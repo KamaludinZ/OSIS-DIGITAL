@@ -6,7 +6,7 @@ use Livewire\Volt\Volt;
 Volt::route('/', 'beranda')->name('home');
 
 Volt::route('cari', 'cari')->name('cari');
-Volt::route('kelola/sosmed', 'kelola.sosmed')->middleware('auth')->name('kelola.sosmed');
+Volt::route('kelola/sosmed', 'kelola.sosmed')->middleware(['auth', 'can:kelola-publikasi'])->name('kelola.sosmed');
 Route::get('sosmed/{post}/buka', App\Http\Controllers\BukaSosmedController::class)->whereNumber('post')->middleware('throttle:60,1')->name('sosmed.buka');
 Volt::route('hasil', 'hasil')->name('hasil');
 Route::get('admin-cetak/kartu-pemilih', App\Http\Controllers\KartuPemilihController::class)->middleware(['auth', 'can:kelola-pemilih'])->name('kartu-pemilih');
@@ -19,8 +19,8 @@ Volt::route('bilik-suara/bukti', 'bilik-suara.bukti')->name('bilik-suara.bukti')
 Volt::route('kandidat', 'kandidat.index')->name('kandidat.index');
 Volt::route('kandidat/{id}', 'kandidat.profil')->whereNumber('id')->name('kandidat.profil');
 
-// Dashboard internal (Filament) belum dibangun; arahkan ke Beranda.
-Route::redirect('dashboard', '/')
+// Alamat lama "dashboard": arahkan ke halaman awal sesuai peran.
+Route::get('dashboard', fn () => redirect(auth()->user()->halamanAwal()))
     ->middleware(['auth'])
     ->name('dashboard');
 

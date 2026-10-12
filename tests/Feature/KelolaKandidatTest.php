@@ -86,7 +86,7 @@ class KelolaKandidatTest extends TestCase
             ->assertRedirect(route('kandidat.profil', ['id' => $satu->id, 'tab' => 'tanya-jawab']));
 
         $this->actingAs($akun);
-        $this->get('/admin')->assertForbidden();
+        $this->get('/admin')->assertRedirect(route('kandidat.profil', ['id' => $satu->id, 'tab' => 'tanya-jawab']));
 
         Volt::test('kandidat.profil', ['id' => $satu->id])->set('tab', 'tanya-jawab')
             ->assertSee('Kamu masuk sebagai kandidat nomor 1')

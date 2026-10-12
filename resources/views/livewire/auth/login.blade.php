@@ -45,7 +45,7 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
             Session::regenerate();
 
             // Kandidat langsung ke tanya jawab miliknya untuk menanggapi pertanyaan.
-            $this->redirect(route('kandidat.profil', ['id' => $pengguna->candidate_id, 'tab' => 'tanya-jawab']), navigate: false);
+            $this->redirect($pengguna->halamanAwal(), navigate: false);
 
             return;
         }
@@ -61,7 +61,7 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        $this->redirectIntended(default: '/admin', navigate: false);
+        $this->redirectIntended(default: $pengguna->halamanAwal(), navigate: false);
     }
 
     /**

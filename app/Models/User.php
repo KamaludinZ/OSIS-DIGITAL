@@ -72,6 +72,16 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
         return $this->belongsTo(Candidate::class, 'candidate_id');
     }
 
+    /** Halaman pertama setelah masuk, sesuai peran. */
+    public function halamanAwal(): string
+    {
+        return match (true) {
+            $this->role === Peran::Kandidat && $this->candidate_id !== null => route('kandidat.profil', ['id' => $this->candidate_id, 'tab' => 'tanya-jawab']),
+            in_array($this->role, [Peran::Pengurus, Peran::Panitia, Peran::Admin], true) => '/admin',
+            default => route('home'),
+        };
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return in_array($this->role, [Peran::Pengurus, Peran::Panitia, Peran::Admin], true);
