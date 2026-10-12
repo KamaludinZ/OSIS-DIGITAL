@@ -146,8 +146,40 @@ pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists /var/lib/po
 
 ### 6.2 Berkas unggahan
 
-Volume `osis-storage` berisi foto dan poster. Cadangkan lewat fitur backup volume
-di server atau `docker run --rm -v <nama-volume>:/data -v $PWD:/backup alpine tar czf /backup/storage.tgz -C /data .`.
+Volume `osis-storage` berisi foto kandidat, poster, dan thumbnail media sosial.
+Coolify menambahkan awalan ID resource pada nama volume. Cari nama lengkapnya di server:
+
+```bash
+docker volume ls | grep osis-storage
+```
+
+Lalu cadangkan (ganti `<nama-volume>`):
+
+```bash
+docker run --rm -v <nama-volume>:/data -v $PWD:/backup alpine tar czf /backup/storage-$(date +%F).tgz -C /data .
+```
+
+### 6.3 Data tetap aman saat redeploy
+
+Semua data yang harus bertahan disimpan di volume, bukan di dalam image:
+
+| Data | Lokasi | Volume |
+|---|---|---|
+| Foto kandidat, poster, thumbnail, berkas unggahan sementara | `storage/app/…` | `osis-storage` |
+| Basis data (termasuk sesi, cache, antrean) | `/var/lib/postgresql` | `osis-pgdata` |
+
+Redeploy membangun ulang image tetapi **tidak** menyentuh volume. Data hanya hilang bila:
+- resource dihapus di Coolify **dengan** pilihan hapus volume dicentang;
+- nama volume di `docker-compose.yml` diubah, sehingga Coolify membuat volume baru yang kosong
+  (**jangan ganti** `osis-storage` / `osis-pgdata`);
+- `docker compose down -v` dijalankan manual.
+
+**Cek setelah deploy pertama:**
+1. Unggah satu foto kandidat.
+2. Klik **Redeploy**.
+3. Pastikan fotonya masih tampil.
+
+Volume juga terlihat di Coolify → resource → **Persistent Storage**.
 
 ---
 
