@@ -86,7 +86,7 @@ class CandidateResource extends Resource
                     ->visible(fn (Get $get) => self::berpasangan($get)),
                 FileUpload::make('foto_url')->label(fn (Get $get) => self::berpasangan($get) ? 'Foto berdua (ketua & wakil)' : 'Foto calon ketua')
                     ->helperText('Foto mendatar (4:3) agar tampil penuh di kartu dan bilik suara. Maks. 2 MB.')
-                    ->image()->imageEditor()->imageAspectRatio('4:3')
+                    ->image()->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->imageEditor()->imageAspectRatio('4:3')
                     ->disk('public')->directory('kandidat')->visibility('public')
                     ->maxSize(2048)->columnSpanFull(),
             ]),

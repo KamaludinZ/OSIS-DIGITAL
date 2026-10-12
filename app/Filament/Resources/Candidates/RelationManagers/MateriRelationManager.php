@@ -36,7 +36,7 @@ class MateriRelationManager extends RelationManager
             Radio::make('tipe')->label('Jenis materi')->options(self::LABEL)->default('janji')->inline()->required()->live()->columnSpanFull(),
             FileUpload::make('url_konten')->label('Gambar poster')
                 ->helperText('Potret 3:4 paling pas. Maks. 3 MB.')
-                ->image()->disk('public')->directory('kandidat/materi')->visibility('public')->maxSize(3072)
+                ->image()->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->disk('public')->directory('kandidat/materi')->visibility('public')->maxSize(3072)
                 ->visible(fn (Get $get) => $tipe($get) === 'poster')->required(fn (Get $get) => $tipe($get) === 'poster')
                 ->columnSpanFull(),
             TextInput::make('url_konten')->label('Tautan video')->url()->placeholder('https://www.youtube.com/watch?v=…')

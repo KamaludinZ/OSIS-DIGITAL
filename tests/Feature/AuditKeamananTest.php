@@ -117,4 +117,37 @@ class AuditKeamananTest extends TestCase
         $this->expectException(\App\Exceptions\SuaraDitolak::class);
         app(\App\Services\LayananPemilihan::class)->kirimSuara($pemilih, Election::aktif(), $calonLain->id);
     }
+
+    public function test_header_keamanan(): void
+    {
+        $this->get('/')->assertHeader('X-Content-Type-Options', 'nosniff')->assertHeader('X-Frame-Options', 'SAMEORIGIN')
+            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    }
+
+    public function test_policy_data_pemilihan(): void
+    {
+        $calon = Candidate::factory()->create();
+        $pengurus = User::factory()->create(['role' => Peran::Pengurus]);
+        $panitia = User::factory()->create(['role' => Peran::Panitia]);
+
+        foreach ([Election::class, Candidate::class, \App\Models\CampaignMaterial::class, \App\Models\CampaignSchedule::class, \App\Models\CandidateQuestion::class] as $model) {
+            $this->assertFalse($pengurus->can('create', $model), $model);
+            $this->assertTrue($panitia->can('create', $model), $model);
+        }
+        $this->assertFalse($pengurus->can('update', $calon));
+        $this->assertFalse(User::factory()->create(['role' => Peran::Kandidat, 'candidate_id' => $calon->id])->can('update', $calon));
+    }
+
+    public function test_unggahan_svg_ditolak(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $e = Election::factory()->create(['format_kandidat' => 'ketua']);
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $svg = \Illuminate\Http\UploadedFile::fake()->createWithContent('foto.svg', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Candidates\Pages\CreateCandidate::class)
+            ->fillForm(['election_id' => $e->id, 'nomor_urut' => 1, 'nama_ketua' => 'Uji', 'foto_url' => $svg])
+            ->call('create')
+            ->assertHasFormErrors(['foto_url']);
+    }
 }

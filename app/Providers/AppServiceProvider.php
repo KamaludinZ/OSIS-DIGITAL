@@ -25,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(User::class, \App\Policies\UserPolicy::class);
         Gate::policy(\App\Models\Announcement::class, \App\Policies\AnnouncementPolicy::class);
+        Gate::policy(\App\Models\Voter::class, \App\Policies\VoterPolicy::class);
+
+        foreach ([\App\Models\Election::class, \App\Models\Candidate::class, \App\Models\CampaignMaterial::class, \App\Models\CampaignSchedule::class, \App\Models\CandidateQuestion::class] as $model) {
+            Gate::policy($model, \App\Policies\KelolaPemilihanPolicy::class);
+        }
 
         foreach ([\App\Models\Division::class, \App\Models\Member::class, \App\Models\WorkProgram::class, \App\Models\Event::class] as $model) {
             Gate::policy($model, \App\Policies\KelolaOrganisasiPolicy::class);
