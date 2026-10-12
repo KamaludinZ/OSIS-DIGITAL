@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
@@ -15,11 +16,25 @@ new #[Layout('components.layouts.siswa')] class extends Component {
 
     public function updatePassword(): void
     {
+        // Batasi tebakan kata sandi saat ini: 5 percobaan per menit per akun.
+        $kunci = 'ganti-sandi:'.Auth::id();
+
+        if (RateLimiter::tooManyAttempts($kunci, 5)) {
+            $this->reset('current_password', 'password', 'password_confirmation');
+
+            throw ValidationException::withMessages([
+                'current_password' => 'Terlalu banyak percobaan. Coba lagi dalam '.RateLimiter::availableIn($kunci).' detik.',
+            ]);
+        }
+
+        RateLimiter::hit($kunci, 60);
+
         try {
             $validated = $this->validate([
                 'current_password' => ['required', 'string', 'current_password'],
-                'password' => ['required', 'string', Password::min(8), 'confirmed'],
+                'password' => ['required', 'string', Password::min(8), 'confirmed', 'different:current_password'],
             ], [
+                'password.different' => 'Kata sandi baru harus berbeda dari yang lama.',
                 'current_password.current_password' => 'Kata sandi saat ini salah.',
                 'password.confirmed' => 'Ulangi kata sandi baru dengan sama persis.',
             ], [
@@ -31,6 +46,8 @@ new #[Layout('components.layouts.siswa')] class extends Component {
 
             throw $e;
         }
+
+        RateLimiter::clear($kunci);
 
         // Model User meng-hash kata sandi lewat cast "hashed".
         Auth::user()->update(['password' => $validated['password']]);

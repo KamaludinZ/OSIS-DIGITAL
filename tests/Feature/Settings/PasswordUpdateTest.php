@@ -60,4 +60,21 @@ class PasswordUpdateTest extends TestCase
         $this->get('/settings/profile')->assertOk();
         $this->assertAuthenticatedAs($user);
     }
+
+    public function test_sandi_baru_harus_berbeda_dan_tebakan_dibatasi(): void
+    {
+        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Panitia]));
+
+        Volt::test('settings.password')
+            ->set('current_password', 'password')->set('password', 'password')->set('password_confirmation', 'password')
+            ->call('updatePassword')->assertHasErrors(['password' => 'different']);
+
+        foreach (range(1, 4) as $i) {
+            Volt::test('settings.password')->set('current_password', 'salah-'.$i)->set('password', 'baru-sekali-9')->set('password_confirmation', 'baru-sekali-9')
+                ->call('updatePassword')->assertHasErrors(['current_password']);
+        }
+
+        Volt::test('settings.password')->set('current_password', 'password')->set('password', 'baru-sekali-9')->set('password_confirmation', 'baru-sekali-9')
+            ->call('updatePassword')->assertHasErrors(['current_password'])->assertSee('Terlalu banyak percobaan');
+    }
 }
