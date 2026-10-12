@@ -35,8 +35,9 @@ chown -R www-data:www-data storage bootstrap/cache
 # DB_HOST salah isi di panel (mis. "db" atau UUID resource lain) tetapi service "postgres" bawaan ada:
 # pakai yang bawaan dan beri tahu di log, daripada kontainer gagal terus.
 DB_HOST=${DB_HOST:-postgres}
-if ! getent hosts "$DB_HOST" > /dev/null 2>&1; then
-    if [ "$DB_HOST" != "postgres" ] && getent hosts postgres > /dev/null 2>&1; then
+host_dikenal() { H="$1" php -r '$h = getenv("H"); exit(filter_var($h, FILTER_VALIDATE_IP) || gethostbyname($h) !== $h ? 0 : 1);'; }
+if ! host_dikenal "$DB_HOST"; then
+    if [ "$DB_HOST" != "postgres" ] && host_dikenal postgres; then
         echo "[osis] PERINGATAN: host basis data '$DB_HOST' tidak dikenal; memakai service 'postgres' bawaan. Hapus variabel DB_HOST di Coolify (atau isi 'postgres')." >&2
         DB_HOST=postgres
     else
