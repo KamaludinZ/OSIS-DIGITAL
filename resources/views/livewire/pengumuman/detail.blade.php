@@ -5,6 +5,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.siswa')] class extends Component {
+    #[\Livewire\Attributes\Locked]
     public array $pengumuman = [];
 
     public function mount(int $id, LayananPublikasi $publikasi): void

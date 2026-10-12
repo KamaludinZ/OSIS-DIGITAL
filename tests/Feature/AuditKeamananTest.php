@@ -1,0 +1,120 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\Peran;
+use App\Models\Candidate;
+use App\Models\Election;
+use App\Models\User;
+use App\Models\Voter;
+use App\Services\SesiPemilih;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
+use Livewire\Volt\Volt;
+use Tests\TestCase;
+
+/** Uji regresi temuan audit keamanan. */
+class AuditKeamananTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function coba(string $kode): bool
+    {
+        try {
+            app(SesiPemilih::class)->masukDenganKode($kode);
+
+            return true;
+        } catch (ValidationException) {
+            return false;
+        }
+    }
+
+    public function test_kode_sendiri_tidak_bisa_mengosongkan_batas_tebakan(): void
+    {
+        $milikSendiri = Voter::factory()->berkode('111111')->create();
+
+        // Penyerang berganti sesi & menyelipkan kode miliknya tiap 4 tebakan.
+        for ($putaran = 0; $putaran < 5; $putaran++) {
+            session()->flush();
+            session()->regenerate();
+            foreach (range(1, 4) as $i) {
+                $this->assertFalse($this->coba(sprintf('9%05d', $putaran * 10 + $i)));
+            }
+            // Putaran 1–4 masih boleh masuk; setelah 20 tebakan salah dari IP ini semua ditahan.
+            $this->assertSame($putaran < 4, $this->coba('111111'), 'putaran '.$putaran);
+        }
+    }
+
+    public function test_batas_per_sesi_tidak_mengunci_seluruh_lab(): void
+    {
+        Voter::factory()->berkode('222222')->create();
+
+        foreach (range(1, 5) as $i) {
+            $this->coba('00000'.$i); // satu komputer salah ketik 5 kali
+        }
+        $this->assertFalse($this->coba('222222'));
+
+        // Komputer lain di lab yang sama (IP sama, sesi berbeda) tetap bisa masuk.
+        session()->flush();
+        session()->regenerate();
+        $this->assertTrue($this->coba('222222'));
+    }
+
+    public function test_panitia_diberi_tahu_saat_tebakan_melonjak(): void
+    {
+        $panitia = User::factory()->create(['role' => Peran::Panitia]);
+
+        for ($i = 0; $i < 45; $i++) {
+            if ($i % 5 === 0) {
+                session()->flush();
+                session()->regenerate();
+                \Illuminate\Support\Facades\RateLimiter::clear('kode-pilih:127.0.0.1'); // abaikan batas per menit untuk simulasi 1 jam
+            }
+            $this->coba(sprintf('8%05d', $i));
+        }
+
+        $this->assertSame(1, $panitia->notifications()->count());
+        $this->assertStringContainsString('kode pilih salah', $panitia->notifications()->first()->data['title']);
+    }
+
+    public function test_sesi_bilik_suara_kedaluwarsa_setelah_15_menit(): void
+    {
+        $pemilih = Voter::factory()->berkode('333333')->create();
+        $this->assertTrue($this->coba('333333'));
+        $this->assertSame($pemilih->id, app(SesiPemilih::class)->pemilih()?->id);
+
+        $this->travel(16)->minutes();
+        $this->assertNull(app(SesiPemilih::class)->pemilih());
+        $this->assertNull(session(SesiPemilih::KUNCI_PEMILIH));
+    }
+
+    public function test_status_server_tidak_bisa_diubah_dari_peramban(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $calon = Candidate::first();
+
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+        Volt::test('bilik-suara')->set('pemilihan', ['id' => 999, 'status' => 'berjalan']);
+    }
+
+    public function test_profil_kandidat_terkunci(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+        Volt::test('kandidat.profil', ['id' => Candidate::first()->id])->set('calon.id', 999);
+    }
+
+    public function test_suara_hanya_ke_pemilihan_aktif(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $lain = Election::factory()->create(['judul' => 'Pemilihan lain', 'mulai' => now()->subYear(), 'selesai' => now()->subYear()->addDay()]);
+        $calonLain = Candidate::factory()->create(['election_id' => $lain->id]);
+        $pemilih = Voter::factory()->create();
+
+        // Kandidat dari pemilihan lain ditolak walau id-nya dikirim langsung.
+        $this->expectException(\App\Exceptions\SuaraDitolak::class);
+        app(\App\Services\LayananPemilihan::class)->kirimSuara($pemilih, Election::aktif(), $calonLain->id);
+    }
+}

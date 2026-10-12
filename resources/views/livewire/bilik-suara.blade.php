@@ -10,7 +10,10 @@ use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends Component {
+    #[\Livewire\Attributes\Locked]
     public ?array $pemilihan = null;
+
+    #[\Livewire\Attributes\Locked]
 
     public array $kandidat = [];
 
@@ -92,6 +95,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
     public bool $konfirmasi = false;
 
     /** Suara sudah tersimpan di database. */
+    #[\Livewire\Attributes\Locked]
     public bool $terkirim = false;
 
     public function bukaKonfirmasi(): void
@@ -134,7 +138,10 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
         try {
             $suara = app(LayananPemilihan::class)->kirimSuara(
                 $this->pemilih,
-                Election::findOrFail($this->pemilihan['id']),
+                // Hanya pemilihan yang sedang aktif yang bisa menerima suara.
+                app(LayananPemilihan::class)->pemilihanAktif()?->id === ($this->pemilihan['id'] ?? null)
+                    ? Election::findOrFail($this->pemilihan['id'])
+                    : throw new SuaraDitolak('Pemilihan sudah berganti. Muat ulang halaman.', 'pemilihan_berganti'),
                 $this->dipilih,
             );
         } catch (SuaraDitolak $e) {

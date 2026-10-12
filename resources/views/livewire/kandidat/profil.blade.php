@@ -6,22 +6,36 @@ use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.siswa')] class extends Component {
+    #[\Livewire\Attributes\Locked]
     public array $calon = [];
 
     /** Kandidat sebelum & sesudah (urut nomor) untuk navigasi. */
+    #[\Livewire\Attributes\Locked]
     public ?array $sebelumnya = null;
+
+    #[\Livewire\Attributes\Locked]
 
     public ?array $berikutnya = null;
 
+    #[\Livewire\Attributes\Locked]
+
     public ?string $statusPemilihan = null;
+
+    #[\Livewire\Attributes\Locked]
 
     public array $materi = [];
 
+    #[\Livewire\Attributes\Locked]
+
     public array $jadwal = [];
+
+    #[\Livewire\Attributes\Locked]
 
     public array $tanyaJawab = [];
 
     public string $pertanyaanBaru = '';
+
+    #[\Livewire\Attributes\Locked]
 
     public bool $pertanyaanTerkirim = false;
 
@@ -89,6 +103,8 @@ new #[Layout('components.layouts.siswa')] class extends Component {
 
     /** Draf tanggapan kandidat per pertanyaan (id => teks). */
     public array $tanggapan = [];
+
+    #[\Livewire\Attributes\Locked]
 
     public ?int $tanggapanTersimpan = null;
 

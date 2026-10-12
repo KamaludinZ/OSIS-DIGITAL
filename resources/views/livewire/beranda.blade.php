@@ -8,13 +8,22 @@ use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.siswa')] #[Title('Beranda')] class extends Component {
+    #[\Livewire\Attributes\Locked]
     public ?array $pemilihan = null;
+
+    #[\Livewire\Attributes\Locked]
 
     public array $pengumuman = [];
 
+    #[\Livewire\Attributes\Locked]
+
     public array $agenda = [];
 
+    #[\Livewire\Attributes\Locked]
+
     public array $programKerja = [];
+
+    #[\Livewire\Attributes\Locked]
 
     public array $sosmed = [];
 

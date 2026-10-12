@@ -7,6 +7,7 @@ use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class extends Component {
+    #[\Livewire\Attributes\Locked]
     public ?array $rekap = null;
 
     public function mount(): void

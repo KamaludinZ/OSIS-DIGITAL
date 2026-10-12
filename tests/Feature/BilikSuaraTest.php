@@ -29,7 +29,7 @@ class BilikSuaraTest extends TestCase
     /** Masuk bilik suara sebagai pemilih (setara memasukkan kode pilih). */
     private function masuk(?Voter $pemilih = null): static
     {
-        return $this->withSession([SesiPemilih::KUNCI_PEMILIH => ($pemilih ?? $this->pemilih)->id]);
+        return $this->withSession([SesiPemilih::KUNCI_PEMILIH => ($pemilih ?? $this->pemilih)->id, 'pemilih_masuk_pada' => now()->timestamp]);
     }
 
     /** ID kandidat berdasarkan nomor urut pada data contoh. */
@@ -113,7 +113,7 @@ class BilikSuaraTest extends TestCase
 
     public function test_hanya_satu_kandidat_yang_aktif_dipilih(): void
     {
-        session([SesiPemilih::KUNCI_PEMILIH => $this->pemilih->id]);
+        session([SesiPemilih::KUNCI_PEMILIH => $this->pemilih->id, 'pemilih_masuk_pada' => now()->timestamp]);
 
         Volt::test('bilik-suara')->call('tutupPanduan')
             ->assertSet('dipilih', null)
@@ -130,7 +130,7 @@ class BilikSuaraTest extends TestCase
 
     public function test_konfirmasi_lalu_kirim_suara_tersimpan_sekali(): void
     {
-        session([SesiPemilih::KUNCI_PEMILIH => $this->pemilih->id]);
+        session([SesiPemilih::KUNCI_PEMILIH => $this->pemilih->id, 'pemilih_masuk_pada' => now()->timestamp]);
 
         Volt::test('bilik-suara')->call('tutupPanduan')
             ->call('bukaKonfirmasi')
@@ -158,7 +158,7 @@ class BilikSuaraTest extends TestCase
     public function test_pemilih_belum_terverifikasi_tidak_bisa_memilih(): void
     {
         $menunggu = Voter::factory()->berkode('111222')->create(['verifikasi' => 'menunggu']);
-        session([SesiPemilih::KUNCI_PEMILIH => $menunggu->id]);
+        session([SesiPemilih::KUNCI_PEMILIH => $menunggu->id, 'pemilih_masuk_pada' => now()->timestamp]);
 
         Volt::test('bilik-suara')->call('tutupPanduan')
             ->assertSee('masih menunggu verifikasi panitia')
@@ -168,7 +168,7 @@ class BilikSuaraTest extends TestCase
 
     public function test_kelayakan_dicek_ulang_saat_kirim_suara(): void
     {
-        session([SesiPemilih::KUNCI_PEMILIH => $this->pemilih->id]);
+        session([SesiPemilih::KUNCI_PEMILIH => $this->pemilih->id, 'pemilih_masuk_pada' => now()->timestamp]);
         $komponen = Volt::test('bilik-suara')->call('tutupPanduan')->call('pilih', $this->idNomor(1))->call('bukaKonfirmasi');
 
         Election::query()->update(['status' => 'selesai']);
@@ -188,7 +188,7 @@ class BilikSuaraTest extends TestCase
             ->assertSee('Selesai &amp; keluar', false)
             ->assertDontSee('Nadia Kusuma');
 
-        session([SesiPemilih::KUNCI_PEMILIH => $this->pemilih->id]);
+        session([SesiPemilih::KUNCI_PEMILIH => $this->pemilih->id, 'pemilih_masuk_pada' => now()->timestamp]);
         Volt::test('bilik-suara.bukti')->call('selesai')->assertRedirect(route('home'));
         $this->assertNull(session(SesiPemilih::KUNCI_PEMILIH));
     }

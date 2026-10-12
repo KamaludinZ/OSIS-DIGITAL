@@ -7,6 +7,7 @@ use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.siswa')] #[Title('Bukti Suara')] class extends Component {
+    #[\Livewire\Attributes\Locked]
     public array $bukti = [];
 
     public function mount(LayananPemilihan $layanan): void

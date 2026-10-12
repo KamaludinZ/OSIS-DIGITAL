@@ -6,7 +6,10 @@ use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.siswa')] #[Title('Kandidat')] class extends Component {
+    #[\Livewire\Attributes\Locked]
     public ?array $pemilihan = null;
+
+    #[\Livewire\Attributes\Locked]
 
     public array $kandidat = [];
 
