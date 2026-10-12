@@ -25,6 +25,13 @@ class RuangOsimTest extends TestCase
 
     public function test_pengurus_melihat_ringkasan_organisasi(): void
     {
+        // Kosong: tetap tampil dengan petunjuk.
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $this->get('/admin/ringkasan')->assertOk()->assertSee('Pengurus inti periode ini belum diisi');
+
+        $this->seed(\Database\Seeders\OrganisasiSeeder::class);
+        $ketua = \App\Models\Member::periode()->where('jabatan', 'Ketua OSIM')->first();
+
         foreach ([Peran::Pengurus, Peran::Panitia, Peran::Admin] as $peran) {
             $this->actingAs(User::factory()->create(['role' => $peran]));
 
@@ -34,7 +41,9 @@ class RuangOsimTest extends TestCase
                 ->assertSee('Ruang OSIM')
                 ->assertSeeInOrder(['Anggota pengurus', 'Divisi', 'Program berjalan', 'Kegiatan terjadwal'])
                 ->assertSee('Pengurus inti')
-                ->assertSee('Divisi Keagamaan');
+                ->assertSee('Divisi Keagamaan')
+                ->assertSee($ketua->nama)
+                ->assertSee('periode '.\App\Models\Member::periodeAktif());
         }
     }
 

@@ -2,7 +2,10 @@
 
 namespace App\Filament\Pages;
 
-use App\Support\DataTiruanOrganisasi;
+use App\Models\Division;
+use App\Models\Event;
+use App\Models\Member;
+use App\Models\WorkProgram;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -24,24 +27,47 @@ class Ringkasan extends Page
 
     public function getSubheading(): ?string
     {
-        return 'Kepengurusan OSIM periode '.DataTiruanOrganisasi::periode();
+        return 'Kepengurusan OSIM periode '.Member::periodeAktif();
     }
 
     protected function getViewData(): array
     {
-        $divisi = DataTiruanOrganisasi::divisi();
-        $program = collect(DataTiruanOrganisasi::programKerja());
+        $periode = Member::periodeAktif();
+        $urutInti = array_flip(Member::JABATAN_INTI);
+
+        $inti = Member::query()->periode($periode)->inti()->get()
+            ->sortBy(fn (Member $m) => [$urutInti[$m->jabatan] ?? 99, $m->urutan ?? 0])
+            ->map(fn (Member $m) => ['jabatan' => $m->jabatan, 'nama' => $m->nama, 'kelas' => $m->kelas ?? '—'])
+            ->values()->all();
+
+        $divisi = Division::query()
+            ->withCount(['members' => fn ($q) => $q->periode($periode), 'workPrograms'])
+            ->with(['members' => fn ($q) => $q->periode($periode)->where('jabatan', 'Koordinator')])
+            ->orderBy('nama')->get()
+            ->map(fn (Division $d) => [
+                'nama' => $d->nama,
+                'koordinator' => $d->members->first()?->nama ?? 'Belum ditentukan',
+                'anggota' => $d->members_count,
+                'program' => $d->work_programs_count,
+            ])->all();
+
+        $program = WorkProgram::query()->with('divisi')->orderBy('nama')->get()
+            ->map(fn (WorkProgram $p) => ['nama' => $p->nama, 'divisi' => $p->divisi?->nama ?? 'Pengurus OSIM', 'status' => $p->status->value]);
+
+        $jadwal = Event::query()->mendatang()->with('divisi')->limit(5)->get()
+            ->map(fn (Event $e) => ['nama' => $e->nama, 'tanggal' => $e->tanggal_mulai->toDateString(), 'tempat' => $e->tempat ?? '—', 'divisi' => $e->divisi?->nama ?? 'Pengurus inti'])
+            ->all();
 
         return [
-            'inti' => DataTiruanOrganisasi::pengurusInti(),
+            'inti' => $inti,
             'divisi' => $divisi,
             'program' => $program->groupBy('status'),
-            'jadwal' => DataTiruanOrganisasi::jadwal(),
+            'jadwal' => $jadwal,
             'angka' => [
-                ['Anggota pengurus', count(DataTiruanOrganisasi::pengurusInti()) + array_sum(array_column($divisi, 'anggota'))],
+                ['Anggota pengurus', Member::query()->periode($periode)->count()],
                 ['Divisi', count($divisi)],
                 ['Program berjalan', $program->where('status', 'jalan')->count()],
-                ['Kegiatan terjadwal', count(DataTiruanOrganisasi::jadwal())],
+                ['Kegiatan terjadwal', Event::query()->mendatang()->count()],
             ],
         ];
     }

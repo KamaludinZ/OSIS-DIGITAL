@@ -16,6 +16,9 @@
     <div class="grid gap-6 xl:grid-cols-3">
         {{-- Pengurus inti --}}
         <x-filament::section heading="Pengurus inti" class="xl:col-span-2">
+            @if (empty($inti))
+                <p class="text-sm text-tinta-2">Pengurus inti periode ini belum diisi. Tambahkan di menu Anggota.</p>
+            @endif
             <ul class="grid gap-3 sm:grid-cols-2">
                 @foreach ($inti as $p)
                     <li class="flex items-center gap-3 rounded-xl bg-hijau-50 p-3 ring-1 ring-garis">
@@ -32,6 +35,9 @@
 
         {{-- Jadwal kegiatan --}}
         <x-filament::section heading="Jadwal terdekat">
+            @if (empty($jadwal))
+                <p class="text-sm text-tinta-2">Belum ada kegiatan mendatang.</p>
+            @endif
             <ol class="divide-y divide-dashed divide-garis">
                 @foreach ($jadwal as $j)
                     @php($t = \Illuminate\Support\Carbon::parse($j['tanggal']))
@@ -72,6 +78,9 @@
         {{-- Program kerja per status --}}
         <x-filament::section heading="Program kerja">
             <div class="flex flex-col gap-4">
+                @if ($program->isEmpty())
+                    <p class="text-sm text-tinta-2">Belum ada program kerja.</p>
+                @endif
                 @foreach (['jalan', 'rencana', 'selesai'] as $status)
                     @continue(! isset($program[$status]))
                     <div>
