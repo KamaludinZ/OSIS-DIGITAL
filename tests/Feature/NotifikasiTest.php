@@ -199,4 +199,35 @@ class NotifikasiTest extends TestCase
         $layanan->kirimPertanyaan($penanya, $calon, 'Apakah ada program literasi Al-Quran?');
         $this->assertSame(1, $akun->notifications()->count());
     }
+
+    public function test_penjadwal_pengingat_pemilihan(): void
+    {
+        $this->travelTo(now()->setTime(8, 0));
+        $panitia = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Panitia]);
+        $tidakMau = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]);
+        $tidakMau->aturNotifikasi('pemilihan', false);
+        $e = Election::factory()->create(['mulai' => now()->addDays(2), 'selesai' => now()->addDays(2)->addHours(8), 'status' => StatusPemilihan::Berjalan]);
+        $kirim = fn () => app(LayananNotifikasi::class)->kirimPengingatPemilihan();
+
+        $this->assertSame([], $kirim()); // masih jauh
+
+        $this->travelTo($e->mulai->copy()->subHours(20));
+        $this->assertSame(['segera@'.$e->mulai->toDateTimeString()], $kirim());
+        $this->assertSame([], $kirim()); // tidak dobel
+
+        $this->travelTo($e->mulai->copy()->addMinutes(5));
+        $this->assertSame(['buka@'.$e->mulai->toDateTimeString()], $kirim());
+
+        $this->travelTo($e->selesai->copy()->subHours(2));
+        $this->artisan('osim:kirim-pengingat-pemilihan')->expectsOutputToContain('1 pengingat');
+
+        $this->assertSame(['Bilik suara ditutup 3 jam lagi', 'Bilik suara sudah dibuka', 'Besok bilik suara dibuka'],
+            $panitia->notifications()->orderByDesc('created_at')->get()->pluck('data.title')->all());
+        $this->assertSame(0, $tidakMau->notifications()->count());
+
+        // Jadwal diundur panitia: pengingat "tutup" berlaku lagi untuk jam yang baru.
+        $e->update(['selesai' => $e->selesai->copy()->addHours(4)]);
+        $this->travelTo($e->fresh()->selesai->copy()->subHour());
+        $this->assertSame(['tutup@'.$e->fresh()->selesai->toDateTimeString()], $kirim());
+    }
 }

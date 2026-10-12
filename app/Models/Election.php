@@ -37,6 +37,7 @@ class Election extends Model
             'status' => StatusPemilihan::class,
             'format_kandidat' => \App\Enums\FormatKandidat::class,
             'hasil_publik' => 'boolean',
+            'pengingat_terkirim' => 'array',
         ];
     }
 

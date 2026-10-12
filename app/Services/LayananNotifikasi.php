@@ -95,6 +95,50 @@ class LayananNotifikasi
             ->sum(fn (Announcement $a) => $this->beritahuPengumuman($a));
     }
 
+    /**
+     * Pengingat pemilihan untuk akun (dipanggil penjadwal). Tiap pengingat
+     * dikirim sekali per jadwal; bila jam buka/tutup diubah, kuncinya ikut berubah.
+     *
+     * @return list<string> kunci pengingat yang baru dikirim
+     */
+    public function kirimPengingatPemilihan(): array
+    {
+        $terkirim = [];
+
+        foreach (Election::query()->where('status', StatusPemilihan::Berjalan)->where('selesai', '>', now())->get() as $e) {
+            $jam = fn (Carbon $t) => $t->translatedFormat('l, j F Y \p\u\k\u\l H:i').' WIB';
+            $jadwal = [
+                // [kunci, mulai berlaku, berakhir, judul, isi]
+                ['segera@'.$e->mulai->toDateTimeString(), $e->mulai->copy()->subDay(), $e->mulai,
+                    'Besok bilik suara dibuka', $e->judul.' dibuka '.$jam($e->mulai).'. Pastikan kartu pemilih sudah dibagikan.'],
+                ['buka@'.$e->mulai->toDateTimeString(), $e->mulai, $e->selesai->copy()->subHours(3),
+                    'Bilik suara sudah dibuka', 'Pemungutan suara berlangsung sampai '.$jam($e->selesai).'.'],
+                ['tutup@'.$e->selesai->toDateTimeString(), $e->selesai->copy()->subHours(3), $e->selesai,
+                    'Bilik suara ditutup 3 jam lagi', 'Pemungutan suara berakhir '.$jam($e->selesai).'. Ingatkan yang belum memilih.'],
+            ];
+
+            $sudah = $e->pengingat_terkirim ?? [];
+
+            foreach ($jadwal as [$kunci, $dari, $sampai, $judul, $isi]) {
+                if (in_array($kunci, $sudah, true) || now()->lt($dari) || now()->gte($sampai)) {
+                    continue;
+                }
+
+                $sudah[] = $kunci;
+                $e->forceFill(['pengingat_terkirim' => $sudah])->saveQuietly();
+
+                \Filament\Notifications\Notification::make()->title($judul)->body($isi)
+                    ->icon('heroicon-o-check-badge')
+                    ->actions([\Filament\Actions\Action::make('buka')->label('Lihat')->url(route('bilik-suara'))])
+                    ->sendToDatabase($this->penerima('pemilihan'));
+
+                $terkirim[] = $kunci;
+            }
+        }
+
+        return $terkirim;
+    }
+
     public static function lupakan(): void
     {
         Cache::forget('umpan-notifikasi');
