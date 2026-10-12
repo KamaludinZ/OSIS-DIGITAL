@@ -6,3 +6,12 @@
 # docs/internal/
 # *.snap
 # fixtures/
+
+# Berkas runtime Laravel (cache, view terkompilasi, sesi, unggahan) — bukan kode.
+storage/
+bootstrap/cache/
+public/build/
+public/storage
+# Konfigurasi alat pengembang lokal.
+.claude/
+.impeccable/review/
