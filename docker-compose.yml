@@ -55,10 +55,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/up > /dev/null || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 90s
+      interval: 20s
+      timeout: 10s
+      retries: 6
+      start_period: 180s
 
   worker:
     build: *osis-build
@@ -70,7 +70,7 @@ services:
     volumes:
       - osis-storage:/var/www/html/storage/app
     depends_on:
-      app:
+      postgres:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'queue:work' > /dev/null || exit 1"]
@@ -88,7 +88,7 @@ services:
     volumes:
       - osis-storage:/var/www/html/storage/app
     depends_on:
-      app:
+      postgres:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'schedule:work' > /dev/null || exit 1"]
