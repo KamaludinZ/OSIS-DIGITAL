@@ -9,6 +9,9 @@ Volt::route('cari', 'cari')->name('cari');
 Volt::route('kelola/sosmed', 'kelola.sosmed')->middleware(['auth', 'can:kelola-publikasi'])->name('kelola.sosmed');
 Route::get('sosmed/{post}/buka', App\Http\Controllers\BukaSosmedController::class)->whereNumber('post')->middleware('throttle:60,1')->name('sosmed.buka');
 Volt::route('hasil', 'hasil')->name('hasil');
+Volt::route('notifikasi', 'notifikasi')->name('notifikasi');
+Route::get('notifikasi/umpan', fn (App\Services\LayananNotifikasi $layanan) => response()->json($layanan->umpan())->header('Cache-Control', 'public, max-age=60'))
+    ->middleware('throttle:60,1')->name('notifikasi.umpan');
 Route::get('admin-cetak/kartu-pemilih', App\Http\Controllers\KartuPemilihController::class)->middleware(['auth', 'can:kelola-pemilih'])->name('kartu-pemilih');
 Route::get('hasil/laporan', [App\Http\Controllers\LaporanHasilController::class, 'cetak'])->name('hasil.laporan');
 Route::get('hasil/laporan.csv', [App\Http\Controllers\LaporanHasilController::class, 'csv'])->name('hasil.laporan.csv');

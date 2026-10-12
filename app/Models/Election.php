@@ -26,6 +26,7 @@ class Election extends Model
     {
         // Status / publikasi berubah -> rekap di halaman Hasil harus ikut berubah.
         static::saved(fn (Election $pemilihan) => \App\Services\LayananHasil::lupakanCache($pemilihan->id));
+        static::saved(fn () => \App\Services\LayananNotifikasi::lupakan());
     }
 
     protected function casts(): array

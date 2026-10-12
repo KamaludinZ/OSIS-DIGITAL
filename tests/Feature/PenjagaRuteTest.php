@@ -52,6 +52,6 @@ class PenjagaRuteTest extends TestCase
 
         $this->post('/logout')->assertRedirect('/')->assertSessionHas('status');
         $this->assertGuest();
-        $this->followingRedirects()->get('/')->assertSee('Masuk pengurus');
+        $this->followingRedirects()->get('/')->assertSee('href="'.route('login').'"', false);
     }
 }

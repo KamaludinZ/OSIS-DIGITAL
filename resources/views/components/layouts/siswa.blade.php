@@ -17,7 +17,8 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="osim flex min-h-screen flex-col antialiased">
+    <body class="osim flex min-h-screen flex-col antialiased"
+          x-data x-init="$store.notif.ambil('{{ route('notifikasi.umpan') }}')">
         <a href="#isi" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-emas-400 focus:px-4 focus:py-2 focus:font-semibold focus:text-hijau-950">Langsung ke isi</a>
 
         {{-- Kepala: pita hijau madrasah --}}
@@ -47,6 +48,14 @@
                 </nav>
 
                 <div class="ml-auto flex items-center gap-1.5">
+                    <a href="{{ route('notifikasi') }}" wire:navigate
+                       x-bind:aria-label="'Pemberitahuan' + ($store.notif.belumDibaca ? ', ' + $store.notif.belumDibaca + ' belum dibaca' : '')"
+                       aria-label="Pemberitahuan"
+                       @class(['relative flex size-10 items-center justify-center rounded-full transition', 'bg-emas-400 text-hijau-950' => request()->routeIs('notifikasi'), 'text-white hover:bg-white/10' => ! request()->routeIs('notifikasi')])>
+                        <flux:icon.bell variant="mini" />
+                        <span x-cloak x-show="$store.notif.belumDibaca > 0" x-text="$store.notif.belumDibaca > 9 ? '9+' : $store.notif.belumDibaca"
+                              class="angka absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-emas-400 px-1 text-[11px] font-black text-hijau-950 ring-2 ring-hijau-600"></span>
+                    </a>
                     <a href="{{ route('cari') }}" wire:navigate aria-label="Cari kabar OSIM"
                        @class(['flex size-10 items-center justify-center rounded-full transition', 'bg-emas-400 text-hijau-950' => request()->routeIs('cari'), 'text-white hover:bg-white/10' => ! request()->routeIs('cari')])>
                         <flux:icon.magnifying-glass variant="mini" />
@@ -83,8 +92,8 @@
                             </flux:menu>
                         </flux:dropdown>
                     @else
-                        <a href="{{ route('login') }}" wire:navigate class="rounded-full bg-white px-4 py-2 text-sm font-bold text-hijau-800 shadow-[0_3px_10px_-3px_rgb(0_0_0/0.15)] transition hover:bg-hijau-50">
-                            Masuk pengurus
+                        <a href="{{ route('login') }}" wire:navigate class="rounded-full bg-white px-4 py-2 text-sm font-bold text-hijau-800 shadow-[0_3px_10px_-3px_rgb(0_0_0/0.15)] transition hover:bg-hijau-50 whitespace-nowrap">
+                            Masuk<span class="hidden sm:inline"> pengurus</span>
                         </a>
                     @endauth
                 </div>

@@ -21,6 +21,13 @@ class Event extends Model
         'divisi_id',
     ];
 
+    protected static function booted(): void
+    {
+        // Umpan pemberitahuan publik ikut diperbarui.
+        static::saved(fn () => \App\Services\LayananNotifikasi::lupakan());
+        static::deleted(fn () => \App\Services\LayananNotifikasi::lupakan());
+    }
+
     protected function casts(): array
     {
         return [
