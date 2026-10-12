@@ -18,18 +18,16 @@
         @endif
     </div>
 
-    <div class="flex gap-4 p-4">
-        {{-- Pas foto --}}
-        <x-osim.pasfoto class="w-24 shrink-0 sm:w-28" :foto="$calon['foto_url'] ?? null" alt="Foto {{ $calon['nama_ketua'] }} dan {{ $calon['nama_wakil'] }}" />
-
-        {{-- Nomor urut raksasa --}}
-        <div class="flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl bg-hijau-50 ring-1 ring-garis">
-            <x-osim.label class="text-[10px]">No. Urut</x-osim.label>
-            <span class="font-display angka text-7xl font-black leading-none text-hijau-700 sm:text-8xl" aria-label="Nomor urut {{ $calon['nomor_urut'] }}">{{ $calon['nomor_urut'] }}</span>
-        </div>
+    {{-- Foto pasangan calon (lebar) dengan nomor urut di pojok --}}
+    <div class="relative p-4 pb-0">
+        <x-osim.pasfoto class="aspect-[4/3] w-full" :foto="$calon['foto_url'] ?? null" alt="Foto {{ $calon['nama_ketua'] }} dan {{ $calon['nama_wakil'] }}" />
+        <span class="absolute left-6 top-6 flex items-baseline gap-1 rounded-lg bg-hijau-900 px-2.5 py-1 text-white shadow-[0_4px_10px_-3px_rgb(4_41_26/0.5)]" aria-label="Nomor urut {{ $calon['nomor_urut'] }}">
+            <span class="font-sempit text-[10px] font-bold uppercase tracking-wider text-hijau-200">No.</span>
+            <span class="font-display angka text-2xl font-black leading-none text-emas-300">{{ $calon['nomor_urut'] }}</span>
+        </span>
     </div>
 
-    <dl class="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pb-4">
+    <dl class="grid grid-cols-2 gap-x-4 gap-y-3 p-4">
         <div class="min-w-0">
             <dt><x-osim.label>Calon Ketua</x-osim.label></dt>
             <dd class="mt-0.5 font-bold leading-tight text-tinta">{{ $calon['nama_ketua'] }}</dd>

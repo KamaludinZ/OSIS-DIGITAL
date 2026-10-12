@@ -59,6 +59,9 @@
                                 <span class="hidden max-w-32 truncate sm:block">{{ \Illuminate\Support\Str::of(auth()->user()->name)->before(' ') }}</span>
                             </button>
                             <flux:menu>
+                                @if (auth()->user()->canAccessPanel(\Filament\Facades\Filament::getPanel('admin')))
+                                    <flux:menu.item href="/admin" icon="building-office-2">Ruang OSIM</flux:menu.item>
+                                @endif
                                 @can('kelola-publikasi')
                                     <flux:menu.item href="{{ route('kelola.sosmed') }}" icon="play-circle" wire:navigate>Kelola media sosial</flux:menu.item>
                                 @endcan
@@ -72,7 +75,7 @@
                         </flux:dropdown>
                     @else
                         <a href="{{ route('login') }}" wire:navigate class="rounded-full bg-white px-4 py-2 text-sm font-bold text-hijau-800 shadow-[0_3px_10px_-3px_rgb(0_0_0/0.15)] transition hover:bg-hijau-50">
-                            Masuk
+                            Masuk pengurus
                         </a>
                     @endauth
                 </div>

@@ -36,10 +36,20 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
             ]);
         }
 
+        // Login hanya untuk admin, pengurus, dan panitia. Siswa & GTK
+        // memilih dengan kode pilih dan bertanya lewat verifikasi NISN/NIK.
+        if (! Auth::user()->canAccessPanel(\Filament\Facades\Filament::getPanel('admin'))) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Login hanya untuk admin, pengurus, dan panitia. Untuk memilih, gunakan kode pilih di Bilik Suara.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        $this->redirectIntended(default: route('home', absolute: false), navigate: true);
+        $this->redirectIntended(default: '/admin', navigate: false);
     }
 
     /**
@@ -74,13 +84,13 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
 
 <div class="overflow-hidden rounded-[14px] bg-white shadow-[0_18px_40px_-18px_rgb(4_41_26/0.5)] ring-1 ring-garis">
     <div class="flex items-center justify-between gap-3 bg-hijau-100 px-6 py-2.5">
-        <x-osim.label class="text-hijau-800">Kartu Masuk Siswa &amp; Pengurus</x-osim.label>
+        <x-osim.label class="text-hijau-800">Kartu Masuk Pengurus &amp; Panitia</x-osim.label>
         <img src="/images/brand/logo-mtsn2.png" alt="" class="size-6" />
     </div>
 
     <div class="p-6 sm:p-8">
-        <h1 class="font-display text-3xl font-black text-tinta">Masuk</h1>
-        <p class="mt-1 text-tinta-2">Gunakan email sekolah dan kata sandi yang diberikan pengurus.</p>
+        <h1 class="font-display text-3xl font-black text-tinta">Masuk pengurus</h1>
+        <p class="mt-1 text-tinta-2">Khusus admin, pengurus OSIM, dan panitia pemilihan.</p>
 
         @if (session('status'))
             <p class="mt-4 rounded-lg bg-hijau-100 px-3 py-2 text-sm font-semibold text-hijau-800" role="status">{{ session('status') }}</p>
@@ -131,8 +141,10 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
     <div class="flex gap-3 p-6 text-sm text-tinta-2 sm:px-8">
         <flux:icon.information-circle variant="mini" class="mt-0.5 shrink-0 text-hijau-600" />
         <p>
-            <strong class="text-tinta">Belum punya akun atau lupa kata sandi?</strong>
-            Akun dibuat dan diatur ulang oleh pengurus OSIM atau admin madrasah. Silakan hubungi mereka di ruang OSIM.
+            <strong class="text-tinta">Siswa atau guru?</strong> Tidak perlu login. Memilih cukup dengan kode pilih 6 digit di
+            <a href="{{ route('bilik-suara') }}" class="font-bold text-hijau-700 underline" wire:navigate>Bilik Suara</a>,
+            dan bertanya ke kandidat cukup dengan NISN/NIK + tanggal lahir.
+            <br><strong class="text-tinta">Belum punya akun pengurus atau lupa kata sandi?</strong> Hubungi admin madrasah.
         </p>
     </div>
 </div>

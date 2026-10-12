@@ -12,9 +12,9 @@ class DatabaseSeeder extends Seeder
      * Data awal untuk pengembangan lokal. Aman dijalankan berulang
      * (php artisan db:seed) karena memakai updateOrCreate.
      *
-     * Akun contoh — semua berkata sandi "password":
-     *   admin@osis.test, panitia@osis.test, pengurus@osis.test,
-     *   siswa@osis.test, siswa2@osis.test
+     * Akun contoh (login hanya untuk staf) — kata sandi "password":
+     *   admin@osis.test, panitia@osis.test, pengurus@osis.test
+     * Siswa & GTK tidak punya akun: lihat PemilihSeeder untuk kode pilih contoh.
      */
     public function run(): void
     {
@@ -30,8 +30,6 @@ class DatabaseSeeder extends Seeder
             ['Admin Sekolah', 'admin@osis.test', Peran::Admin, null],
             ['Panitia Pemilihan', 'panitia@osis.test', Peran::Panitia, 'VIII-A'],
             ['Pengurus OSIM', 'pengurus@osis.test', Peran::Pengurus, 'VIII-C'],
-            ['Budi Santoso', 'siswa@osis.test', Peran::Siswa, 'VII-C'],
-            ['Citra Lestari', 'siswa2@osis.test', Peran::Siswa, 'VII-E'],
         ];
 
         foreach ($akun as [$nama, $email, $peran, $kelas]) {
@@ -44,6 +42,6 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        $this->call([PemilihanSeeder::class, KampanyeSeeder::class, PublikasiSeeder::class, SosmedSeeder::class]);
+        $this->call([PemilihSeeder::class, PemilihanSeeder::class, KampanyeSeeder::class, PublikasiSeeder::class, SosmedSeeder::class]);
     }
 }

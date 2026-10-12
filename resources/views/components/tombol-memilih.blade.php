@@ -1,4 +1,4 @@
-@props(['sudahMemilih' => app(\App\Services\LayananPemilihan::class)->sudahMemilih(auth()->user())])
+@props(['sudahMemilih' => app(\App\Services\LayananPemilihan::class)->sudahMemilih(app(\App\Services\SesiPemilih::class)->pemilih())])
 
 {{-- Tombol utama menuju bilik suara; terkunci setelah siswa memilih. --}}
 @if ($sudahMemilih)

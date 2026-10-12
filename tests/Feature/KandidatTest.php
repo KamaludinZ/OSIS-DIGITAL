@@ -105,12 +105,22 @@ class KandidatTest extends TestCase
             ->assertSee('Bagaimana memastikan aspirasi benar-benar ditindaklanjuti?')
             ->assertSee('Jawaban Paslon 1')
             ->assertSee('Menunggu jawaban')
-            ->assertSee('Masuk dengan akun sekolah untuk mengirim pertanyaan.');
+            ->assertSee('Konfirmasi dulu identitasmu');
 
-        $this->actingAs(\App\Models\User::factory()->create(['name' => 'Budi Penanya']));
+        $siswa = \App\Models\Voter::factory()->create(['nama' => 'Budi Penanya', 'kelas' => 'VII-C', 'nomor_induk' => '0091234501', 'tanggal_lahir' => '2012-08-17']);
 
         Volt::test('kandidat.profil', ['id' => $id])
             ->set('tab', 'tanya-jawab')
+            ->set('nomorInduk', '0091234501')
+            ->set('tanggalLahir', '2012-08-18')
+            ->call('verifikasiPenanya')
+            ->assertHasErrors('nomorInduk')
+            ->assertSee('NISN dan tanggal lahir tidak cocok')
+            ->set('nomorInduk', '0091234501')
+            ->set('tanggalLahir', '2012-08-17')
+            ->call('verifikasiPenanya')
+            ->assertHasNoErrors()
+            ->assertSee('Bertanya sebagai')
             ->set('pertanyaanBaru', 'pendek')
             ->call('kirimPertanyaan')
             ->assertHasErrors(['pertanyaanBaru' => 'min'])
@@ -118,9 +128,39 @@ class KandidatTest extends TestCase
             ->call('kirimPertanyaan')
             ->assertHasNoErrors()
             ->assertSet('pertanyaanBaru', '')
-            ->assertSeeInOrder(['Budi Penanya', 'Kapan forum ketua kelas pertama diadakan?', 'Bagaimana memastikan aspirasi']);
+            ->assertSeeInOrder(['Budi Penanya', 'VII-C', 'Kapan forum ketua kelas pertama diadakan?', 'Bagaimana memastikan aspirasi']);
 
-        $this->assertDatabaseHas('candidate_questions', ['candidate_id' => $id, 'pertanyaan' => 'Kapan forum ketua kelas pertama diadakan?', 'jawaban' => null]);
+        $this->assertDatabaseHas('candidate_questions', ['candidate_id' => $id, 'voter_id' => $siswa->id, 'pertanyaan' => 'Kapan forum ketua kelas pertama diadakan?', 'jawaban' => null]);
+        $this->assertNotNull($siswa->fresh()->penanya_terverifikasi_pada);
+    }
+
+    public function test_gtk_bertanya_dengan_nik_dan_tanggal_lahir(): void
+    {
+        $this->seed(PemilihanSeeder::class);
+        $id = Candidate::where('nomor_urut', 2)->value('id');
+        \App\Models\Voter::factory()->gtk()->create(['nama' => 'Ibu Rahma', 'jabatan' => 'Guru Bahasa', 'nomor_induk' => '3573014101850001', 'tanggal_lahir' => '1985-01-01']);
+
+        Volt::test('kandidat.profil', ['id' => $id])
+            ->set('tab', 'tanya-jawab')
+            ->set('jenisPenanya', 'gtk')
+            ->assertSee('NIK')
+            ->set('nomorInduk', '3573014101850001')
+            ->set('tanggalLahir', '1985-01-01')
+            ->call('verifikasiPenanya')
+            ->assertHasNoErrors()
+            ->set('pertanyaanBaru', 'Bagaimana program ini mendukung kegiatan belajar?')
+            ->call('kirimPertanyaan')
+            ->assertSeeInOrder(['Ibu Rahma', 'Guru Bahasa']);
+    }
+
+    public function test_verifikasi_penanya_dibatasi(): void
+    {
+        $this->seed(PemilihanSeeder::class);
+        $komponen = Volt::test('kandidat.profil', ['id' => Candidate::first()->id])->set('tab', 'tanya-jawab');
+        foreach (range(1, 5) as $i) {
+            $komponen->set('nomorInduk', '00000000'.$i.$i)->set('tanggalLahir', '2012-01-01')->call('verifikasiPenanya');
+        }
+        $komponen->set('nomorInduk', '0000000099')->set('tanggalLahir', '2012-01-01')->call('verifikasiPenanya')->assertSee('Terlalu banyak percobaan');
     }
 
     public function test_tombol_kembali_mengikuti_halaman_asal(): void
@@ -197,8 +237,8 @@ class KandidatTest extends TestCase
 
         $this->get('/kandidat/'.$calon->id.'?tab=tanya-jawab')->assertDontSee('Pertanyaan spam yang disembunyikan');
 
-        $siswa = \App\Models\User::factory()->create(['name' => 'Dewi', 'kelas' => 'IX-A']);
-        $this->actingAs($siswa);
+        $siswa = \App\Models\Voter::factory()->create(['nama' => 'Dewi', 'kelas' => 'IX-A']);
+        session([\App\Services\SesiPemilih::KUNCI_PENANYA => $siswa->id]);
 
         $komponen = Volt::test('kandidat.profil', ['id' => $calon->id])->set('tab', 'tanya-jawab');
         foreach (range(1, 5) as $i) {
@@ -206,7 +246,7 @@ class KandidatTest extends TestCase
         }
         $komponen->set('pertanyaanBaru', 'Pertanyaan keenam yang harus ditolak')->call('kirimPertanyaan')->assertHasErrors('pertanyaanBaru');
 
-        $this->assertSame(5, $calon->questions()->where('penanya_id', $siswa->id)->count());
+        $this->assertSame(5, $calon->questions()->where('voter_id', $siswa->id)->count());
         $this->get('/kandidat/'.$calon->id.'?tab=tanya-jawab')->assertSee('Dewi · IX-A')->assertSee('Menunggu jawaban');
     }
 
@@ -214,19 +254,20 @@ class KandidatTest extends TestCase
     {
         $this->seed(PemilihanSeeder::class);
         $calon = Candidate::where('nomor_urut', 2)->first();
-        $this->actingAs($siswa = \App\Models\User::factory()->create());
+        $siswa = \App\Models\Voter::factory()->create();
+        session([\App\Services\SesiPemilih::KUNCI_PENANYA => $siswa->id]);
 
         $komponen = Volt::test('kandidat.profil', ['id' => $calon->id])->set('tab', 'tanya-jawab');
         foreach (range(1, 3) as $_) {
             $komponen->set('pertanyaanBaru', 'Kapan   kelompok belajar dimulai?')->call('kirimPertanyaan')->assertHasNoErrors();
         }
 
-        $this->assertSame(1, $calon->questions()->where('penanya_id', $siswa->id)->count());
+        $this->assertSame(1, $calon->questions()->where('voter_id', $siswa->id)->count());
         $this->assertSame(1, collect($komponen->get('tanyaJawab'))->where('pertanyaan', 'Kapan kelompok belajar dimulai?')->count());
 
         // Pertanyaan yang sama boleh dikirim lagi setelah jeda.
         $this->travel(3)->minutes();
         app(\App\Services\LayananKampanye::class)->kirimPertanyaan($siswa, $calon, 'Kapan kelompok belajar dimulai?');
-        $this->assertSame(2, $calon->questions()->where('penanya_id', $siswa->id)->count());
+        $this->assertSame(2, $calon->questions()->where('voter_id', $siswa->id)->count());
     }
 }

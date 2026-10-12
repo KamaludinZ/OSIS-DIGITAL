@@ -1,6 +1,6 @@
-{{-- Slot pas foto 3x4 bersudut tempel, seperti foto di kartu pelajar. --}}
+{{-- Slot foto bersudut tempel, seperti foto di kartu pelajar. Rasio diatur lewat class (mis. aspect-[3/4], aspect-[4/3]). --}}
 @props(['foto' => null, 'alt' => '', 'gelap' => false])
-<div {{ $attributes->class(['relative aspect-[3/4] overflow-hidden rounded-md', 'bg-hijau-700 text-hijau-200' => $gelap, 'bg-hijau-50 text-hijau-600 ring-1 ring-garis' => ! $gelap]) }}>
+<div {{ $attributes->class(['relative overflow-hidden rounded-md', 'bg-hijau-700 text-hijau-200' => $gelap, 'bg-hijau-50 text-hijau-600 ring-1 ring-garis' => ! $gelap]) }}>
     {{-- Bila berkas foto gagal dimuat, tampilkan keadaan "belum tersedia". --}}
     <div x-data="{ gagal: {{ $foto ? 'false' : 'true' }} }" class="size-full">
         @if ($foto)
@@ -11,7 +11,7 @@
                 <circle cx="24" cy="17" r="9" opacity=".55" />
                 <path d="M6 46c1.5-10 8.6-16 18-16s16.5 6 18 16z" opacity=".55" />
             </svg>
-            <span class="font-sempit text-[10px] font-bold uppercase leading-tight tracking-[0.12em]">Foto belum tersedia</span>
+            <span class="font-sempit text-[10px] font-bold uppercase leading-tight tracking-[0.12em]">Foto pasangan belum tersedia</span>
         </div>
     </div>
     {{-- Sudut tempel --}}

@@ -19,13 +19,14 @@ class SeederTest extends TestCase
         $this->seed();
         $this->seed();
 
-        $this->assertSame(5, User::count());
+        $this->assertSame(3, User::count());
+        $this->assertSame(1, \App\Models\Voter::where('kode_pilih', '246810')->count());
         $this->assertSame(3, Candidate::count());
         $this->assertSame(5, Announcement::count());
 
-        $siswa = User::where('email', 'siswa@osis.test')->first();
-        $this->assertSame(Peran::Siswa, $siswa->role);
-        $this->assertTrue(Hash::check('password', $siswa->password));
+        $panitia = User::where('email', 'panitia@osis.test')->first();
+        $this->assertTrue(Hash::check('password', $panitia->password));
+        $this->assertFalse(User::where('role', Peran::Siswa)->exists());
         $this->assertSame(Peran::Panitia, User::where('email', 'panitia@osis.test')->first()->role);
     }
 }

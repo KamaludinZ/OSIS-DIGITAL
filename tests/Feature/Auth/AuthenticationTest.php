@@ -20,7 +20,7 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => \App\Enums\Peran::Panitia]);
 
         $response = LivewireVolt::test('auth.login')
             ->set('email', $user->email)
@@ -29,9 +29,22 @@ class AuthenticationTest extends TestCase
 
         $response
             ->assertHasNoErrors()
-            ->assertRedirect(route('home', absolute: false));
+            ->assertRedirect('/admin');
 
         $this->assertAuthenticated();
+    }
+
+    public function test_login_hanya_untuk_staf(): void
+    {
+        $siswa = User::factory()->create(['role' => \App\Enums\Peran::Siswa]);
+
+        LivewireVolt::test('auth.login')
+            ->set('email', $siswa->email)
+            ->set('password', 'password')
+            ->call('login')
+            ->assertHasErrors('email');
+
+        $this->assertGuest();
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void
@@ -63,7 +76,8 @@ class AuthenticationTest extends TestCase
 
         $this->get('/login')
             ->assertOk()
-            ->assertSee('Belum punya akun atau lupa kata sandi?')
+            ->assertSee('Kembali ke Beranda')
+            ->assertSee('Belum punya akun pengurus atau lupa kata sandi?')
             ->assertDontSee('Sign up')
             ->assertDontSee('Forgot your password');
     }

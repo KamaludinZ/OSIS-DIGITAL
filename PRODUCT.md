@@ -9,7 +9,8 @@ web
 ## Users
 
 - **Siswa MTsN 2 Kota Malang (kelas 7–9, usia ±12–15 tahun)** — membaca kabar OSIM, mengenal kandidat, dan memberikan suara pemilihan ketua OSIM. Membuka dari HP sendiri (kabar, kampanye) maupun komputer lab sekolah (pemungutan suara bergiliran).
-- **Pengurus OSIM & panitia pemilihan** — menerbitkan pengumuman, agenda, program kerja; menjalankan periode pemilihan dan memantau rekap (dashboard internal terpisah).
+- **GTK (guru & tenaga kependidikan)** — ikut memilih dan boleh bertanya ke kandidat.
+- **Pengurus OSIM, panitia pemilihan, admin** — satu-satunya yang punya akun login; bekerja di Ruang OSIM (panel Filament bertema OSIM).
 
 ## Product Purpose
 
@@ -24,10 +25,12 @@ Dibuat khusus untuk OSIM MTsN 2 Kota Malang — bukan portal sekolah generik: me
 - Organisasi siswa disebut **OSIM** (Organisasi Siswa Intra Madrasah), bukan OSIS.
 - Pemungutan suara pada jam sekolah, bisa serentak di lab komputer.
 - Selama pemilihan berjalan, perolehan per kandidat dirahasiakan; hasil dibuka setelah panitia mempublikasikan.
+- **Tanpa akun untuk siswa & GTK:** memilih memakai **kode pilih 6 digit** (dibuat aplikasi dari data siswa & GTK yang diunggah panitia, dicetak sebagai kartu pemilih); bertanya ke kandidat cukup verifikasi **NISN (siswa) / NIK (GTK) + tanggal lahir**.
+- Login hanya untuk admin, pengurus, dan panitia.
 
 ## Capabilities and Constraints
 
-- Laravel 12 monolit: antarmuka siswa Blade + Livewire (Volt) + Flux + Tailwind 4; dashboard internal Filament (belum dibangun).
+- Laravel 12 monolit: antarmuka siswa Blade + Livewire (Volt) + Flux + Tailwind 4; dashboard internal "Ruang OSIM" memakai Filament 5 dengan tema OSIM (/admin).
 - Seluruh antarmuka berbahasa Indonesia.
 - Fitur publik: Beranda (pengumuman, agenda, program kerja, cari), Bilik Suara, Kandidat (profil, materi, jadwal, tanya jawab), Hasil.
 

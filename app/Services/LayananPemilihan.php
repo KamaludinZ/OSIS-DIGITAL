@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
-use App\Enums\Peran;
 use App\Exceptions\SuaraDitolak;
 use App\Enums\StatusPemilihan;
 use App\Models\Candidate;
 use App\Models\Election;
-use App\Models\User;
+use App\Models\Voter;
 use App\Models\Vote;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -87,12 +86,12 @@ class LayananPemilihan
     }
 
     /**
-     * Verifikasi kelayakan pemilih. Urutan cek: pemilihan dibuka → sudah
-     * masuk → berperan siswa → belum pernah memilih di pemilihan ini.
+     * Verifikasi kelayakan pemilih. Urutan cek: pemilihan dibuka → kode pilih
+     * sudah dimasukkan → data pemilih terverifikasi → belum pernah memilih.
      *
      * @return array{boleh: bool, alasan: ?string, pesan: ?string}
      */
-    public function kelayakan(?User $pengguna, ?Election $pemilihan = null): array
+    public function kelayakan(?Voter $pemilih, ?Election $pemilihan = null): array
     {
         $pemilihan ??= $this->pemilihanAktif();
 
@@ -102,15 +101,17 @@ class LayananPemilihan
             return $tolak('pemilihan_tertutup', 'Bilik suara sedang tidak dibuka.');
         }
 
-        if (! $pengguna) {
-            return $tolak('belum_masuk', 'Masuk dengan akun sekolah untuk menggunakan hak pilih.');
+        if (! $pemilih) {
+            return $tolak('belum_kode', 'Masukkan kode pilih 6 digit dari panitia untuk menggunakan hak pilih.');
         }
 
-        if ($pengguna->role !== Peran::Siswa) {
-            return $tolak('bukan_pemilih', 'Hanya siswa terdaftar yang dapat memilih. Akun Anda berperan sebagai '.$pengguna->role->value.'.');
+        if ($pemilih->verifikasi !== 'terverifikasi') {
+            return $tolak('bukan_pemilih', $pemilih->verifikasi === 'menunggu'
+                ? 'Data pemilihmu masih menunggu verifikasi panitia.'
+                : 'Data pemilihmu tidak lolos verifikasi. Hubungi panitia pemilihan.');
         }
 
-        if ($pengguna->sudahMemilih($pemilihan)) {
+        if ($pemilih->sudahMemilih($pemilihan)) {
             return $tolak('sudah_memilih', 'Anda sudah menggunakan hak pilih pada pemilihan ini.');
         }
 
@@ -124,9 +125,9 @@ class LayananPemilihan
      *
      * @throws SuaraDitolak
      */
-    public function kirimSuara(User $pengguna, Election $pemilihan, int $kandidatId): Vote
+    public function kirimSuara(Voter $pemilih, Election $pemilihan, int $kandidatId): Vote
     {
-        $kelayakan = $this->kelayakan($pengguna, $pemilihan);
+        $kelayakan = $this->kelayakan($pemilih, $pemilihan);
 
         if (! $kelayakan['boleh']) {
             throw new SuaraDitolak($kelayakan['pesan'], $kelayakan['alasan']);
@@ -141,7 +142,7 @@ class LayananPemilihan
         try {
             $suara = DB::transaction(fn () => Vote::create([
                 'election_id' => $pemilihan->id,
-                'user_id' => $pengguna->id,
+                'voter_id' => $pemilih->id,
                 'candidate_id' => $calon->id,
                 'kode_bukti' => $this->buatKodeBukti(),
             ]));
@@ -156,18 +157,18 @@ class LayananPemilihan
     }
 
     /** Apakah pengguna sudah memilih di pemilihan aktif. */
-    public function sudahMemilih(?User $pengguna, ?Election $pemilihan = null): bool
+    public function sudahMemilih(?Voter $pemilih, ?Election $pemilihan = null): bool
     {
         $pemilihan ??= $this->pemilihanAktif();
 
-        return $pengguna && $pemilihan && $pengguna->sudahMemilih($pemilihan);
+        return $pemilih && $pemilihan && $pemilih->sudahMemilih($pemilihan);
     }
 
     /** Bukti suara milik pengguna (tanpa kandidat yang dipilih). */
-    public function buktiSuara(User $pengguna, ?Election $pemilihan = null): ?array
+    public function buktiSuara(Voter $pemilih, ?Election $pemilihan = null): ?array
     {
         $pemilihan ??= $this->pemilihanAktif();
-        $suara = $pemilihan ? $pengguna->votes()->where('election_id', $pemilihan->id)->first() : null;
+        $suara = $pemilihan ? $pemilih->votes()->where('election_id', $pemilihan->id)->first() : null;
 
         return $suara ? [
             'kode' => $suara->kode_bukti,

@@ -12,7 +12,7 @@ class CandidateQuestion extends Model
     /** @use HasFactory<\Database\Factories\CandidateQuestionFactory> */
     use HasFactory;
 
-    protected $fillable = ['candidate_id', 'penanya_id', 'pertanyaan', 'jawaban', 'dijawab_pada', 'ditampilkan'];
+    protected $fillable = ['candidate_id', 'penanya_id', 'voter_id', 'pertanyaan', 'jawaban', 'dijawab_pada', 'ditampilkan'];
 
     protected function casts(): array
     {
@@ -22,6 +22,11 @@ class CandidateQuestion extends Model
     public function candidate(): BelongsTo
     {
         return $this->belongsTo(Candidate::class);
+    }
+
+    public function voter(): BelongsTo
+    {
+        return $this->belongsTo(Voter::class);
     }
 
     public function penanya(): BelongsTo

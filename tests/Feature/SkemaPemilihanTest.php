@@ -20,12 +20,12 @@ class SkemaPemilihanTest extends TestCase
     {
         $pemilihan = Election::factory()->create();
         $calon = Candidate::factory()->for($pemilihan)->create(['nomor_urut' => 1]);
-        $siswa = User::factory()->create();
+        $siswa = \App\Models\Voter::factory()->create();
 
-        Vote::create(['election_id' => $pemilihan->id, 'user_id' => $siswa->id, 'candidate_id' => $calon->id, 'kode_bukti' => 'OSIM-AAAA-BBBB']);
+        Vote::create(['election_id' => $pemilihan->id, 'voter_id' => $siswa->id, 'candidate_id' => $calon->id, 'kode_bukti' => 'OSIM-AAAA-BBBB']);
 
         $this->assertSame(StatusPemilihan::Berjalan, $pemilihan->status);
-        $this->assertSame(Peran::Siswa, $siswa->role);
+        $this->assertSame(\App\Enums\JenisPemilih::Siswa, $siswa->jenis);
         $this->assertIsArray($calon->fresh()->misi);
         $this->assertSame(1, $pemilihan->votes()->count());
         $this->assertTrue($siswa->sudahMemilih($pemilihan));
@@ -36,12 +36,12 @@ class SkemaPemilihanTest extends TestCase
     {
         $pemilihan = Election::factory()->create();
         [$a, $b] = Candidate::factory()->for($pemilihan)->count(2)->create();
-        $siswa = User::factory()->create();
+        $siswa = \App\Models\Voter::factory()->create();
 
-        Vote::create(['election_id' => $pemilihan->id, 'user_id' => $siswa->id, 'candidate_id' => $a->id, 'kode_bukti' => 'OSIM-1111-1111']);
+        Vote::create(['election_id' => $pemilihan->id, 'voter_id' => $siswa->id, 'candidate_id' => $a->id, 'kode_bukti' => 'OSIM-1111-1111']);
 
         $this->expectException(QueryException::class);
-        Vote::create(['election_id' => $pemilihan->id, 'user_id' => $siswa->id, 'candidate_id' => $b->id, 'kode_bukti' => 'OSIM-2222-2222']);
+        Vote::create(['election_id' => $pemilihan->id, 'voter_id' => $siswa->id, 'candidate_id' => $b->id, 'kode_bukti' => 'OSIM-2222-2222']);
     }
 
     public function test_nomor_urut_unik_per_pemilihan(): void
@@ -77,5 +77,18 @@ class SkemaPemilihanTest extends TestCase
 
         $this->travel(2)->hours();
         $this->assertSame('selesai', $layanan->ringkasanPemilihan()['status']);
+    }
+
+    public function test_kode_pilih_6_digit_unik_dan_gtk(): void
+    {
+        $kode = collect(range(1, 30))->map(fn () => \App\Models\Voter::factory()->create()->beriKode());
+
+        $this->assertTrue($kode->every(fn ($k) => preg_match('/^\d{6}$/', $k) === 1));
+        $this->assertSame(30, $kode->unique()->count());
+
+        $gtk = \App\Models\Voter::factory()->gtk()->create(['jabatan' => 'Guru IPA']);
+        $this->assertSame('NIK', $gtk->jenis->labelNomorInduk());
+        $this->assertSame('Guru IPA', $gtk->keterangan());
+        $this->assertArrayNotHasKey('kode_pilih', $gtk->toArray());
     }
 }

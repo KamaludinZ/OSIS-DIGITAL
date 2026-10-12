@@ -19,8 +19,8 @@ class AgregasiSuaraTest extends TestCase
 
     private function suara(Election $e, Candidate $c, int $jumlah): void
     {
-        User::factory()->count($jumlah)->create()->each(fn ($u) => Vote::create([
-            'election_id' => $e->id, 'user_id' => $u->id, 'candidate_id' => $c->id, 'kode_bukti' => 'OSIM-'.Str::upper(Str::random(9)),
+        \App\Models\Voter::factory()->count($jumlah)->create()->each(fn ($u) => Vote::create([
+            'election_id' => $e->id, 'voter_id' => $u->id, 'candidate_id' => $c->id, 'kode_bukti' => 'OSIM-'.Str::upper(Str::random(9)),
         ]));
     }
 
@@ -50,7 +50,8 @@ class AgregasiSuaraTest extends TestCase
         $e = Election::factory()->create(['hasil_publik' => true]);
         $c = Candidate::factory()->for($e)->create(['nomor_urut' => 1]);
         $this->suara($e, $c, 6);
-        User::factory()->count(4)->create();
+        \App\Models\Voter::factory()->count(4)->create();
+        \App\Models\Voter::factory()->create(['verifikasi' => 'ditolak']);
         User::factory()->create(['role' => Peran::Panitia]);
 
         DB::enableQueryLog();
@@ -58,7 +59,7 @@ class AgregasiSuaraTest extends TestCase
         $jumlahQuery = count(DB::getQueryLog());
 
         $this->assertSame(6, $rekap['suara_masuk']);
-        $this->assertSame(10, $rekap['total_pemilih']); // 6 pemilih + 4 siswa, panitia tidak dihitung
+        $this->assertSame(10, $rekap['total_pemilih']); // 6 pemilih + 4 belum memilih; ditolak & akun panitia tidak dihitung
         $this->assertTrue($rekap['hasil_publik']);
         $this->assertSame('berjalan', $rekap['status']);
         $this->assertLessThanOrEqual(3, $jumlahQuery);

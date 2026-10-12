@@ -24,11 +24,11 @@ class HasilTest extends TestCase
         $e = Election::firstOrFail();
         foreach ([1 => 3, 2 => 5, 3 => 2] as $nomor => $jumlah) {
             $calon = Candidate::where('nomor_urut', $nomor)->first();
-            User::factory()->count($jumlah)->create()->each(fn ($u) => Vote::create([
-                'election_id' => $e->id, 'user_id' => $u->id, 'candidate_id' => $calon->id, 'kode_bukti' => 'OSIM-'.Str::upper(Str::random(9)),
+            \App\Models\Voter::factory()->count($jumlah)->create()->each(fn ($u) => Vote::create([
+                'election_id' => $e->id, 'voter_id' => $u->id, 'candidate_id' => $calon->id, 'kode_bukti' => 'OSIM-'.Str::upper(Str::random(9)),
             ]));
         }
-        User::factory()->count(2)->create();
+        \App\Models\Voter::factory()->count(2)->create();
 
         return $e;
     }
@@ -93,12 +93,12 @@ class HasilTest extends TestCase
         $komponen = Volt::test('hasil')->assertSet('rekap.suara_masuk', 10);
 
         // Suara yang masuk lewat bilik suara langsung membuang cache rekap.
-        $siswa = User::factory()->create();
-        app(\App\Services\LayananPemilihan::class)->kirimSuara($siswa, $e, Candidate::first()->id);
+        $pemilih = \App\Models\Voter::factory()->create();
+        app(\App\Services\LayananPemilihan::class)->kirimSuara($pemilih, $e, Candidate::first()->id);
         $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 11);
 
         // Tanpa pembuangan cache, angka bertahan sampai cache kedaluwarsa.
-        Vote::create(['election_id' => $e->id, 'user_id' => User::factory()->create()->id, 'candidate_id' => Candidate::first()->id, 'kode_bukti' => 'OSIM-LANGSUNG-1']);
+        Vote::create(['election_id' => $e->id, 'voter_id' => \App\Models\Voter::factory()->create()->id, 'candidate_id' => Candidate::first()->id, 'kode_bukti' => 'OSIM-LANGSUNG-1']);
         $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 11);
         $this->travel(\App\Services\LayananHasil::CACHE_DETIK + 1)->seconds();
         $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 12);
@@ -181,7 +181,7 @@ class HasilTest extends TestCase
 
         // Paslon 1 menyusul jadi 5 suara -> seri.
         $satu = Candidate::where('nomor_urut', 1)->first();
-        User::factory()->count(2)->create()->each(fn ($u) => Vote::create(['election_id' => $e->id, 'user_id' => $u->id, 'candidate_id' => $satu->id, 'kode_bukti' => 'OSIM-'.Str::upper(Str::random(9))]));
+        \App\Models\Voter::factory()->count(2)->create()->each(fn ($u) => Vote::create(['election_id' => $e->id, 'voter_id' => $u->id, 'candidate_id' => $satu->id, 'kode_bukti' => 'OSIM-'.Str::upper(Str::random(9))]));
         $this->assertSame('seri', $layanan->pemenang($e)['status']);
 
         $kosong = Election::factory()->create();

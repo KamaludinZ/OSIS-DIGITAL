@@ -24,7 +24,7 @@ class SkemaKampanyeTest extends TestCase
         $this->assertSame(TipeMateri::Poster, $calon->materials->first()->tipe);
         $this->assertSame(['Aula Utama', 'Masjid Sekolah', 'Kantin Sekolah'], $calon->schedules->pluck('tempat')->all());
         $this->assertSame(2, $calon->questions()->count());
-        $this->assertSame('Citra Lestari', $calon->questions()->whereNotNull('jawaban')->first()->penanya->name);
+        $this->assertSame('Citra Lestari', $calon->questions()->whereNotNull('jawaban')->first()->voter->nama);
     }
 
     public function test_hapus_kandidat_ikut_menghapus_data_kampanye(): void

@@ -3,6 +3,7 @@
 use App\Exceptions\SuaraDitolak;
 use App\Models\Election;
 use App\Services\LayananPemilihan;
+use App\Services\SesiPemilih;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -18,20 +19,40 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
         $this->pemilihan = $layanan->ringkasanPemilihan();
         $this->kandidat = $layanan->daftarKandidat();
         $this->panduan = ! session('panduan_dilewati', false);
-
-        if (auth()->guest()) {
-            // Setelah masuk, kembalikan siswa ke bilik suara.
-            session(['url.intended' => route('bilik-suara')]);
-        }
     }
 
-    /** Hasil verifikasi kelayakan pemilih untuk pengguna saat ini. */
+    /** Kode pilih 6 digit yang diketik pemilih. */
+    public string $kode = '';
+
+    public function masukKode(SesiPemilih $sesi): void
+    {
+        $this->resetErrorBag('kode');
+        $sesi->masukDenganKode($this->kode);
+        $this->reset('kode', 'dipilih');
+        unset($this->kelayakan, $this->pemilih);
+    }
+
+    public function keluar(SesiPemilih $sesi): void
+    {
+        $sesi->keluar();
+        $this->reset('dipilih', 'konfirmasi');
+        unset($this->kelayakan, $this->pemilih);
+    }
+
+    /** Pemilih yang sedang memakai bilik suara (dari kode pilih). */
+    #[Computed]
+    public function pemilih(): ?\App\Models\Voter
+    {
+        return app(SesiPemilih::class)->pemilih();
+    }
+
+    /** Hasil verifikasi kelayakan pemilih saat ini. */
     #[Computed]
     public function kelayakan(): array
     {
         $pemilihan = $this->pemilihan ? Election::find($this->pemilihan['id']) : null;
 
-        return app(LayananPemilihan::class)->kelayakan(auth()->user(), $pemilihan);
+        return app(LayananPemilihan::class)->kelayakan($this->pemilih, $pemilihan);
     }
 
     public function bolehMemilih(): bool
@@ -112,7 +133,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
 
         try {
             $suara = app(LayananPemilihan::class)->kirimSuara(
-                auth()->user(),
+                $this->pemilih,
                 Election::findOrFail($this->pemilihan['id']),
                 $this->dipilih,
             );
@@ -285,8 +306,42 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                     </div>
                 </section>
             @else
+                {{-- Masuk bilik suara dengan kode pilih --}}
+                @if ($this->kelayakan['alasan'] === 'belum_kode')
+                    <section aria-labelledby="judul-kode" class="overflow-hidden rounded-[14px] bg-white shadow-[0_18px_40px_-18px_rgb(4_41_26/0.5)] ring-1 ring-garis">
+                        <div class="flex items-center justify-between gap-3 bg-hijau-100 px-5 py-2.5">
+                            <x-osim.label class="text-hijau-800">Kartu Pemilih</x-osim.label>
+                            <img src="/images/brand/logo-mtsn2.png" alt="" class="size-6" />
+                        </div>
+                        <form wire:submit="masukKode" class="grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
+                            <div>
+                                <h2 id="judul-kode" class="font-display text-2xl font-black text-tinta">Masukkan kode pilihmu</h2>
+                                <p class="mt-1 text-tinta-2">6 angka yang tertera di kartu pemilih dari panitia. Tidak perlu akun atau kata sandi.</p>
+                                <label for="kode-pilih" class="sr-only">Kode pilih 6 digit</label>
+                                <input id="kode-pilih" wire:model="kode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" autofocus
+                                       placeholder="••••••"
+                                       x-on:input="$el.value = $el.value.replace(/\D/g, '').slice(0, 6)"
+                                       @class(['font-sempit angka mt-4 h-16 w-full max-w-xs rounded-xl border-2 bg-hijau-50/50 px-4 text-center text-4xl font-black tracking-[0.4em] text-hijau-900 placeholder:text-hijau-200 focus:bg-white focus:outline-none', 'border-cap' => $errors->has('kode'), 'border-garis focus:border-hijau-600' => ! $errors->has('kode')]) />
+                                @error('kode')
+                                    <p class="mt-2 flex items-center gap-1.5 text-sm font-bold text-cap" role="alert"><flux:icon.exclamation-circle variant="micro" /> {{ $message }}</p>
+                                @enderror
+                            </div>
+                            <button type="submit" wire:loading.attr="disabled" wire:target="masukKode"
+                                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-emas-400 px-6 py-4 text-lg font-black text-hijau-950 shadow-[0_4px_10px_-3px_var(--color-emas-500)] hover:bg-emas-300 disabled:opacity-60">
+                                Masuk bilik suara <flux:icon.arrow-right variant="mini" />
+                            </button>
+                        </form>
+                    </section>
+                @elseif ($this->pemilih)
+                    {{-- Identitas pemilih yang sedang memakai bilik --}}
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-[14px] bg-white px-5 py-3 shadow-[0_18px_40px_-18px_rgb(4_41_26/0.5)] ring-1 ring-garis">
+                        <p class="text-tinta"><span class="text-tinta-2">Memilih sebagai</span> <strong>{{ $this->pemilih->nama }}</strong> <span class="text-tinta-2">· {{ $this->pemilih->keterangan() }}</span></p>
+                        <button type="button" wire:click="keluar" class="text-sm font-bold text-hijau-700 hover:underline">Bukan kamu? Keluar</button>
+                    </div>
+                @endif
+
                 {{-- Hasil verifikasi kelayakan pemilih --}}
-                @unless ($this->kelayakan['boleh'])
+                @unless ($this->kelayakan['boleh'] || $this->kelayakan['alasan'] === 'belum_kode')
                     @php($sudah = $this->kelayakan['alasan'] === 'sudah_memilih')
                     <div role="status" @class([
                         'flex flex-col gap-3 rounded-[14px] p-5 shadow-[0_18px_40px_-18px_rgb(4_41_26/0.5)] sm:flex-row sm:items-center sm:justify-between',
@@ -297,14 +352,9 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                             <flux:icon :name="$sudah ? 'check-badge' : 'lock-closed'" variant="mini" class="mt-0.5 shrink-0 {{ $sudah ? 'text-hijau-600' : '' }}" />
                             {{ $this->kelayakan['pesan'] }}
                         </p>
-                        @switch($this->kelayakan['alasan'])
-                            @case('belum_masuk')
-                                <a href="{{ route('login') }}" wire:navigate class="shrink-0 rounded-xl bg-hijau-600 px-5 py-2.5 text-center font-bold text-white hover:bg-hijau-700">Masuk</a>
-                                @break
-                            @case('sudah_memilih')
-                                <a href="{{ route('bilik-suara.bukti') }}" wire:navigate class="shrink-0 rounded-xl bg-hijau-600 px-5 py-2.5 text-center font-bold text-white hover:bg-hijau-700">Lihat bukti</a>
-                                @break
-                        @endswitch
+                        @if ($sudah)
+                            <a href="{{ route('bilik-suara.bukti') }}" wire:navigate class="shrink-0 rounded-xl bg-hijau-600 px-5 py-2.5 text-center font-bold text-white hover:bg-hijau-700">Lihat bukti</a>
+                        @endif
                     </div>
                 @endunless
 
@@ -312,7 +362,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                 <section aria-labelledby="judul-kandidat" @class(['pt-0' => true])>
                     <div class="flex items-end justify-between gap-3">
                         <x-osim.tab id="judul-kandidat" warna="putih" ikon="user-group" class="whitespace-nowrap">Pasangan Calon ({{ count($kandidat) }})</x-osim.tab>
-                        <button type="button" wire:click="bukaPanduan" class="mb-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-bold text-white hover:bg-white/10 lg:text-hijau-50">
+                        <button type="button" wire:click="bukaPanduan" class="mb-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-bold text-hijau-700 hover:bg-hijau-100">
                             <flux:icon.question-mark-circle variant="micro" /> <span class="sm:hidden">Panduan</span><span class="hidden sm:inline">Lihat panduan cara memilih</span>
                         </button>
                     </div>
@@ -387,7 +437,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                         <p class="mt-1 text-tinta-2">Apakah Anda yakin memilih <strong class="text-tinta">nomor {{ $calon['nomor_urut'] }}</strong>?</p>
 
                         <div class="mt-5 flex items-center gap-4">
-                            <x-osim.pasfoto class="w-16 shrink-0" :foto="$calon['foto_url']" alt="" />
+                            <x-osim.pasfoto class="aspect-[4/3] w-28 shrink-0" :foto="$calon['foto_url']" alt="" />
                             <span class="font-display angka flex h-24 w-20 shrink-0 items-center justify-center rounded-xl bg-hijau-50 text-7xl font-black text-hijau-700 ring-1 ring-garis">{{ $calon['nomor_urut'] }}</span>
                             <div class="min-w-0">
                                 <div class="font-bold leading-tight text-tinta">{{ $calon['nama_ketua'] }}</div>

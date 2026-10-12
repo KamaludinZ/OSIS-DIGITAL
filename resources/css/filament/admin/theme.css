@@ -1,0 +1,107 @@
+/* Font di-host sendiri, sama dengan halaman siswa. */
+@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource-variable/figtree/wght.css';
+
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+/* Token dunia "Kartu Peserta Madrasah" (lihat DESIGN.md) */
+@theme {
+    --font-display: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-teks: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
+    --color-hijau-50: #f2f8f3;
+    --color-hijau-100: #e3f1e6;
+    --color-hijau-200: #c9e8d2;
+    --color-hijau-300: #9fd3ae;
+    --color-hijau-600: #0f7a3d;
+    --color-hijau-700: #0c6633;
+    --color-hijau-900: #063d22;
+    --color-hijau-950: #04291a;
+    --color-emas-300: #ffe066;
+    --color-emas-400: #f2c200;
+    --color-emas-500: #d9a800;
+    --color-garis: #d3e4d7;
+    --color-tinta: #14261b;
+    --color-tinta-2: #3d5c48;
+}
+
+.fi-body {
+    font-family: var(--font-teks);
+    background-color: var(--color-hijau-50);
+    color: var(--color-tinta);
+}
+
+.fi-body ::selection {
+    background: var(--color-emas-300);
+    color: var(--color-hijau-950);
+}
+
+/* Merek */
+.osim-merek-nama {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 112;
+    font-weight: 900;
+    font-size: 1.125rem;
+    color: var(--color-tinta);
+}
+.osim-merek-sub {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-tinta-2);
+}
+
+/* Sidebar = pita hijau madrasah dengan cetakan gelombang */
+.fi-sidebar {
+    background-color: var(--color-hijau-600);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='48' viewBox='0 0 160 48'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.08' stroke-width='1'%3E%3Cpath d='M0 12c20-10 40-10 60 0s40 10 60 0 40-10 60 0'/%3E%3Cpath d='M0 24c20-10 40-10 60 0s40 10 60 0 40-10 60 0'/%3E%3Cpath d='M0 36c20-10 40-10 60 0s40 10 60 0 40-10 60 0'/%3E%3C/g%3E%3C/svg%3E");
+}
+.fi-sidebar .osim-merek-nama { color: #fff; }
+.fi-sidebar .osim-merek-sub { color: var(--color-hijau-100); }
+.fi-sidebar-header { background: transparent; box-shadow: none; border-color: rgb(255 255 255 / 0.1); }
+.fi-sidebar .fi-icon-btn, .fi-sidebar-header .fi-icon { color: var(--color-hijau-100); }
+.fi-sidebar-group-label { color: var(--color-hijau-200); font-family: var(--font-display); font-variation-settings: 'wdth' 75; text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px; font-weight: 700; }
+.fi-sidebar-group-btn .fi-icon { color: var(--color-hijau-200); }
+.fi-sidebar-item-label { color: #fff; font-weight: 600; }
+.fi-sidebar-item-btn > .fi-icon { color: var(--color-hijau-200); }
+.fi-sidebar-item:not(.fi-active) > .fi-sidebar-item-btn:hover,
+.fi-sidebar-item:not(.fi-active) > .fi-sidebar-item-btn:focus-visible { background-color: rgb(255 255 255 / 0.1); }
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn { background-color: var(--color-emas-400); box-shadow: 0 4px 10px -3px rgb(4 41 26 / 0.45); }
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-sidebar-item-label,
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-icon { color: var(--color-hijau-950); }
+.fi-sidebar-item-grouped-border-part { background-color: rgb(255 255 255 / 0.25); }
+.fi-sidebar-footer { border-color: rgb(255 255 255 / 0.1); }
+
+/* Topbar putih bersih */
+.fi-topbar { box-shadow: none; border-bottom: 1px solid var(--color-garis); }
+
+/* Judul halaman memakai suara display dunia OSIM */
+.fi-header-heading {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 112;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+
+/* Kartu & tabel: sudut 14px, garis hijau muda */
+.fi-section:not(.fi-section-not-contained), .fi-ta-ctn, .fi-wi-stats-overview-stat {
+    border-radius: 14px;
+    box-shadow: 0 1px 0 var(--color-garis), 0 10px 24px -16px rgb(4 41 26 / 0.35);
+    --tw-ring-color: var(--color-garis);
+}
+.fi-section-header-heading, .fi-ta-header-heading {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 100;
+    font-weight: 800;
+}
+.fi-wi-stats-overview-stat-value { font-family: var(--font-display); font-weight: 900; font-variant-numeric: tabular-nums; }
+
+/* Tombol utama = emas, sama dengan aksi utama di halaman siswa */
+.fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-btn-link) {
+    background-color: var(--color-emas-400);
+    color: var(--color-hijau-950);
+    box-shadow: 0 4px 10px -3px var(--color-emas-500);
+}
+.fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-btn-link):hover { background-color: var(--color-emas-300); }
+.fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-btn-link) .fi-icon { color: var(--color-hijau-950); }

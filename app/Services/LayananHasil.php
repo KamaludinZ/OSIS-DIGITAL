@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Enums\Peran;
 use App\Enums\StatusPemilihan;
 use Illuminate\Validation\ValidationException;
 use App\Models\Election;
-use App\Models\User;
+use App\Models\Voter;
 use App\Models\Vote;
 use Illuminate\Support\Facades\Cache;
 
@@ -46,13 +45,10 @@ class LayananHasil
             ->all();
     }
 
-    /**
-     * Jumlah pemilih berhak. Sampai modul Data Pemilih (fase 3) ada,
-     * pemilih = semua akun berperan siswa.
-     */
+    /** Jumlah pemilih berhak: siswa & GTK yang datanya terverifikasi. */
     public function jumlahPemilih(): int
     {
-        return User::where('role', Peran::Siswa)->count();
+        return Voter::terverifikasi()->count();
     }
 
     /** Lama cache rekap (detik). Banyak siswa bisa membuka Hasil bersamaan. */

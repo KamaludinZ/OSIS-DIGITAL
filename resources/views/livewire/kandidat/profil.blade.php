@@ -56,15 +56,39 @@ new #[Layout('components.layouts.siswa')] class extends Component {
             $this->dari = 'kandidat';
         }
 
-        if (auth()->guest()) {
-            // Setelah masuk (mis. untuk bertanya), kembali ke profil ini.
-            session(['url.intended' => route('kandidat.profil', ['id' => $id, 'tab' => $this->tab === 'profil' ? null : $this->tab])]);
-        }
+
+    }
+
+    /** Verifikasi identitas penanya (tanpa akun): NISN/NIK + tanggal lahir. */
+    public string $jenisPenanya = 'siswa';
+
+    public string $nomorInduk = '';
+
+    public string $tanggalLahir = '';
+
+    /** Penanya: pemilih terverifikasi di sesi ini, atau akun pengurus/panitia/admin. */
+    public function penanya(): \App\Models\Voter|\App\Models\User|null
+    {
+        return app(\App\Services\SesiPemilih::class)->penanya() ?? auth()->user();
+    }
+
+    public function verifikasiPenanya(): void
+    {
+        $this->validate([
+            'jenisPenanya' => ['required', 'in:siswa,gtk'],
+            'nomorInduk' => ['required', 'string', 'max:20'],
+            'tanggalLahir' => ['required', 'date'],
+        ], [], ['nomorInduk' => $this->jenisPenanya === 'gtk' ? 'NIK' : 'NISN', 'tanggalLahir' => 'Tanggal lahir']);
+
+        app(\App\Services\SesiPemilih::class)->verifikasiPenanya($this->jenisPenanya, $this->nomorInduk, $this->tanggalLahir, 'nomorInduk');
+        $this->reset('nomorInduk', 'tanggalLahir');
     }
 
     public function kirimPertanyaan(): void
     {
-        if (auth()->guest()) {
+        $penanya = $this->penanya();
+
+        if (! $penanya) {
             return;
         }
 
@@ -78,7 +102,7 @@ new #[Layout('components.layouts.siswa')] class extends Component {
         );
 
         $baru = app(\App\Services\LayananKampanye::class)->kirimPertanyaan(
-            auth()->user(),
+            $penanya,
             \App\Models\Candidate::findOrFail($this->calon['id']),
             $this->pertanyaanBaru,
         );
@@ -124,7 +148,7 @@ new #[Layout('components.layouts.siswa')] class extends Component {
         <div class="mt-4 grid items-end gap-6 pb-8 md:grid-cols-[auto_1fr]">
             <div class="flex items-end gap-4">
                 <span class="font-display angka text-[7.5rem] font-black leading-[0.8] text-emas-300 sm:text-[9rem]" aria-hidden="true">{{ $calon['nomor_urut'] }}</span>
-                <x-osim.pasfoto gelap class="w-28 ring-4 ring-white/15 sm:w-36" :foto="$calon['foto_url']" alt="Foto {{ $calon['nama_ketua'] }} dan {{ $calon['nama_wakil'] }}" />
+                <x-osim.pasfoto gelap class="aspect-[4/3] w-44 ring-4 ring-white/15 sm:w-60" :foto="$calon['foto_url']" alt="Foto {{ $calon['nama_ketua'] }} dan {{ $calon['nama_wakil'] }}" />
             </div>
             <div class="min-w-0">
                 <h1 class="font-display text-3xl font-black leading-[1.02] sm:text-5xl"><span class="sr-only">Pasangan Calon {{ $calon['nomor_urut'] }}: </span>{{ $calon['nama_ketua'] }} &amp; {{ $calon['nama_wakil'] }}</h1>
@@ -192,7 +216,8 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                 <h2 id="judul-tanya" class="font-display text-2xl font-black text-tinta">Tanya Jawab</h2>
 
                 <div class="rounded-[14px] bg-white p-5 ring-1 ring-garis">
-                    @auth
+                    @if ($penanya = $this->penanya())
+                        <p class="mb-3 text-sm text-tinta-2">Bertanya sebagai <strong class="text-tinta">{{ $penanya instanceof \App\Models\Voter ? $penanya->nama.' · '.$penanya->keterangan() : $penanya->name }}</strong></p>
                         <form wire:submit="kirimPertanyaan" class="flex flex-col gap-3">
                             <label for="pertanyaan-baru" class="font-bold text-tinta">Tanyakan sesuatu kepada Paslon {{ $calon['nomor_urut'] }}</label>
                             <textarea id="pertanyaan-baru" wire:model="pertanyaanBaru" rows="3" maxlength="500"
@@ -213,11 +238,39 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                             @endif
                         </form>
                     @else
-                        <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <p class="text-tinta-2">Masuk dengan akun sekolah untuk mengirim pertanyaan.</p>
-                            <a href="{{ route('login') }}" wire:navigate class="rounded-xl bg-hijau-600 px-5 py-2.5 font-bold text-white hover:bg-hijau-700">Masuk</a>
-                        </div>
-                    @endauth
+                        <form wire:submit="verifikasiPenanya" class="flex flex-col gap-4">
+                            <div>
+                                <h3 class="font-bold text-tinta">Konfirmasi dulu identitasmu</h3>
+                                <p class="text-sm text-tinta-2">Tidak perlu akun. Cukup cocokkan dengan data madrasah.</p>
+                            </div>
+                            <fieldset class="grid grid-cols-2 gap-2">
+                                <legend class="sr-only">Saya adalah</legend>
+                                @foreach (['siswa' => 'Siswa', 'gtk' => 'Guru / Tendik (GTK)'] as $nilai => $label)
+                                    <label @class(['cursor-pointer rounded-xl px-3 py-2.5 text-center text-sm font-bold ring-1', 'bg-hijau-600 text-white ring-hijau-600' => $jenisPenanya === $nilai, 'bg-white text-hijau-800 ring-garis hover:bg-hijau-50' => $jenisPenanya !== $nilai])>
+                                        <input type="radio" wire:model.live="jenisPenanya" value="{{ $nilai }}" class="sr-only" /> {{ $label }}
+                                    </label>
+                                @endforeach
+                            </fieldset>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label for="nomor-induk" class="text-sm font-bold text-tinta">{{ $jenisPenanya === 'gtk' ? 'NIK' : 'NISN' }}</label>
+                                    <input id="nomor-induk" wire:model="nomorInduk" type="text" inputmode="numeric" autocomplete="off" maxlength="20"
+                                           class="mt-1 h-11 w-full rounded-xl border-2 border-garis bg-hijau-50/50 px-3 text-tinta focus:border-hijau-600 focus:bg-white focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label for="tanggal-lahir" class="text-sm font-bold text-tinta">Tanggal lahir</label>
+                                    <input id="tanggal-lahir" wire:model="tanggalLahir" type="date"
+                                           class="mt-1 h-11 w-full rounded-xl border-2 border-garis bg-hijau-50/50 px-3 text-tinta focus:border-hijau-600 focus:bg-white focus:outline-none" />
+                                </div>
+                            </div>
+                            @error('nomorInduk') <p class="flex items-center gap-1.5 text-sm font-bold text-cap" role="alert"><flux:icon.exclamation-circle variant="micro" /> {{ $message }}</p> @enderror
+                            @error('tanggalLahir') <p class="text-sm font-bold text-cap" role="alert">{{ $message }}</p> @enderror
+                            <button type="submit" wire:loading.attr="disabled" wire:target="verifikasiPenanya"
+                                    class="inline-flex w-fit items-center gap-2 rounded-xl bg-hijau-600 px-5 py-2.5 font-bold text-white hover:bg-hijau-700 disabled:opacity-60">
+                                <flux:icon.shield-check variant="micro" /> Konfirmasi &amp; mulai bertanya
+                            </button>
+                        </form>
+                    @endif
                 </div>
 
                 @forelse ($tanyaJawab as $item)

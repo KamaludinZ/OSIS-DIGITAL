@@ -4,13 +4,14 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Peran;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
-class User extends Authenticatable // implements MustVerifyEmail
+class User extends Authenticatable implements FilamentUser // implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -63,13 +64,9 @@ class User extends Authenticatable // implements MustVerifyEmail
             ->implode('');
     }
 
-    public function votes(): HasMany
+    /** Ruang OSIM (panel Filament) hanya untuk pengurus, panitia, dan admin. */
+    public function canAccessPanel(Panel $panel): bool
     {
-        return $this->hasMany(Vote::class);
-    }
-
-    public function sudahMemilih(Election $pemilihan): bool
-    {
-        return $this->votes()->where('election_id', $pemilihan->id)->exists();
+        return in_array($this->role, [Peran::Pengurus, Peran::Panitia, Peran::Admin], true);
     }
 }

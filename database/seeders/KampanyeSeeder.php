@@ -25,7 +25,10 @@ class KampanyeSeeder extends Seeder
             3 => [[1, '09:00', 'Taman Sekolah'], [-1, '14:00', 'Ruang Kesenian'], [5, '10:30', 'Laboratorium IPA']],
         ];
 
-        $penanya = User::firstOrCreate(['email' => 'siswa2@osis.test'], ['name' => 'Citra Lestari', 'password' => 'password', 'kelas' => 'VII-E']);
+        $penanya = \App\Models\Voter::firstOrCreate(
+            ['jenis' => 'siswa', 'nomor_induk' => '0091234502'],
+            ['nama' => 'Citra Lestari', 'kelas' => 'VII-E', 'tanggal_lahir' => '2012-03-09'],
+        );
 
         // [pertanyaan, jawaban|null, hari lalu]
         $tanya = [
@@ -70,7 +73,7 @@ class KampanyeSeeder extends Seeder
             $calon->questions()->delete();
             foreach ($tanya[$n] ?? [] as [$pertanyaan, $jawaban, $hariLalu]) {
                 $q = $calon->questions()->create([
-                    'penanya_id' => $penanya->id,
+                    'voter_id' => $penanya->id,
                     'pertanyaan' => $pertanyaan,
                     'jawaban' => $jawaban,
                     'dijawab_pada' => $jawaban ? now()->subDays($hariLalu)->addHours(3) : null,

@@ -21,9 +21,9 @@
 
             <div class="mt-10 lg:mt-auto lg:mb-auto">
                 <p class="font-display max-w-md text-4xl font-black leading-[0.98] sm:text-5xl">
-                    Satu akun,<br><span class="text-emas-300">satu suara.</span>
+                    Ruang kerja<br><span class="text-emas-300">pengurus OSIM.</span>
                 </p>
-                <p class="mt-4 max-w-md text-hijau-50">Masuk untuk memilih ketua OSIM, bertanya kepada kandidat, dan mengikuti kabar madrasah.</p>
+                <p class="mt-4 max-w-md text-hijau-50">Kelola kabar, kegiatan, data pemilih, dan pemilihan ketua OSIM.</p>
             </div>
 
             <p class="hidden text-sm text-hijau-100 lg:block"><em>Milenial Religius, Berbudaya Lingkungan</em></p>
@@ -33,6 +33,10 @@
         <main class="-mt-16 px-4 pb-10 sm:px-10 lg:mt-0 lg:flex lg:items-center lg:justify-center lg:py-10">
             <div class="mx-auto w-full max-w-md">
                 {{ $slot }}
+                <a href="{{ route('home') }}" wire:navigate
+                   class="mt-4 flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-hijau-800 ring-1 ring-garis hover:bg-hijau-100">
+                    <flux:icon.arrow-left variant="micro" /> Kembali ke Beranda
+                </a>
             </div>
         </main>
 

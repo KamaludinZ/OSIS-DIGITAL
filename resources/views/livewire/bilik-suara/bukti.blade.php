@@ -11,7 +11,8 @@ new #[Layout('components.layouts.siswa')] #[Title('Bukti Suara')] class extends 
 
     public function mount(LayananPemilihan $layanan): void
     {
-        $bukti = $layanan->buktiSuara(auth()->user());
+        $pemilih = app(\App\Services\SesiPemilih::class)->pemilih();
+        $bukti = $pemilih ? $layanan->buktiSuara($pemilih) : null;
 
         if (! $bukti) {
             // Belum memilih: arahkan ke bilik suara.
@@ -21,6 +22,13 @@ new #[Layout('components.layouts.siswa')] #[Title('Bukti Suara')] class extends 
         }
 
         $this->bukti = $bukti;
+    }
+
+    /** Akhiri sesi pemilih agar komputer bisa dipakai siswa berikutnya. */
+    public function selesai(): void
+    {
+        app(\App\Services\SesiPemilih::class)->keluar();
+        $this->redirectRoute('home', navigate: true);
     }
 }; ?>
 
@@ -66,9 +74,9 @@ new #[Layout('components.layouts.siswa')] #[Title('Bukti Suara')] class extends 
         </section>
 
         <div class="mt-5 flex flex-col gap-2 sm:flex-row print:hidden">
-            <a href="{{ route('home') }}" wire:navigate class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-hijau-600 px-5 py-3 font-bold text-white hover:bg-hijau-700">
-                Kembali ke Beranda
-            </a>
+            <button type="button" wire:click="selesai" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-hijau-600 px-5 py-3 font-bold text-white hover:bg-hijau-700">
+                <flux:icon.arrow-right-start-on-rectangle variant="mini" /> Selesai &amp; keluar
+            </button>
             <button type="button" x-on:click="window.print()" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-hijau-800 ring-1 ring-garis hover:bg-hijau-50">
                 <flux:icon.printer variant="mini" /> Cetak bukti
             </button>
