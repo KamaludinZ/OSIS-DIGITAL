@@ -54,4 +54,25 @@ class PenjagaRuteTest extends TestCase
         $this->assertGuest();
         $this->followingRedirects()->get('/')->assertSee('href="'.route('login').'"', false);
     }
+
+    public function test_reset_kata_sandi_memutus_sesi_lain(): void
+    {
+        $pengurus = User::factory()->create(['role' => Peran::Pengurus]);
+
+        $this->actingAs($pengurus)->get('/settings/profile')->assertOk(); // sesi menyimpan sidik kata sandi
+        $pengurus->forceFill(['password' => 'kata-sandi-baru-1'])->save();   // admin mereset
+
+        $this->get('/settings/profile')->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
+
+    public function test_keluar_dari_ruang_osim(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Admin]));
+
+        $this->post(route('filament.admin.auth.logout'))->assertRedirect();
+        $this->assertGuest();
+        $this->get('/admin')->assertRedirect(route('login'));
+        $this->get('/logout')->assertStatus(405); // keluar hanya lewat POST (dilindungi CSRF)
+    }
 }

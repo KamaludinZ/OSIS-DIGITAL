@@ -14,7 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Pengguna yang sudah masuk lalu membuka /login diarahkan ke halaman awal perannya.
         $middleware->redirectUsersTo(fn (Illuminate\Http\Request $request) => $request->user()?->halamanAwal() ?? '/');
 
-        $middleware->web(append: [App\Http\Middleware\PastikanAkunAktif::class]);
+        // AuthenticateSession: sesi di perangkat lain ikut berakhir saat kata sandi diganti/direset.
+        $middleware->web(append: [Illuminate\Session\Middleware\AuthenticateSession::class, App\Http\Middleware\PastikanAkunAktif::class]);
 
         // Kandidat dialihkan dari Ruang OSIM sebelum Filament menolak dengan 403.
         foreach ([App\Http\Middleware\PastikanAkunAktif::class, App\Http\Middleware\AlihkanKandidatDariPanel::class] as $penjaga) {

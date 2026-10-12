@@ -35,6 +35,9 @@ new #[Layout('components.layouts.siswa')] class extends Component {
         // Model User meng-hash kata sandi lewat cast "hashed".
         Auth::user()->update(['password' => $validated['password']]);
 
+        // Sesi ini tetap masuk; sesi di perangkat lain berakhir (AuthenticateSession).
+        session()->put('password_hash_'.Auth::getDefaultDriver(), Auth::user()->getAuthPassword());
+
         $this->reset('current_password', 'password', 'password_confirmation');
         $this->dispatch('password-updated');
     }

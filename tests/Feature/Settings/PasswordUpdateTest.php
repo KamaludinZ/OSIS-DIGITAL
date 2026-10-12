@@ -47,4 +47,17 @@ class PasswordUpdateTest extends TestCase
 
         $response->assertHasErrors(['current_password']);
     }
+
+    public function test_ganti_kata_sandi_sendiri_tetap_masuk_di_sesi_ini(): void
+    {
+        $user = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]);
+        $this->actingAs($user)->get('/settings/password')->assertOk();
+
+        Volt::test('settings.password')
+            ->set('current_password', 'password')->set('password', 'baru-sekali-9')->set('password_confirmation', 'baru-sekali-9')
+            ->call('updatePassword')->assertHasNoErrors();
+
+        $this->get('/settings/profile')->assertOk();
+        $this->assertAuthenticatedAs($user);
+    }
 }
