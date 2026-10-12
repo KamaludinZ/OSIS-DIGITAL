@@ -7,6 +7,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Checkbox;
 use Filament\Schemas\Components\Callout;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -36,6 +37,18 @@ class EventForm
                         ->implode(' · ').'. Pertimbangkan mengganti tanggal atau tempat.')
                     ->warning()
                     ->visible(fn (Get $get, ?Event $record) => $bentrok($get, $record)->isNotEmpty())
+                    ->columnSpanFull(),
+
+                // Server menolak jadwal bentrok kecuali panitia sengaja mengizinkan (mis. kegiatan gabungan).
+                Checkbox::make('abaikan_bentrok')
+                    ->label('Tetap simpan meski bentrok (kegiatan gabungan/sengaja di tempat yang sama)')
+                    ->dehydrated(false)
+                    ->visible(fn (Get $get, ?Event $record) => $bentrok($get, $record)->isNotEmpty())
+                    ->rules([fn (Get $get, ?Event $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record, $bentrok) {
+                        if (! $value && $bentrok($get, $record)->isNotEmpty()) {
+                            $fail('Jadwal bentrok dengan kegiatan lain di tempat yang sama. Ganti tanggal/tempat, atau centang untuk tetap menyimpan.');
+                        }
+                    }])
                     ->columnSpanFull(),
 
                 Textarea::make('deskripsi')->label('Deskripsi')->rows(3)->maxLength(1000)->columnSpanFull(),

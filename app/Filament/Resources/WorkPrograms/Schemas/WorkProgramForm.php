@@ -27,7 +27,14 @@ class WorkProgramForm
                     ->inline()
                     ->required(),
                 TextInput::make('capaian')->label('Capaian')->placeholder('Contoh: 6 sesi, 540 peserta')->maxLength(150),
-                Toggle::make('unggulan')->label('Tampilkan sebagai sorotan di Beranda')->columnSpanFull(),
+                Toggle::make('unggulan')->label('Tampilkan sebagai sorotan di Beranda')
+                    ->helperText('Maksimal '.\App\Models\WorkProgram::BATAS_UNGGULAN.' program unggulan sekaligus.')
+                    ->rules([fn (?\App\Models\WorkProgram $record) => function (string $attribute, $value, \Closure $fail) use ($record) {
+                        if ($value && ! $record?->unggulan && \App\Models\WorkProgram::kuotaUnggulanTersisa($record?->id) <= 0) {
+                            $fail('Sudah ada '.\App\Models\WorkProgram::BATAS_UNGGULAN.' program unggulan. Matikan sorotan program lain dulu.');
+                        }
+                    }])
+                    ->columnSpanFull(),
             ]);
     }
 

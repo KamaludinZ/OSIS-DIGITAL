@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Voters\Tables;
 use App\Filament\Resources\Voters\Schemas\VoterForm;
 use App\Models\Voter;
 use App\Services\LayananPemilihan;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -31,7 +33,7 @@ class VotersTable
             ->poll('30s') // kolom "Sudah memilih" ikut berubah selama pemungutan suara
             ->modifyQueryUsing(fn (Builder $query) => $query->withExists(['votes as sudah_memilih' => fn ($v) => $v->where('election_id', $pemilihan?->id ?? 0)]))
             ->columns([
-                TextColumn::make('nama')->label('Nama')->weight('bold')->searchable(['nama', 'nomor_induk'])->sortable()
+                TextColumn::make('nama')->label('Nama')->weight('bold')->searchable(['nama', 'nomor_induk', 'kelas', 'jabatan'])->sortable()
                     ->description(fn (Voter $r) => $r->jenis->labelNomorInduk().' '.$r->nomor_induk),
                 TextColumn::make('jenis')->label('Jenis')->badge()
                     ->formatStateUsing(fn ($state) => $state->label())
@@ -65,12 +67,33 @@ class VotersTable
                     ->queries(true: fn (Builder $query) => $query->whereNotNull('kode_pilih'), false: fn (Builder $query) => $query->whereNull('kode_pilih')),
             ])
             ->filtersFormColumns(2)
-            ->recordActions([EditAction::make()])
+            ->recordActions([
+                Action::make('verifikasiSatu')->label('Verifikasi')->icon(Heroicon::OutlinedShieldCheck)->color('success')
+                    ->visible(fn (Voter $record) => $record->verifikasi !== 'terverifikasi')
+                    ->action(function (Voter $record) {
+                        $record->update(['verifikasi' => 'terverifikasi']);
+                        Notification::make()->title($record->nama.' terverifikasi')->success()->send();
+                    }),
+                ActionGroup::make([
+                    EditAction::make(),
+                    Action::make('tolak')->label('Tolak verifikasi')->icon(Heroicon::OutlinedNoSymbol)->color('danger')
+                        ->visible(fn (Voter $record) => $record->verifikasi !== 'ditolak')
+                        ->requiresConfirmation()
+                        ->modalDescription('Pemilih yang ditolak tidak bisa memakai kode pilihnya.')
+                        ->action(function (Voter $record) {
+                            $record->update(['verifikasi' => 'ditolak']);
+                            Notification::make()->title($record->nama.' ditolak')->warning()->send();
+                        }),
+                ]),
+            ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('verifikasi')->label('Ubah verifikasi')->icon(Heroicon::OutlinedShieldCheck)
                         ->schema([Select::make('verifikasi')->label('Status')->options(VoterForm::$labelVerifikasi)->required()])
-                        ->action(fn (Collection $records, array $data) => $records->each->update(['verifikasi' => $data['verifikasi']]))
+                        ->action(function (Collection $records, array $data) {
+                            $records->each->update(['verifikasi' => $data['verifikasi']]);
+                            Notification::make()->title($records->count().' pemilih diubah menjadi "'.VoterForm::$labelVerifikasi[$data['verifikasi']].'"')->success()->send();
+                        })
                         ->deselectRecordsAfterCompletion(),
                     BulkAction::make('kodeUlang')->label('Buat ulang kode pilih')->icon(Heroicon::OutlinedKey)
                         ->requiresConfirmation()

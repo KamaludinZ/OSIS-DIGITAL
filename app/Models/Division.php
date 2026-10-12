@@ -22,4 +22,9 @@ class Division extends Model
     {
         return $this->hasMany(WorkProgram::class, 'divisi_id');
     }
+
+    public function members(): HasMany
+    {
+        return $this->hasMany(Member::class, 'divisi_id');
+    }
 }

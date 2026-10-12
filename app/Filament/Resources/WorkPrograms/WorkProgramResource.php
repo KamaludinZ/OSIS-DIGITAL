@@ -32,6 +32,11 @@ class WorkProgramResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'nama';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('kelola-organisasi') ?? false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return WorkProgramForm::configure($schema);

@@ -6,6 +6,7 @@ use App\Enums\JenisPemilih;
 use App\Models\Voter;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use OpenSpout\Reader\CSV\Reader as CsvReader;
 use OpenSpout\Reader\XLSX\Reader as XlsxReader;
@@ -34,6 +35,7 @@ class ImporPemilih
         $hasil = ['kolom_hilang' => [], 'baris' => []];
         $header = null;
         $nomor = 0;
+        $dilihat = []; // nomor induk => baris pertama, untuk menolak data ganda dalam satu berkas
 
         foreach ($reader->getSheetIterator() as $sheet) {
             foreach ($sheet->getRowIterator() as $row) {
@@ -70,9 +72,14 @@ class ImporPemilih
                         ! $induk => strtoupper($kolomInduk).($jenis === JenisPemilih::Siswa ? ' kosong/lebih dari 10 angka' : ' harus 16 angka'),
                         ! $nama => 'nama kosong',
                         ! $tanggal => 'tanggal lahir tidak valid',
+                        isset($dilihat[$induk]) => strtoupper($kolomInduk)." {$induk} ganda dengan baris {$dilihat[$induk]}",
                         default => null,
                     },
                 ];
+
+                if ($induk && ! isset($dilihat[$induk])) {
+                    $dilihat[$induk] = $nomor;
+                }
             }
 
             break; // hanya sheet pertama
@@ -108,12 +115,12 @@ class ImporPemilih
     }
 
     /**
-     * @return array{tambah: int, perbarui: int, gagal: list<string>}
+     * @return array{tambah: int, perbarui: int, sama: int, gagal: list<string>}
      */
     public function impor(string $path, JenisPemilih $jenis, ?string $namaAsli = null): array
     {
         $isi = $this->baca($path, $jenis, $namaAsli);
-        $hasil = ['tambah' => 0, 'perbarui' => 0, 'gagal' => []];
+        $hasil = ['tambah' => 0, 'perbarui' => 0, 'sama' => 0, 'gagal' => []];
 
         if ($isi['kolom_hilang']) {
             $hasil['gagal'][] = 'Kolom wajib tidak ada: '.implode(', ', $isi['kolom_hilang']).'. Gunakan templat yang disediakan.';
@@ -123,18 +130,28 @@ class ImporPemilih
 
         $kolomKet = $jenis === JenisPemilih::Siswa ? 'kelas' : 'jabatan';
 
-        foreach ($isi['baris'] as $b) {
-            if ($b['galat']) {
-                $hasil['gagal'][] = "Baris {$b['baris']}: {$b['galat']}";
+        DB::transaction(function () use ($isi, $jenis, $kolomKet, &$hasil) {
+            foreach ($isi['baris'] as $b) {
+                if ($b['galat']) {
+                    $hasil['gagal'][] = "Baris {$b['baris']}: {$b['galat']}";
 
-                continue;
+                    continue;
+                }
+
+                $pemilih = Voter::firstOrNew(['jenis' => $jenis, 'nomor_induk' => $b['nomor_induk']]);
+                $baru = ! $pemilih->exists;
+                $pemilih->fill(['nama' => $b['nama'], $kolomKet => $b['keterangan'], 'tanggal_lahir' => $b['tanggal_lahir']]);
+
+                if (! $baru && ! $pemilih->isDirty()) {
+                    $hasil['sama']++;
+
+                    continue;
+                }
+
+                $pemilih->save();
+                $hasil[$baru ? 'tambah' : 'perbarui']++;
             }
-
-            $pemilih = Voter::firstOrNew(['jenis' => $jenis, 'nomor_induk' => $b['nomor_induk']]);
-            $baru = ! $pemilih->exists;
-            $pemilih->fill(['nama' => $b['nama'], $kolomKet => $b['keterangan'], 'tanggal_lahir' => $b['tanggal_lahir']])->save();
-            $hasil[$baru ? 'tambah' : 'perbarui']++;
-        }
+        });
 
         return $hasil;
     }

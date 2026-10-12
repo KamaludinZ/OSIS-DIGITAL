@@ -25,11 +25,10 @@ class ListVoters extends ListRecords
 
     public function getSubheading(): ?string
     {
-        $total = Voter::count();
-        $berhak = Voter::terverifikasi()->count();
-        $berkode = Voter::terverifikasi()->whereNotNull('kode_pilih')->count();
+        $s = app(\App\Services\LayananPartisipasi::class)->statistik(app(\App\Services\LayananPemilihan::class)->pemilihanAktif());
+        $menunggu = $s['menunggu'] ? " ({$s['menunggu']} menunggu)" : '';
 
-        return "{$total} pemilih terdaftar · {$berhak} terverifikasi · {$berkode} sudah punya kode pilih";
+        return "{$s['total']} pemilih terdaftar · {$s['terverifikasi']} terverifikasi{$menunggu} · {$s['berkode']} sudah punya kode pilih · {$s['memilih']} sudah memilih";
     }
 
     protected function getHeaderActions(): array
@@ -109,7 +108,7 @@ class ListVoters extends ListRecords
                 $berkas = self::berkasDari($data['berkas']);
                 $hasil = app(ImporPemilih::class)->impor($berkas->getRealPath(), $jenis, $berkas->getClientOriginalName());
 
-                $judul = "Impor selesai: {$hasil['tambah']} ditambahkan, {$hasil['perbarui']} diperbarui";
+                $judul = "Impor selesai: {$hasil['tambah']} ditambahkan, {$hasil['perbarui']} diperbarui".($hasil['sama'] ? ", {$hasil['sama']} tidak berubah" : '');
                 $tanpaKode = Voter::terverifikasi()->whereNull('kode_pilih')->count();
                 $baris = [];
 

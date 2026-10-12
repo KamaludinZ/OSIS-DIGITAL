@@ -57,30 +57,14 @@ class RuangOsimTest extends TestCase
             ->assertHasFormErrors(['nama' => 'unique']);
     }
 
-    public function test_daftar_anggota_bisa_dicari_dan_difilter(): void
-    {
-        $this->actingAs(User::factory()->create(['role' => Peran::Admin]));
-
-        $this->get('/admin/anggota')->assertOk()->assertSee('Anggota Pengurus')->assertSee('Tambah anggota');
-
-        \Livewire\Livewire::test(\App\Filament\Pages\Anggota::class)
-            ->assertSee('Ahmad Fauzan')
-            ->searchTable('Hafidz')
-            ->assertSee('Hafidz Ramadhan')
-            ->assertDontSee('Ahmad Fauzan')
-            ->searchTable('')
-            ->filterTable('divisi', 'Divisi Humas')
-            ->assertSee('Nabila Azzahra')
-            ->assertDontSee('Hafidz Ramadhan');
-    }
-
     public function test_pencarian_anggota_menurut_divisi_dan_pencarian_divisi(): void
     {
         $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
         \App\Models\Division::create(['nama' => 'Divisi Keagamaan', 'deskripsi' => 'Kajian dan peringatan hari besar Islam.']);
         \App\Models\Division::create(['nama' => 'Divisi Olahraga', 'deskripsi' => 'Kompetisi antarkelas.']);
 
-        \Livewire\Livewire::test(\App\Filament\Pages\Anggota::class)
+        $this->seed(\Database\Seeders\OrganisasiSeeder::class);
+        \Livewire\Livewire::test(\App\Filament\Resources\Members\Pages\ListMembers::class)
             ->searchTable('humas')
             ->assertSee('Nabila Azzahra')
             ->assertDontSee('Ahmad Fauzan');
@@ -130,10 +114,20 @@ class RuangOsimTest extends TestCase
             ->fillForm(['nama' => 'Lomba Pidato', 'tanggal_mulai' => '2026-11-15', 'tanggal_selesai' => '2026-11-15', 'tempat' => ' aula utama '])
             ->assertSee('Bentrok dengan 1 kegiatan di tempat yang sama')
             ->assertSee('Pentas Seni')
+            ->call('create')
+            ->assertHasFormErrors(['abaikan_bentrok'])
             ->fillForm(['tempat' => 'Lapangan'])
             ->assertDontSee('Bentrok dengan')
             ->call('create')
             ->assertHasNoFormErrors();
+
+        // Bentrok yang disengaja boleh disimpan bila dicentang.
+        \Livewire\Livewire::test(\App\Filament\Resources\Events\Pages\CreateEvent::class)
+            ->fillForm(['nama' => 'Bazar Gabungan', 'tanggal_mulai' => '2026-11-14', 'tanggal_selesai' => '2026-11-14', 'tempat' => 'Aula Utama'])
+            ->fillForm(['abaikan_bentrok' => true])
+            ->call('create')
+            ->assertHasNoFormErrors();
+        $this->assertDatabaseHas('events', ['nama' => 'Bazar Gabungan']);
 
         // Tanggal selesai sebelum mulai ditolak.
         \Livewire\Livewire::test(\App\Filament\Resources\Events\Pages\CreateEvent::class)
@@ -142,8 +136,8 @@ class RuangOsimTest extends TestCase
             ->assertHasFormErrors(['tanggal_selesai']);
 
         $this->assertCount(0, \App\Models\Event::bentrok('2026-11-16', '2026-11-20', 'Aula Utama'));
-        $this->assertCount(1, \App\Models\Event::bentrok('2026-11-10', '2026-11-14', 'Aula Utama'));
-        $this->assertCount(0, \App\Models\Event::bentrok('2026-11-14', '2026-11-14', 'Aula Utama', $aula->id));
+        $this->assertCount(2, \App\Models\Event::bentrok('2026-11-10', '2026-11-14', 'Aula Utama')); // Pentas Seni + Bazar Gabungan
+        $this->assertSame(['Bazar Gabungan'], \App\Models\Event::bentrok('2026-11-14', '2026-11-14', 'Aula Utama', $aula->id)->pluck('nama')->all());
     }
 
     public function test_data_pemilih_hanya_untuk_panitia_dan_admin(): void
@@ -339,5 +333,177 @@ class RuangOsimTest extends TestCase
             ->dispatch('buat-kode-pemilih-baru')
             ->assertNotified('2 kode pilih dibuat');
         $this->assertSame(0, \App\Models\Voter::whereNull('kode_pilih')->count());
+    }
+
+    public function test_crud_anggota_pengurus(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $divisi = \App\Models\Division::create(['nama' => 'Divisi Keagamaan']);
+        $siswa = \App\Models\Voter::factory()->create(['nama' => 'Hafidz Ramadhan', 'kelas' => 'VIII-A']);
+
+        $this->get('/admin/anggota')->assertOk()->assertSee('Anggota');
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Members\Pages\CreateMember::class)
+            ->assertSchemaStateSet(['periode' => \App\Models\Member::periodeAktif(), 'jabatan' => 'Anggota'])
+            ->fillForm(['voter_id' => $siswa->id])
+            ->assertSchemaStateSet(['nama' => 'Hafidz Ramadhan', 'kelas' => 'VIII-A'])
+            ->fillForm(['divisi_id' => $divisi->id, 'jabatan' => 'Koordinator'])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('members', ['nama' => 'Hafidz Ramadhan', 'divisi_id' => $divisi->id, 'jabatan' => 'Koordinator', 'voter_id' => $siswa->id]);
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Members\Pages\CreateMember::class)
+            ->fillForm(['nama' => 'Ketua Baru', 'jabatan' => 'Ketua OSIM', 'periode' => '2026'])
+            ->call('create')
+            ->assertHasFormErrors(['periode']);
+
+        // Panitia tidak mengelola organisasi.
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $this->get('/admin/anggota')->assertForbidden();
+        $this->get('/admin/divisions')->assertForbidden();
+    }
+
+    public function test_pencarian_global_anggota_dan_divisi(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $this->seed(\Database\Seeders\OrganisasiSeeder::class);
+        \App\Models\Member::factory()->create(['nama' => 'Hafidz Periode Lalu', 'periode' => '2020/2021']);
+
+        $hasil = \Filament\Facades\Filament::getGlobalSearchProvider()->getResults('hafidz');
+        $judul = $hasil->getCategories()->flatten()->map->title->all();
+
+        $this->assertContains('Hafidz Ramadhan', $judul);
+        $this->assertNotContains('Hafidz Periode Lalu', $judul);
+
+        $koordinator = \Filament\Facades\Filament::getGlobalSearchProvider()->getResults('koordinator')->getCategories()->flatten();
+        $this->assertCount(8, $koordinator);
+    }
+
+    public function test_batas_program_unggulan(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $divisi = \App\Models\Division::create(['nama' => 'Divisi Uji']);
+        \App\Models\WorkProgram::factory()->count(6)->create(['unggulan' => true, 'divisi_id' => $divisi->id]);
+        $biasa = \App\Models\WorkProgram::factory()->create(['unggulan' => false, 'divisi_id' => $divisi->id]);
+
+        $this->assertSame(0, \App\Models\WorkProgram::kuotaUnggulanTersisa());
+
+        \Livewire\Livewire::test(\App\Filament\Resources\WorkPrograms\Pages\CreateWorkProgram::class)
+            ->fillForm(['nama' => 'Ketujuh', 'divisi_id' => $divisi->id, 'status' => 'rencana', 'unggulan' => true])
+            ->call('create')
+            ->assertHasFormErrors(['unggulan']);
+
+        // Program yang sudah unggulan tetap bisa disunting tanpa ditolak.
+        $sudah = \App\Models\WorkProgram::where('unggulan', true)->first();
+        \Livewire\Livewire::test(\App\Filament\Resources\WorkPrograms\Pages\EditWorkProgram::class, ['record' => $sudah->id])
+            ->fillForm(['capaian' => '10 kegiatan'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        \Livewire\Livewire::test(\App\Filament\Resources\WorkPrograms\Pages\ListWorkPrograms::class)
+            ->assertTableColumnStateSet('unggulan', false, $biasa)
+            ->assertSee('Kuota 6 sorotan penuh');
+    }
+
+    public function test_otorisasi_pengurus_pada_data_organisasi(): void
+    {
+        $divisi = \App\Models\Division::create(['nama' => 'Divisi Uji']);
+        $program = \App\Models\WorkProgram::factory()->create(['divisi_id' => $divisi->id]);
+
+        $panitia = User::factory()->create(['role' => Peran::Panitia]);
+        $this->actingAs($panitia);
+
+        foreach ([\App\Models\Division::class, \App\Models\Member::class, \App\Models\WorkProgram::class, \App\Models\Event::class] as $model) {
+            $this->assertFalse($panitia->can('create', $model), $model);
+        }
+        $this->assertFalse($panitia->can('update', $program));
+        $this->assertFalse($panitia->can('delete', $divisi));
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Divisions\Pages\CreateDivision::class)->assertForbidden();
+        \Livewire\Livewire::test(\App\Filament\Resources\WorkPrograms\Pages\EditWorkProgram::class, ['record' => $program->id])->assertForbidden();
+        $this->get('/admin/work-programs')->assertForbidden();
+        $this->get('/admin/events/create')->assertForbidden();
+
+        $pengurus = User::factory()->create(['role' => Peran::Pengurus]);
+        $this->assertTrue($pengurus->can('update', $program));
+        $this->assertTrue(User::factory()->create(['role' => Peran::Admin])->can('delete', $divisi));
+    }
+
+    public function test_daftar_pemilih_dengan_filter(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $e = \App\Models\Election::first();
+        $budi = \App\Models\Voter::factory()->berkode('111111')->create(['nama' => 'Budi Tujuh', 'kelas' => 'VII-A']);
+        $sari = \App\Models\Voter::factory()->create(['nama' => 'Sari Sembilan', 'kelas' => 'IX-C', 'verifikasi' => 'menunggu']);
+        $guru = \App\Models\Voter::factory()->gtk()->berkode('222222')->create(['nama' => 'Pak Guru']);
+        app(\App\Services\LayananPemilihan::class)->kirimSuara($budi, $e, \App\Models\Candidate::first()->id);
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $daftar = fn () => \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class);
+
+        $daftar()->filterTable('jenis', 'gtk')->assertCanSeeTableRecords([$guru])->assertCanNotSeeTableRecords([$budi, $sari]);
+        $daftar()->filterTable('tingkat', 'IX')->assertCanSeeTableRecords([$sari])->assertCanNotSeeTableRecords([$budi, $guru]);
+        $daftar()->filterTable('verifikasi', 'menunggu')->assertCanSeeTableRecords([$sari])->assertCanNotSeeTableRecords([$budi]);
+        $daftar()->filterTable('sudah_memilih', true)->assertCanSeeTableRecords([$budi])->assertCanNotSeeTableRecords([$sari, $guru]);
+        $daftar()->filterTable('sudah_memilih', false)->assertCanSeeTableRecords([$sari, $guru])->assertCanNotSeeTableRecords([$budi]);
+        $daftar()->filterTable('kode', false)->assertCanSeeTableRecords([$sari])->assertCanNotSeeTableRecords([$budi, $guru]);
+        $daftar()->searchTable('IX-C')->assertCanSeeTableRecords([$sari])->assertCanNotSeeTableRecords([$budi]);
+
+        $pengurus = User::factory()->create(['role' => Peran::Pengurus]);
+        $this->assertFalse($pengurus->can('viewAny', \App\Models\Voter::class));
+        $this->assertFalse($pengurus->can('update', $budi));
+    }
+
+    public function test_verifikasi_pemilih_satuan(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $v = \App\Models\Voter::factory()->berkode('777777')->create(['verifikasi' => 'menunggu']);
+        $daftar = fn () => \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class);
+
+        $daftar()->assertTableActionVisible('verifikasiSatu', $v)->callTableAction('verifikasiSatu', $v);
+        $this->assertSame('terverifikasi', $v->fresh()->verifikasi);
+        $daftar()->assertTableActionHidden('verifikasiSatu', $v);
+
+        $daftar()->callTableAction('tolak', $v);
+        $this->assertSame('ditolak', $v->fresh()->verifikasi);
+        $this->assertSame('bukan_pemilih', app(\App\Services\LayananPemilihan::class)->kelayakan($v->fresh())['alasan'] ?? null);
+    }
+
+    public function test_statistik_partisipasi_pemilih(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $e = \App\Models\Election::first();
+        $berkode = \App\Models\Voter::factory()->count(3)->sequence(fn ($s) => ['kode_pilih' => '30000'.$s->index])->create();
+        \App\Models\Voter::factory()->create(['verifikasi' => 'menunggu']);
+        \App\Models\Voter::factory()->create(['verifikasi' => 'ditolak', 'kode_pilih' => '399999']);
+        app(\App\Services\LayananPemilihan::class)->kirimSuara($berkode[0], $e, \App\Models\Candidate::first()->id);
+
+        $s = app(\App\Services\LayananPartisipasi::class)->statistik($e);
+        $this->assertSame(['total' => 5, 'terverifikasi' => 3, 'menunggu' => 1, 'ditolak' => 1, 'berkode' => 3, 'memilih' => 1, 'persen' => 33.3], $s);
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $this->get('/admin/data-pemilih')->assertSee('5 pemilih terdaftar')->assertSee('3 terverifikasi (1 menunggu)')->assertSee('1 sudah memilih');
+    }
+
+    public function test_impor_menolak_data_ganda_dalam_berkas_dan_lewati_yang_sama(): void
+    {
+        $impor = app(\App\Services\ImporPemilih::class);
+        $csv = tempnam(sys_get_temp_dir(), 'ganda').'.csv';
+        // 91234567 dan 0091234567 adalah NISN yang sama setelah nol di depan dipulihkan.
+        file_put_contents($csv, "nisn,nama,kelas,tanggal_lahir\n0091234567,Ahmad Fauzi,VII-A,2013-05-21\n91234567,Ahmad F.,VII-B,2013-05-21\n0091234570,Rina,VII-A,2013-02-02\n");
+
+        $p = $impor->pratinjau($csv, \App\Enums\JenisPemilih::Siswa);
+        $this->assertSame([2, 2], [$p['valid'], $p['baru']]);
+        $this->assertSame(['Baris 3: NISN 0091234567 ganda dengan baris 2'], $p['gagal']);
+
+        $hasil = $impor->impor($csv, \App\Enums\JenisPemilih::Siswa);
+        $this->assertSame([2, 0, 0], [$hasil['tambah'], $hasil['perbarui'], $hasil['sama']]);
+        $this->assertSame('VII-A', \App\Models\Voter::where('nomor_induk', '0091234567')->value('kelas'));
+
+        $hasil = $impor->impor($csv, \App\Enums\JenisPemilih::Siswa);
+        $this->assertSame([0, 0, 2], [$hasil['tambah'], $hasil['perbarui'], $hasil['sama']]);
+        $this->assertSame(2, \App\Models\Voter::count());
     }
 }

@@ -32,7 +32,11 @@ class WorkProgramsTable
                     ->options(WorkProgramForm::statusLabel())
                     ->selectablePlaceholder(false)
                     ->sortable(),
-                ToggleColumn::make('unggulan')->label('Sorotan'),
+                ToggleColumn::make('unggulan')->label('Sorotan')
+                    ->disabled(fn ($record) => ! $record->unggulan && \App\Models\WorkProgram::kuotaUnggulanTersisa() <= 0)
+                    ->tooltip(fn ($record) => ! $record->unggulan && \App\Models\WorkProgram::kuotaUnggulanTersisa() <= 0
+                        ? 'Kuota '.\App\Models\WorkProgram::BATAS_UNGGULAN.' sorotan penuh'
+                        : null),
             ])
             ->filters([
                 SelectFilter::make('status')->label('Status')->options(WorkProgramForm::statusLabel()),

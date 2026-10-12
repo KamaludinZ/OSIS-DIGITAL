@@ -42,6 +42,6 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        $this->call([PemilihSeeder::class, PemilihanSeeder::class, KampanyeSeeder::class, PublikasiSeeder::class, SosmedSeeder::class]);
+        $this->call([PemilihSeeder::class, PemilihanSeeder::class, KampanyeSeeder::class, PublikasiSeeder::class, OrganisasiSeeder::class, SosmedSeeder::class]);
     }
 }

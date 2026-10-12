@@ -36,6 +36,29 @@ class LayananPartisipasi
         ];
     }
 
+    /**
+     * Angka ringkas data pemilih untuk panitia (satu kueri).
+     *
+     * @return array{total: int, terverifikasi: int, menunggu: int, ditolak: int, berkode: int, memilih: int, persen: float}
+     */
+    public function statistik(?Election $pemilihan): array
+    {
+        $r = Voter::query()
+            ->leftJoin('votes', fn ($j) => $j->on('votes.voter_id', '=', 'voters.id')->where('votes.election_id', $pemilihan?->id ?? 0))
+            ->selectRaw('count(voters.id) as total')
+            ->selectRaw("sum(case when voters.verifikasi = 'terverifikasi' then 1 else 0 end) as terverifikasi")
+            ->selectRaw("sum(case when voters.verifikasi = 'menunggu' then 1 else 0 end) as menunggu")
+            ->selectRaw("sum(case when voters.verifikasi = 'ditolak' then 1 else 0 end) as ditolak")
+            ->selectRaw("sum(case when voters.verifikasi = 'terverifikasi' and voters.kode_pilih is not null then 1 else 0 end) as berkode")
+            ->selectRaw('count(votes.id) as memilih')
+            ->first();
+
+        $angka = collect(['total', 'terverifikasi', 'menunggu', 'ditolak', 'berkode', 'memilih'])
+            ->mapWithKeys(fn ($k) => [$k => (int) $r->{$k}])->all();
+
+        return $angka + ['persen' => $angka['terverifikasi'] ? round($angka['memilih'] / $angka['terverifikasi'] * 100, 1) : 0.0];
+    }
+
     /** Urutkan VII-A < VII-B < VIII-A < IX-A. */
     private function urutKelas(string $kelas): string
     {
