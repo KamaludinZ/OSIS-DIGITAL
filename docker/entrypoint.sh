@@ -13,8 +13,18 @@ if [ -z "$APP_KEY" ]; then
 fi
 
 # APP_KEY harus "base64:" + 32 byte acak; format lain membuat semua halaman (dan /up) error 500.
+# Bersihkan kutip/spasi/baris baru yang sering ikut tersalin dari panel.
+APP_KEY=$(printf '%s' "$APP_KEY" | tr -d " \r\n\t\"'")
+# Kunci 32 byte yang tersalin tanpa awalan "base64:" dilengkapi otomatis.
+case "$APP_KEY" in
+  base64:*) ;;
+  *) [ "$(php -r 'echo strlen((string) base64_decode(getenv("APP_KEY"), true));')" = "32" ] && APP_KEY="base64:$APP_KEY" && echo "[osis] APP_KEY tanpa awalan base64: dilengkapi otomatis" ;;
+esac
+export APP_KEY
 if ! php -r '$k = getenv("APP_KEY"); exit(str_starts_with($k, "base64:") && strlen((string) base64_decode(substr($k, 7), true)) === 32 ? 0 : 1);'; then
-    echo "[osis] APP_KEY tidak valid. Harus berbentuk base64:... hasil 'php artisan key:generate --show' (salin utuh termasuk awalan base64:)." >&2
+    php -r '$k = getenv("APP_KEY"); $b = str_starts_with($k, "base64:"); $d = base64_decode($b ? substr($k, 7) : $k, true);
+        fwrite(STDERR, sprintf("[osis] APP_KEY tidak valid (panjang %d karakter, awalan base64: %s, hasil decode %s byte; harus 32).\n", strlen($k), $b ? "ada" : "TIDAK ADA", $d === false ? "gagal" : strlen($d)));'
+    echo "[osis] Isi APP_KEY di Coolify dengan hasil 'php artisan key:generate --show' secara utuh, contoh bentuk: base64:AbC...xyz= (51 karakter)." >&2
     exit 1
 fi
 
