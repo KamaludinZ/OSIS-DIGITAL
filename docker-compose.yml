@@ -14,8 +14,10 @@ x-osis-env: &osis-env
   LOG_CHANNEL: stderr
   LOG_LEVEL: ${LOG_LEVEL:-warning}
   DB_CONNECTION: pgsql
-  DB_HOST: postgres
-  DB_PORT: "5432"
+  # Bawaan: PostgreSQL di dalam stack ini (service "postgres"). JANGAN isi DB_HOST di Coolify
+  # kecuali sengaja memakai resource PostgreSQL terpisah (lihat panduan bagian 3a).
+  DB_HOST: ${DB_HOST:-postgres}
+  DB_PORT: ${DB_PORT:-5432}
   DB_DATABASE: ${DB_DATABASE:-osis_digital}
   DB_USERNAME: ${DB_USERNAME:-osis_digital}
   DB_PASSWORD: ${DB_PASSWORD:?Isi DB_PASSWORD yang kuat}

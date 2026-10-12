@@ -66,6 +66,10 @@ HTTPS, sertifikat, dan domain diurus **Traefik bawaan Coolify**. Kontainer tidak
    | `RUN_MIGRATIONS` |     | bawaan `true` (migrasi otomatis tiap deploy)               |
 
    Tandai `APP_KEY` dan `DB_PASSWORD` sebagai **secret/locked** bila tersedia.
+
+   > **Jangan isi `DB_HOST`.** Basis data sudah ada di dalam stack (service `postgres`).
+   > Bila `DB_HOST` diisi nama/UUID resource PostgreSQL lain di Coolify, aplikasi gagal dengan
+   > `could not translate host name "…"`, karena resource itu berada di jaringan Docker yang berbeda.
 6. Di bagian **Services → app → Domains**, isi `https://osim.mtsn2kotamalang.sch.id`.
    Bila Coolify meminta port, gunakan `https://osim.mtsn2kotamalang.sch.id:80`
    (port internal kontainer; publik tetap 443).
@@ -76,6 +80,16 @@ HTTPS, sertifikat, dan domain diurus **Traefik bawaan Coolify**. Kontainer tidak
 
 > **Penting:** `APP_KEY` jangan diganti setelah aplikasi dipakai. Sesi dan data
 > terenkripsi akan rusak, dan semua orang harus masuk ulang.
+
+### 3a. (Opsional) Memakai resource PostgreSQL terpisah di Coolify
+
+Cara ini dipakai bila ingin memanfaatkan fitur backup S3 bawaan Coolify untuk basis data.
+1. Buat resource **PostgreSQL** di project yang sama. Catat *Internal URL*: host, user, password, database.
+2. Di resource OSIS Digital → **Settings**, aktifkan **Connect To Predefined Network**,
+   agar stack bisa menjangkau resource basis data itu.
+3. Isi `DB_HOST` (host dari Internal URL), `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, dan `DB_PASSWORD`
+   sesuai resource tersebut.
+4. Service `postgres` bawaan tetap menyala tetapi tidak dipakai. Boleh dibiarkan.
 
 ---
 
@@ -223,6 +237,7 @@ Perlindungan yang sudah ada di aplikasi:
 | Deploy gagal di tahap `composer`/`npm` | Jaringan server / memori kurang | Redeploy; pastikan RAM ≥ 2 GB saat build |
 | `pull access denied for osis-digital` | Service tanpa `build` dicoba di-*pull* dari Docker Hub | Pastikan `app`, `worker`, `scheduler` sama-sama memakai `build: *osis-build` (sudah di repo terbaru) |
 | Log `APP_KEY belum diisi` | Variabel kosong | Isi `APP_KEY`, redeploy |
+| `could not translate host name "<UUID>"` | `DB_HOST` diisi resource PostgreSQL lain yang beda jaringan | Hapus `DB_HOST` (pakai `postgres` bawaan) **atau** ikuti bagian 3a |
 | Log `Menunggu basis data...` terus | Kata sandi DB berubah setelah volume dibuat | Samakan `DB_PASSWORD` dengan saat pertama deploy, atau reset volume `osis-pgdata` (data hilang!) |
 | Halaman 419 "Sesi kedaluwarsa" | Domain diakses lewat `http://` atau `APP_URL` beda dengan domain | Pakai `https://` dan samakan `APP_URL` |
 | Foto/poster tidak tampil | Tautan storage belum dibuat | Terminal `app`: `php artisan storage:link --force` |
