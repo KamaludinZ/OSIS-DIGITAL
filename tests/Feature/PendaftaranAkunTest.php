@@ -74,4 +74,23 @@ class PendaftaranAkunTest extends TestCase
         Livewire::test(EditUser::class, ['record' => $pengurus->id])->fillForm(['password' => 'barusaja12'])->call('save')->assertHasNoFormErrors();
         $this->assertTrue(Hash::check('barusaja12', $pengurus->fresh()->password));
     }
+
+    public function test_lupa_kata_sandi_direset_admin(): void
+    {
+        $admin = User::factory()->create(['role' => Peran::Admin]);
+        $pengurus = User::factory()->create(['role' => Peran::Pengurus]);
+        $this->actingAs($admin);
+
+        // Tidak ada reset mandiri lewat email.
+        $this->get('/forgot-password')->assertNotFound();
+        $this->get('/reset-password/token')->assertNotFound();
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Users\Pages\ListUsers::class)
+            ->assertTableActionHidden('resetSandi', $admin)
+            ->callTableAction('resetSandi', $pengurus)
+            ->assertNotified();
+
+        $this->assertFalse(Hash::check('password', $pengurus->fresh()->password));
+        $this->assertMatchesRegularExpression('/^[a-z2-9]{10}$/', \App\Filament\Resources\Users\UserResource::kataSandiSementara());
+    }
 }

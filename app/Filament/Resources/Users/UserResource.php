@@ -53,6 +53,14 @@ class UserResource extends Resource
             ->mapWithKeys(fn (Peran $p) => [$p->value => $p->label()])->all();
     }
 
+    /** 10 karakter tanpa huruf/angka yang mirip (0/O, 1/l/I) agar mudah didiktekan. */
+    public static function kataSandiSementara(): string
+    {
+        $huruf = 'abcdefghjkmnpqrstuvwxyz23456789';
+
+        return collect(range(1, 10))->map(fn () => $huruf[random_int(0, strlen($huruf) - 1)])->join('');
+    }
+
     public static function canAccess(): bool
     {
         return auth()->user()?->can('kelola-akun') ?? false;
@@ -112,6 +120,19 @@ class UserResource extends Resource
                 \Filament\Tables\Filters\TernaryFilter::make('aktif')->label('Status akun')->trueLabel('Aktif')->falseLabel('Nonaktif'),
             ])
             ->recordActions([
+                \Filament\Actions\Action::make('resetSandi')->label('Reset kata sandi')->icon(Heroicon::OutlinedKey)->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn (User $record) => 'Reset kata sandi '.$record->name.'?')
+                    ->modalDescription('Kata sandi sementara dibuat dan ditampilkan sekali. Sesi akun ini di perangkat lain ikut berakhir.')
+                    ->hidden(fn (User $record) => $record->is(auth()->user()))
+                    ->action(function (User $record) {
+                        $sementara = self::kataSandiSementara();
+                        $record->forceFill(['password' => $sementara, 'remember_token' => null])->save();
+
+                        \Filament\Notifications\Notification::make()->title('Kata sandi sementara untuk '.$record->name)
+                            ->body("**{$sementara}**  \nSampaikan langsung ke pemilik akun dan minta segera diganti di Pengaturan akun.")
+                            ->success()->persistent()->send();
+                    }),
                 EditAction::make(),
                 DeleteAction::make()->hidden(fn (User $record) => $record->is(auth()->user())),
             ]);
