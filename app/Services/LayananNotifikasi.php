@@ -37,6 +37,64 @@ class LayananNotifikasi
             ->all());
     }
 
+    /**
+     * Akun aktif (staf & kandidat) yang mau menerima jenis pemberitahuan ini.
+     *
+     * @return \Illuminate\Support\Collection<int, \App\Models\User>
+     */
+    public function penerima(string $jenis, ?int $kecuali = null): \Illuminate\Support\Collection
+    {
+        return \App\Models\User::query()
+            ->where('aktif', true)
+            ->whereIn('role', ['admin', 'pengurus', 'panitia', 'kandidat'])
+            ->when($kecuali, fn ($q) => $q->whereKeyNot($kecuali))
+            ->with('preferensiNotifikasi')
+            ->get()
+            ->filter(fn ($u) => $u->mauMenerima($jenis))
+            ->values();
+    }
+
+    /**
+     * Kirim "pengumuman baru" ke akun sekali saja, saat pengumuman sudah tayang.
+     * Penandanya diklaim lewat update bersyarat agar aman dari dua pemicu bersamaan.
+     */
+    public function beritahuPengumuman(Announcement $a): int
+    {
+        if ($a->diberitahukan_pada || ! $a->sudahTayang()) {
+            return 0;
+        }
+
+        $diklaim = Announcement::whereKey($a->id)->whereNull('diberitahukan_pada')->update(['diberitahukan_pada' => now()]);
+
+        if (! $diklaim) {
+            return 0;
+        }
+
+        $a->diberitahukan_pada = now();
+        $penerima = $this->penerima('pengumuman', $a->penulis_id);
+
+        \Filament\Notifications\Notification::make()
+            ->title('Pengumuman baru: '.$a->judul)
+            ->body((string) str($a->ringkasan ?: strip_tags((string) $a->isi))->squish()->limit(140))
+            ->icon('heroicon-o-megaphone')
+            ->actions([\Filament\Actions\Action::make('baca')->label('Baca')->url(route('pengumuman.detail', $a->id))])
+            ->sendToDatabase($penerima);
+
+        return $penerima->count();
+    }
+
+    /** Pengumuman terjadwal yang baru saja tayang (dipanggil penjadwal tiap menit). */
+    public function kirimPengumumanTerjadwal(): int
+    {
+        return Announcement::query()
+            ->where('dipublikasikan', true)
+            ->whereNull('diberitahukan_pada')
+            ->where('dipublikasikan_pada', '<=', now())
+            ->where('dipublikasikan_pada', '>=', now()->subDays(2)) // jangan menyusulkan kabar basi
+            ->get()
+            ->sum(fn (Announcement $a) => $this->beritahuPengumuman($a));
+    }
+
     public static function lupakan(): void
     {
         Cache::forget('umpan-notifikasi');

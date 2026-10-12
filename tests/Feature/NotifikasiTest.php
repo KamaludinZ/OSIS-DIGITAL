@@ -150,4 +150,32 @@ class NotifikasiTest extends TestCase
         \Livewire\Volt\Volt::test('notifikasi')->call('bukaAkun', $milikLain)->assertNotFound();
         $this->assertNull($lain->notifications()->first()->read_at);
     }
+
+    public function test_pemicu_pemberitahuan_saat_pengumuman_tayang(): void
+    {
+        $pengurus = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]);
+        $panitia = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Panitia]);
+        $tidakMau = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Admin]);
+        $tidakMau->aturNotifikasi('pengumuman', false);
+        \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Admin, 'aktif' => false]);
+
+        // Draf: belum ada pemberitahuan. Ditayangkan: terkirim sekali, bukan ke penulisnya.
+        $a = Announcement::factory()->create(['dipublikasikan' => false, 'judul' => 'Class Meeting', 'penulis_id' => $pengurus->id]);
+        $this->assertSame(0, \Illuminate\Notifications\DatabaseNotification::count());
+
+        $a->update(['dipublikasikan' => true, 'dipublikasikan_pada' => now()]);
+        $a->update(['judul' => 'Class Meeting (revisi)']);
+        $this->assertSame(1, \Illuminate\Notifications\DatabaseNotification::count());
+        $this->assertSame('Pengumuman baru: Class Meeting', $panitia->notifications()->first()->data['title']);
+        $this->assertSame(route('pengumuman.detail', $a->id), $panitia->notifications()->first()->data['actions'][0]['url']);
+        $this->assertNotNull($a->fresh()->diberitahukan_pada);
+
+        // Terjadwal: dikirim penjadwal saat waktunya tiba.
+        $b = Announcement::factory()->create(['dipublikasikan' => true, 'dipublikasikan_pada' => now()->addHour(), 'judul' => 'Besok libur']);
+        $this->artisan('osim:kirim-pengumuman-terjadwal')->expectsOutputToContain('0 pemberitahuan');
+        $this->travel(61)->minutes();
+        $this->artisan('osim:kirim-pengumuman-terjadwal')->expectsOutputToContain('2 pemberitahuan');
+        $this->artisan('osim:kirim-pengumuman-terjadwal')->expectsOutputToContain('0 pemberitahuan');
+        $this->assertSame(2, $pengurus->notifications()->count() + $panitia->notifications()->where('data->title', 'Pengumuman baru: Besok libur')->count());
+    }
 }
