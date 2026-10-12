@@ -16,7 +16,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Pemberitahuan')] class extend
     Pusat pemberitahuan. Daftar dan status "dibaca" dikelola Alpine store
     `notif` (resources/js/app.js) yang diisi umpan publik dari layout.
 --}}
-<div x-data="{ tab: 'semua', atur: false }">
+<div x-data="{ tab: 'semua', atur: location.hash === '#atur' }" x-init="$watch('atur', (buka) => history.replaceState(null, '', buka ? '#atur' : location.pathname))">
     <section class="osim-guilloche bg-hijau-700 text-white">
         <x-osim.wadah class="pb-8 pt-8">
             <div class="flex flex-wrap items-end justify-between gap-4">

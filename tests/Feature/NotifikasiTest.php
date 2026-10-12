@@ -78,4 +78,14 @@ class NotifikasiTest extends TestCase
         $this->assertSame(route('pengumuman.detail', $a->id), $umpan->firstWhere('id', 'pengumuman-'.$a->id)['tautan']);
         $this->assertSame(route('kegiatan.detail', $k->id), $umpan->firstWhere('id', 'kegiatan-'.$k->id)['tautan']);
     }
+
+    public function test_pengaturan_preferensi_pemberitahuan(): void
+    {
+        $this->get('/notifikasi')->assertOk()
+            ->assertSee('Jenis yang ingin kamu terima')
+            ->assertSeeInOrder(['Pengumuman baru', 'Pengingat pemilihan', 'Agenda kegiatan'])
+            ->assertSee("\$store.notif.ubahPref('pemilihan'", false)
+            ->assertSee("location.hash === '#atur'", false)
+            ->assertSee('Tampilkan juga di layar perangkat');
+    }
 }
