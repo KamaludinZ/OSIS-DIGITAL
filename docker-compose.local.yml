@@ -1,0 +1,9 @@
+# Uji image produksi di komputer sendiri (bukan untuk Coolify):
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.docker up --build
+# lalu buka http://localhost:8080
+services:
+  app:
+    ports:
+      - "8080:80"
+    environment:
+      SESSION_SECURE_COOKIE: "false"

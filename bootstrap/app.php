@@ -11,6 +11,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Di balik reverse proxy (Traefik/Coolify): percayai hanya jaringan privat, agar IP asli
+        // pengunjung terbaca (batas tebakan kode per IP) dan X-Forwarded-For palsu dari luar tidak dipercaya.
+        $middleware->trustProxies(
+            at: array_filter(array_map('trim', explode(',', env('TRUSTED_PROXIES', '127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16')))),
+            headers: Illuminate\Http\Request::HEADER_X_FORWARDED_FOR | Illuminate\Http\Request::HEADER_X_FORWARDED_HOST
+                | Illuminate\Http\Request::HEADER_X_FORWARDED_PORT | Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO,
+        );
+
         // Pengguna yang sudah masuk lalu membuka /login diarahkan ke halaman awal perannya.
         $middleware->redirectUsersTo(fn (Illuminate\Http\Request $request) => $request->user()?->halamanAwal() ?? '/');
 

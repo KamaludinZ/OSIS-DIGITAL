@@ -1,0 +1,111 @@
+# OSIS Digital — produksi di Coolify (build pack: Docker Compose).
+# Isi variabel di Coolify > Environment Variables (lihat docs/DEPLOY-COOLIFY.md).
+# Domain diatur di Coolify pada service "app" (port 80); Traefik Coolify menangani HTTPS.
+
+x-osis-env: &osis-env
+  APP_NAME: "OSIS Digital"
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_KEY: ${APP_KEY:?Isi APP_KEY (php artisan key:generate --show)}
+  APP_URL: ${APP_URL:?Isi APP_URL, mis. https://osim.mtsn2kotamalang.sch.id}
+  APP_LOCALE: id
+  APP_FALLBACK_LOCALE: id
+  APP_TIMEZONE: Asia/Jakarta
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: ${LOG_LEVEL:-warning}
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_DATABASE: ${DB_DATABASE:-osis_digital}
+  DB_USERNAME: ${DB_USERNAME:-osis_digital}
+  DB_PASSWORD: ${DB_PASSWORD:?Isi DB_PASSWORD yang kuat}
+  SESSION_DRIVER: database
+  SESSION_LIFETIME: "120"
+  SESSION_ENCRYPT: "true"
+  SESSION_SECURE_COOKIE: "true"
+  SESSION_SAME_SITE: lax
+  CACHE_STORE: database
+  QUEUE_CONNECTION: database
+  FILESYSTEM_DISK: local
+  BCRYPT_ROUNDS: "12"
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: osis-digital:latest
+    restart: unless-stopped
+    environment:
+      <<: *osis-env
+      APP_ROLE: web
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+    volumes:
+      - osis-storage:/var/www/html/storage/app
+    expose:
+      - "80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/up > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+  worker:
+    image: osis-digital:latest
+    restart: unless-stopped
+    environment:
+      <<: *osis-env
+      APP_ROLE: worker
+    volumes:
+      - osis-storage:/var/www/html/storage/app
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' > /dev/null || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+  scheduler:
+    image: osis-digital:latest
+    restart: unless-stopped
+    environment:
+      <<: *osis-env
+      APP_ROLE: scheduler
+    volumes:
+      - osis-storage:/var/www/html/storage/app
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'schedule:work' > /dev/null || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-osis_digital}
+      POSTGRES_USER: ${DB_USERNAME:-osis_digital}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Isi DB_PASSWORD yang kuat}
+      TZ: Asia/Jakarta
+    volumes:
+      - osis-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  osis-storage:
+  osis-pgdata:

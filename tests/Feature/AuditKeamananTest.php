@@ -167,4 +167,36 @@ class AuditKeamananTest extends TestCase
         $this->assertNotSame($id, session()->getId());
         $this->assertSame($token, session()->token());
     }
+
+    public function test_ip_asli_terbaca_di_balik_proxy_dan_tidak_bisa_dipalsukan(): void
+    {
+        \Illuminate\Support\Facades\Route::get('/_uji-ip', fn () => request()->ip());
+
+        // Lewat Traefik (IP Docker 172.18.0.2): IP pengunjung asli dari X-Forwarded-For dipakai.
+        $this->withServerVariables(['REMOTE_ADDR' => '172.18.0.2'])->withHeader('X-Forwarded-For', '203.0.113.7')
+            ->get('/_uji-ip')->assertSeeText('203.0.113.7');
+
+        // Pengunjung menyisipkan X-Forwarded-For palsu: yang terbaca tetap IP aslinya (dari Traefik).
+        $this->withServerVariables(['REMOTE_ADDR' => '172.18.0.2'])->withHeader('X-Forwarded-For', '1.2.3.4, 203.0.113.7')
+            ->get('/_uji-ip')->assertSeeText('203.0.113.7');
+
+        // Langsung dari internet (bukan proxy tepercaya): header diabaikan.
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.9'])->withHeader('X-Forwarded-For', '1.2.3.4')
+            ->get('/_uji-ip')->assertSeeText('198.51.100.9');
+    }
+
+    public function test_perintah_buat_admin_produksi(): void
+    {
+        $this->artisan('osim:buat-admin', ['email' => 'Admin@MTsN2.sch.id', '--nama' => 'Pak Admin'])
+            ->expectsQuestion('Kata sandi (minimal 12 karakter, kosongkan untuk dibuatkan otomatis)', 'sandi-sangat-kuat-1')
+            ->expectsOutputToContain('Akun admin siap: admin@mtsn2.sch.id')
+            ->assertSuccessful();
+
+        $akun = User::firstWhere('email', 'admin@mtsn2.sch.id');
+        $this->assertSame(Peran::Admin, $akun->role);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('sandi-sangat-kuat-1', $akun->password));
+
+        $this->artisan('osim:buat-admin', ['email' => 'x@y.id'])->expectsQuestion('Kata sandi (minimal 12 karakter, kosongkan untuk dibuatkan otomatis)', 'pendek')
+            ->assertFailed();
+    }
 }
