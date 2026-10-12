@@ -63,6 +63,9 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            // Pemberitahuan akun staf (tabel notifications), diperbarui berkala.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->userMenuItems([
                 \Filament\Actions\Action::make('pengaturan-akun')->label('Pengaturan akun')
                     ->url(fn () => route('settings.profile'))->icon(\Filament\Support\Icons\Heroicon::OutlinedCog6Tooth),

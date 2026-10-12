@@ -90,4 +90,15 @@ class NotifikasiTest extends TestCase
             ->assertSee('Tersimpan di perangkat ini')
             ->assertSee('beriTahuTersimpan()', false);
     }
+
+    public function test_tabel_pemberitahuan_akun_staf(): void
+    {
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumns('notifications', ['id', 'type', 'notifiable_type', 'notifiable_id', 'data', 'read_at']));
+
+        $admin = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Admin]);
+        \Filament\Notifications\Notification::make()->title('Uji pemberitahuan')->sendToDatabase($admin);
+
+        $this->assertSame(1, $admin->unreadNotifications()->count());
+        $this->actingAs($admin)->followingRedirects()->get('/admin')->assertOk()->assertSee('database-notifications', false);
+    }
 }
