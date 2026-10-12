@@ -5,6 +5,7 @@
     $tab = [
         ['settings.profile', 'Profil', 'identification'],
         ['settings.password', 'Kata sandi', 'key'],
+        ['settings.notifikasi', 'Pemberitahuan', 'bell'],
     ];
 @endphp
 
@@ -29,12 +30,12 @@
                 @endif
             </div>
 
-            <nav aria-label="Bagian pengaturan" class="flex gap-1.5">
+            <nav aria-label="Bagian pengaturan" class="-mx-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:px-0">
                 @foreach ($tab as [$rute, $label, $ikon])
                     @php($aktif = request()->routeIs($rute))
                     <a href="{{ route($rute) }}" wire:navigate @if ($aktif) aria-current="page" @endif
                        @class([
-                           'flex items-center gap-2 rounded-t-xl px-4 pb-2.5 pt-3 text-sm font-bold transition',
+                           'flex items-center gap-2 whitespace-nowrap rounded-t-xl px-4 pb-2.5 pt-3 text-sm font-bold transition',
                            'bg-hijau-50 text-hijau-900' => $aktif,
                            'bg-hijau-900/30 text-hijau-50 hover:bg-hijau-900/50' => ! $aktif,
                        ])>

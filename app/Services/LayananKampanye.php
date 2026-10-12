@@ -104,10 +104,23 @@ class LayananKampanye
 
             RateLimiter::hit($kunci, 600);
 
-            return $calon->questions()->create([
+            $baru = $calon->questions()->create([
                 $kolom => $penanya->id,
                 'pertanyaan' => $pertanyaan,
             ]);
+
+            // Beri tahu akun kandidat yang ditanya (bila ada & mau menerima).
+            $calon->akun()->where('aktif', true)->with('preferensiNotifikasi')->get()
+                ->filter(fn (User $akun) => $akun->mauMenerima('pertanyaan'))
+                ->whenNotEmpty(fn ($penerima) => \Filament\Notifications\Notification::make()
+                    ->title('Pertanyaan baru untukmu')
+                    ->body((string) Str::limit($pertanyaan, 140))
+                    ->icon('heroicon-o-chat-bubble-left-right')
+                    ->actions([\Filament\Actions\Action::make('tanggapi')->label('Tanggapi')
+                        ->url(route('kandidat.profil', ['id' => $calon->id, 'tab' => 'tanya-jawab']))])
+                    ->sendToDatabase($penerima));
+
+            return $baru;
         });
 
         return $this->tanyaKeArray($hasil->setRelation($penanya instanceof Voter ? 'voter' : 'penanya', $penanya));

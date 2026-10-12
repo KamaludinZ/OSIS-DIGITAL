@@ -48,4 +48,30 @@ class ProfileUpdateTest extends TestCase
 
         $this->get('/settings/profile')->assertOk()->assertSee('Ke tanya jawab')->assertSee('No. '.$calon->nomor_urut)->assertDontSee('Ke Ruang OSIM');
     }
+
+    public function test_baca_dan_simpan_preferensi_pemberitahuan_akun(): void
+    {
+        $calon = \App\Models\Candidate::factory()->create();
+        $kandidat = User::factory()->create(['role' => Peran::Kandidat, 'candidate_id' => $calon->id]);
+        $this->actingAs($kandidat);
+
+        $this->get('/settings/notifikasi')->assertOk()->assertSee('Pertanyaan untuk kandidat')->assertSee('Pengumuman baru');
+
+        Volt::test('settings.notifikasi')
+            ->assertSet('pilihan', ['pertanyaan' => true, 'pemilihan' => true, 'pengumuman' => true])
+            ->set('pilihan.pengumuman', false)
+            ->set('pilihan.lainnya', true) // jenis asing diabaikan
+            ->call('simpan')
+            ->assertDispatched('preferensi-tersimpan');
+
+        $this->assertFalse($kandidat->fresh()->mauMenerima('pengumuman'));
+        $this->assertTrue($kandidat->fresh()->mauMenerima('pertanyaan'));
+        $this->assertSame(3, $kandidat->preferensiNotifikasi()->count());
+
+        Volt::test('settings.notifikasi')->assertSet('pilihan.pengumuman', false);
+
+        // Panitia tidak melihat jenis khusus kandidat.
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $this->get('/settings/notifikasi')->assertOk()->assertDontSee('Pertanyaan untuk kandidat');
+    }
 }

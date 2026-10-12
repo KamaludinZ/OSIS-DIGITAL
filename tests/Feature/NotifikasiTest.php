@@ -178,4 +178,25 @@ class NotifikasiTest extends TestCase
         $this->artisan('osim:kirim-pengumuman-terjadwal')->expectsOutputToContain('0 pemberitahuan');
         $this->assertSame(2, $pengurus->notifications()->count() + $panitia->notifications()->where('data->title', 'Pengumuman baru: Besok libur')->count());
     }
+
+    public function test_pertanyaan_baru_memberi_tahu_akun_kandidat(): void
+    {
+        $calon = \App\Models\Candidate::factory()->create();
+        $lain = \App\Models\Candidate::factory()->create();
+        $akun = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Kandidat, 'candidate_id' => $calon->id]);
+        $akunLain = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Kandidat, 'candidate_id' => $lain->id]);
+        $penanya = \App\Models\Voter::factory()->create();
+        $layanan = app(\App\Services\LayananKampanye::class);
+
+        $layanan->kirimPertanyaan($penanya, $calon, 'Bagaimana rencana kegiatan Ramadan nanti?');
+        $layanan->kirimPertanyaan($penanya, $calon, 'Bagaimana rencana kegiatan Ramadan nanti?'); // duplikat tidak memberi tahu lagi
+
+        $this->assertSame(1, $akun->notifications()->count());
+        $this->assertSame('Pertanyaan baru untukmu', $akun->notifications()->first()->data['title']);
+        $this->assertSame(0, $akunLain->notifications()->count());
+
+        $akun->aturNotifikasi('pertanyaan', false);
+        $layanan->kirimPertanyaan($penanya, $calon, 'Apakah ada program literasi Al-Quran?');
+        $this->assertSame(1, $akun->notifications()->count());
+    }
 }
