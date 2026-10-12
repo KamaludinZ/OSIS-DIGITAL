@@ -78,6 +78,8 @@ class UserResource extends Resource
                     ->mapWithKeys(fn (Candidate $c) => [$c->id => 'No. '.$c->nomor_urut.' · '.$c->namaTampil()]))
                 ->visible(fn (Get $get) => $get('role') === Peran::Kandidat->value || $get('role') === Peran::Kandidat)
                 ->required(fn (Get $get) => $get('role') === Peran::Kandidat->value || $get('role') === Peran::Kandidat)
+                ->unique(ignoreRecord: true)
+                ->validationMessages(['unique' => 'Kandidat ini sudah punya akun. Reset kata sandinya saja.'])
                 ->helperText('Akun ini hanya bisa menanggapi pertanyaan untuk kandidat tersebut.'),
             \Filament\Forms\Components\Toggle::make('aktif')->label('Akun aktif')->default(true)->inline(false)
                 ->helperText('Akun nonaktif tidak bisa masuk dan langsung keluar dari sesi yang berjalan.')
