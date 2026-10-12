@@ -62,7 +62,9 @@ class SesiPemilih
             throw ValidationException::withMessages([$field => 'Kode pilih tidak dikenal. Periksa lagi 6 angka di kartumu.']);
         }
 
-        session()->regenerate();
+        // ID sesi baru (cegah session fixation) tanpa mengganti token CSRF: halaman Livewire
+        // yang sedang terbuka tetap memakai token lamanya, regenerate() akan memicu 419.
+        session()->migrate(true);
         session([self::KUNCI_PEMILIH => $pemilih->id, 'pemilih_masuk_pada' => now()->timestamp]);
 
         return $pemilih;
@@ -135,7 +137,9 @@ class SesiPemilih
             throw ValidationException::withMessages([$field => ($jenisEnum?->labelNomorInduk() ?? 'Nomor induk').' dan tanggal lahir tidak cocok dengan data madrasah.']);
         }
 
-        session()->regenerate();
+        // ID sesi baru (cegah session fixation) tanpa mengganti token CSRF: halaman Livewire
+        // yang sedang terbuka tetap memakai token lamanya, regenerate() akan memicu 419.
+        session()->migrate(true);
         $pemilih->forceFill(['penanya_terverifikasi_pada' => $pemilih->penanya_terverifikasi_pada ?? now()])->save();
         session([self::KUNCI_PENANYA => $pemilih->id]);
 

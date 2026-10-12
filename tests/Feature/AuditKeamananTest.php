@@ -150,4 +150,21 @@ class AuditKeamananTest extends TestCase
             ->call('create')
             ->assertHasFormErrors(['foto_url']);
     }
+
+    public function test_masuk_kode_mengganti_id_sesi_tanpa_mengganti_token_csrf(): void
+    {
+        // Regresi: regenerate() mengganti token CSRF sehingga halaman Livewire yang terbuka kena 419.
+        Voter::factory()->berkode('444444')->create(['tanggal_lahir' => '2012-05-05', 'nomor_induk' => '0091112223']);
+        session()->start();
+        [$id, $token] = [session()->getId(), session()->token()];
+
+        $this->assertTrue($this->coba('444444'));
+        $this->assertNotSame($id, session()->getId());
+        $this->assertSame($token, session()->token());
+
+        $id = session()->getId();
+        app(SesiPemilih::class)->verifikasiPenanya('siswa', '0091112223', '2012-05-05');
+        $this->assertNotSame($id, session()->getId());
+        $this->assertSame($token, session()->token());
+    }
 }
