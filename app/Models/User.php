@@ -21,6 +21,9 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
      *
      * @var list<string>
      */
+    /** Akun baru langsung aktif (sama dengan bawaan kolom). */
+    protected $attributes = ['aktif' => true];
+
     protected $fillable = [
         'name',
         'email',
@@ -28,6 +31,7 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
         'role',
         'kelas',
         'candidate_id',
+        'aktif',
     ];
 
     /**
@@ -50,6 +54,8 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'aktif' => 'boolean',
+            'terakhir_masuk_pada' => 'datetime',
             'role' => Peran::class,
         ];
     }
@@ -84,6 +90,6 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return in_array($this->role, [Peran::Pengurus, Peran::Panitia, Peran::Admin], true);
+        return $this->aktif && in_array($this->role, [Peran::Pengurus, Peran::Panitia, Peran::Admin], true);
     }
 }
