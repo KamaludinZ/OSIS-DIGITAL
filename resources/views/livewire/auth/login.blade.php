@@ -102,7 +102,7 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
 
     <div class="p-6 sm:p-8">
         <h1 class="font-display text-3xl font-black text-tinta">Masuk pengurus</h1>
-        <p class="mt-1 text-tinta-2">Khusus admin, pengurus OSIM, dan panitia pemilihan.</p>
+        <p class="mt-1 text-tinta-2">Khusus admin, pengurus OSIM, panitia pemilihan, dan kandidat.</p>
 
         @if (session('status'))
             <p class="mt-4 rounded-lg bg-hijau-100 px-3 py-2 text-sm font-semibold text-hijau-800" role="status">{{ session('status') }}</p>
@@ -156,7 +156,7 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
             <strong class="text-tinta">Siswa atau guru?</strong> Tidak perlu login. Memilih cukup dengan kode pilih 6 digit di
             <a href="{{ route('bilik-suara') }}" class="font-bold text-hijau-700 underline" wire:navigate>Bilik Suara</a>,
             dan bertanya ke kandidat cukup dengan NISN/NIK + tanggal lahir.
-            <br><strong class="text-tinta">Belum punya akun pengurus atau lupa kata sandi?</strong> Hubungi admin madrasah.
+            <br><strong class="text-tinta">Belum punya akun atau lupa kata sandi?</strong> Hubungi admin madrasah.
         </p>
     </div>
 </div>

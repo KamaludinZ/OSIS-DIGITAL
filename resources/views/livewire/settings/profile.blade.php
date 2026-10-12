@@ -1,117 +1,73 @@
 <?php
 
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Validation\Rule;
+use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
-new class extends Component {
+new #[Layout('components.layouts.siswa')] class extends Component {
     public string $name = '';
-    public string $email = '';
 
-    /**
-     * Mount the component.
-     */
     public function mount(): void
     {
         $this->name = Auth::user()->name;
-        $this->email = Auth::user()->email;
     }
 
     /**
-     * Update the profile information for the currently authenticated user.
+     * Pengguna hanya mengubah nama tampilan. Email & peran dikelola admin
+     * (akun dibuat dan direset dari Ruang OSIM → Akun Pengguna).
      */
     public function updateProfileInformation(): void
     {
-        $user = Auth::user();
+        $validated = $this->validate(
+            ['name' => ['required', 'string', 'max:100']],
+            ['name.required' => 'Nama tidak boleh kosong.'],
+        );
 
-        $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
+        Auth::user()->update($validated);
 
-            'email' => [
-                'required',
-                'string',
-                'lowercase',
-                'email',
-                'max:255',
-                Rule::unique(User::class)->ignore($user->id)
-            ],
-        ]);
-
-        $user->fill($validated);
-
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
-
-        $user->save();
-
-        $this->dispatch('profile-updated', name: $user->name);
+        $this->dispatch('profile-updated', name: $validated['name']);
     }
 
-    /**
-     * Send an email verification notification to the current user.
-     */
-    public function resendVerificationNotification(): void
+    public function rendering($view): void
     {
-        $user = Auth::user();
-
-        if ($user->hasVerifiedEmail()) {
-            $this->redirectIntended(default: route('dashboard', absolute: false));
-
-            return;
-        }
-
-        $user->sendEmailVerificationNotification();
-
-        Session::flash('status', 'verification-link-sent');
+        $view->title('Pengaturan Akun');
     }
 }; ?>
 
-<section class="w-full">
-    @include('partials.settings-heading')
+<x-settings.layout heading="Profil" subheading="Nama ini tampil di Ruang OSIM dan pada tanggapan tanya jawab.">
+    <form wire:submit="updateProfileInformation" class="flex flex-col gap-5">
+        <div>
+            <label for="nama" class="font-bold text-tinta">Nama</label>
+            <input id="nama" wire:model="name" type="text" required autocomplete="name" maxlength="100"
+                   @class(['mt-1.5 h-12 w-full rounded-xl border-2 bg-hijau-50/50 px-4 text-tinta focus:bg-white focus:outline-none', 'border-cap' => $errors->has('name'), 'border-garis focus:border-hijau-600' => ! $errors->has('name')]) />
+            @error('name') <p class="mt-1.5 flex items-center gap-1.5 text-sm font-bold text-cap" role="alert"><flux:icon.exclamation-circle variant="micro" /> {{ $message }}</p> @enderror
+        </div>
 
-    <x-settings.layout heading="Profile" subheading="Update your name and email address">
-        <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
-            <flux:input wire:model="name" label="{{ __('Name') }}" type="text" name="name" required autofocus autocomplete="name" />
-
+        <dl class="grid gap-3 rounded-xl bg-hijau-50 p-4 text-sm ring-1 ring-garis sm:grid-cols-2">
             <div>
-                <flux:input wire:model="email" label="{{ __('Email') }}" type="email" name="email" required autocomplete="email" />
-
-                @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
-                    <div>
-                        <p class="mt-2 text-sm text-gray-800">
-                            {{ __('Your email address is unverified.') }}
-
-                            <button
-                                wire:click.prevent="resendVerificationNotification"
-                                class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                            >
-                                {{ __('Click here to re-send the verification email.') }}
-                            </button>
-                        </p>
-
-                        @if (session('status') === 'verification-link-sent')
-                            <p class="mt-2 text-sm font-medium text-green-600">
-                                {{ __('A new verification link has been sent to your email address.') }}
-                            </p>
-                        @endif
-                    </div>
-                @endif
+                <dt><x-osim.label>Email sekolah</x-osim.label></dt>
+                <dd class="mt-0.5 break-all font-semibold text-tinta">{{ auth()->user()->email }}</dd>
             </div>
-
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-end">
-                    <flux:button variant="primary" type="submit" class="w-full">{{ __('Save') }}</flux:button>
-                </div>
-
-                <x-action-message class="me-3" on="profile-updated">
-                    {{ __('Saved.') }}
-                </x-action-message>
+            <div>
+                <dt><x-osim.label>Peran</x-osim.label></dt>
+                <dd class="mt-0.5 font-semibold text-tinta">
+                    {{ auth()->user()->role->label() }}@if (auth()->user()->kandidat) · No. {{ auth()->user()->kandidat->nomor_urut }}@endif
+                </dd>
             </div>
-        </form>
+            <p class="flex items-start gap-1.5 text-tinta-2 sm:col-span-2">
+                <flux:icon.information-circle variant="micro" class="mt-0.5 shrink-0 text-hijau-600" />
+                Email dan peran diatur oleh admin madrasah. Hubungi admin bila perlu diganti.
+            </p>
+        </dl>
 
-        <livewire:settings.delete-user-form />
-    </x-settings.layout>
-</section>
+        <div class="flex flex-wrap items-center gap-4">
+            <button type="submit" wire:loading.attr="disabled" wire:target="updateProfileInformation"
+                    class="inline-flex items-center gap-2 rounded-xl bg-hijau-600 px-5 py-3 font-bold text-white shadow-[0_4px_10px_-3px_var(--color-hijau-900)] hover:bg-hijau-700 disabled:opacity-60">
+                <flux:icon.check variant="micro" /> Simpan
+            </button>
+            <x-action-message on="profile-updated" class="flex items-center gap-1.5 text-sm font-bold text-hijau-700">
+                Tersimpan.
+            </x-action-message>
+        </div>
+    </form>
+</x-settings.layout>

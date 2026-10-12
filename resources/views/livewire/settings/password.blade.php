@@ -1,25 +1,30 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
-new class extends Component {
+new #[Layout('components.layouts.siswa')] class extends Component {
     public string $current_password = '';
+
     public string $password = '';
+
     public string $password_confirmation = '';
 
-    /**
-     * Update the password for the currently authenticated user.
-     */
     public function updatePassword(): void
     {
         try {
             $validated = $this->validate([
                 'current_password' => ['required', 'string', 'current_password'],
-                'password' => ['required', 'string', Password::defaults(), 'confirmed'],
+                'password' => ['required', 'string', Password::min(8), 'confirmed'],
+            ], [
+                'current_password.current_password' => 'Kata sandi saat ini salah.',
+                'password.confirmed' => 'Ulangi kata sandi baru dengan sama persis.',
+            ], [
+                'current_password' => 'Kata sandi saat ini',
+                'password' => 'Kata sandi baru',
             ]);
         } catch (ValidationException $e) {
             $this->reset('current_password', 'password', 'password_confirmation');
@@ -27,58 +32,40 @@ new class extends Component {
             throw $e;
         }
 
-        Auth::user()->update([
-            'password' => Hash::make($validated['password']),
-        ]);
+        // Model User meng-hash kata sandi lewat cast "hashed".
+        Auth::user()->update(['password' => $validated['password']]);
 
         $this->reset('current_password', 'password', 'password_confirmation');
-
         $this->dispatch('password-updated');
+    }
+
+    public function rendering($view): void
+    {
+        $view->title('Ganti Kata Sandi');
     }
 }; ?>
 
-<section class="w-full">
-    @include('partials.settings-heading')
-
-    <x-settings.layout heading="Update password" subheading="Ensure your account is using a long, random password to stay secure">
-        <form wire:submit="updatePassword" class="mt-6 space-y-6">
-            <flux:input
-                wire:model="current_password"
-                id="update_password_current_passwordpassword"
-                label="{{ __('Current password') }}"
-                type="password"
-                name="current_password"
-                required
-                autocomplete="current-password"
-            />
-            <flux:input
-                wire:model="password"
-                id="update_password_password"
-                label="{{ __('New password') }}"
-                type="password"
-                name="password"
-                required
-                autocomplete="new-password"
-            />
-            <flux:input
-                wire:model="password_confirmation"
-                id="update_password_password_confirmation"
-                label="{{ __('Confirm Password') }}"
-                type="password"
-                name="password_confirmation"
-                required
-                autocomplete="new-password"
-            />
-
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-end">
-                    <flux:button variant="primary" type="submit" class="w-full">{{ __('Save') }}</flux:button>
-                </div>
-
-                <x-action-message class="me-3" on="password-updated">
-                    {{ __('Saved.') }}
-                </x-action-message>
+<x-settings.layout heading="Ganti kata sandi" subheading="Gunakan minimal 8 karakter dan jangan dibagikan ke siapa pun.">
+    <form wire:submit="updatePassword" class="flex flex-col gap-5">
+        @foreach ([
+            ['current_password', 'Kata sandi saat ini', 'current-password'],
+            ['password', 'Kata sandi baru', 'new-password'],
+            ['password_confirmation', 'Ulangi kata sandi baru', 'new-password'],
+        ] as [$kolom, $label, $isiOtomatis])
+            <div>
+                <label for="{{ $kolom }}" class="font-bold text-tinta">{{ $label }}</label>
+                <input id="{{ $kolom }}" wire:model="{{ $kolom }}" type="password" required autocomplete="{{ $isiOtomatis }}"
+                       @class(['mt-1.5 h-12 w-full rounded-xl border-2 bg-hijau-50/50 px-4 text-tinta focus:bg-white focus:outline-none', 'border-cap' => $errors->has($kolom), 'border-garis focus:border-hijau-600' => ! $errors->has($kolom)]) />
+                @error($kolom) <p class="mt-1.5 flex items-center gap-1.5 text-sm font-bold text-cap" role="alert"><flux:icon.exclamation-circle variant="micro" /> {{ $message }}</p> @enderror
             </div>
-        </form>
-    </x-settings.layout>
-</section>
+        @endforeach
+
+        <div class="flex flex-wrap items-center gap-4">
+            <button type="submit" wire:loading.attr="disabled" wire:target="updatePassword"
+                    class="inline-flex items-center gap-2 rounded-xl bg-hijau-600 px-5 py-3 font-bold text-white shadow-[0_4px_10px_-3px_var(--color-hijau-900)] hover:bg-hijau-700 disabled:opacity-60">
+                <flux:icon.key variant="micro" /> Ganti kata sandi
+            </button>
+            <x-action-message on="password-updated" class="text-sm font-bold text-hijau-700">Kata sandi diganti.</x-action-message>
+        </div>
+    </form>
+</x-settings.layout>

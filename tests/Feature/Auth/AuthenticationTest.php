@@ -77,7 +77,7 @@ class AuthenticationTest extends TestCase
         $this->get('/login')
             ->assertOk()
             ->assertSee('Kembali ke Beranda')
-            ->assertSee('Belum punya akun pengurus atau lupa kata sandi?')
+            ->assertSee('Belum punya akun atau lupa kata sandi?')
             ->assertDontSee('Sign up')
             ->assertDontSee('Forgot your password');
     }
