@@ -64,4 +64,18 @@ class NotifikasiTest extends TestCase
         Announcement::factory()->create(['dipublikasikan' => true, 'dipublikasikan_pada' => now()->subMinute(), 'judul' => 'Kabar segar']);
         $this->assertSame('Kabar segar', app(LayananNotifikasi::class)->umpan()[0]['judul']);
     }
+
+    public function test_detail_pengumuman_menandai_pemberitahuan_dibaca(): void
+    {
+        $a = Announcement::factory()->create(['dipublikasikan' => true, 'dipublikasikan_pada' => now()->subHour()]);
+        $k = Event::factory()->create(['tanggal_mulai' => today()->addDay(), 'tanggal_selesai' => today()->addDay()]);
+
+        $this->get('/pengumuman/'.$a->id)->assertOk()->assertSee("\$store.notif.tandai('pengumuman-{$a->id}')", false);
+        $this->get('/kegiatan/'.$k->id)->assertOk()->assertSee("\$store.notif.tandai('kegiatan-{$k->id}')", false);
+
+        // Tautan di umpan menuju halaman detail yang sama.
+        $umpan = collect($this->umpan());
+        $this->assertSame(route('pengumuman.detail', $a->id), $umpan->firstWhere('id', 'pengumuman-'.$a->id)['tautan']);
+        $this->assertSame(route('kegiatan.detail', $k->id), $umpan->firstWhere('id', 'kegiatan-'.$k->id)['tautan']);
+    }
 }

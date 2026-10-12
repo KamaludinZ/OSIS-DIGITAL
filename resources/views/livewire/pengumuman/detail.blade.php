@@ -18,7 +18,8 @@ new #[Layout('components.layouts.siswa')] class extends Component {
     }
 }; ?>
 
-<article>
+{{-- Membuka langsung juga menandai pemberitahuannya sudah dibaca (per perangkat). --}}
+<article x-data x-init="$store.notif.tandai('pengumuman-{{ $pengumuman['id'] }}')">
     <x-osim.pita class="pt-6 sm:pt-10 pb-24">
         <a href="{{ route('home') }}" wire:navigate class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-bold text-hijau-50 hover:bg-white/10">
             <flux:icon.arrow-left variant="micro" /> Kembali ke Beranda
