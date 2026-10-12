@@ -42,4 +42,16 @@ class PenjagaRuteTest extends TestCase
         $pengurus = User::factory()->create(['role' => Peran::Pengurus]);
         $this->actingAs($pengurus)->get('/kelola/sosmed')->assertOk();
     }
+
+    public function test_keluar_akun_dan_status_sesi(): void
+    {
+        $panitia = User::factory()->create(['role' => Peran::Panitia, 'name' => 'Bu Sari']);
+
+        $this->actingAs($panitia)->get('/')->assertSee('Masuk sebagai')->assertSee('Bu Sari')->assertSee('Panitia pemilihan');
+        $this->actingAs($panitia)->followingRedirects()->get('/admin')->assertOk()->assertSee('Pengaturan akun')->assertSee('Lihat situs OSIM');
+
+        $this->post('/logout')->assertRedirect('/')->assertSessionHas('status');
+        $this->assertGuest();
+        $this->followingRedirects()->get('/')->assertSee('Masuk pengurus');
+    }
 }

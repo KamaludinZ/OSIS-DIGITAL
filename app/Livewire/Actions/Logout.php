@@ -17,6 +17,6 @@ class Logout
         Session::invalidate();
         Session::regenerateToken();
 
-        return redirect('/');
+        return redirect('/')->with('status', 'Kamu sudah keluar dari akun. Sampai jumpa!');
     }
 }

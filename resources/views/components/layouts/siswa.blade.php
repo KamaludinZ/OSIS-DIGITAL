@@ -59,6 +59,12 @@
                                 <span class="hidden max-w-32 truncate sm:block">{{ \Illuminate\Support\Str::of(auth()->user()->name)->before(' ') }}</span>
                             </button>
                             <flux:menu>
+                                <div class="px-2 pb-2 pt-1.5">
+                                    <div class="text-xs text-tinta-2">Masuk sebagai</div>
+                                    <div class="max-w-56 truncate text-sm font-bold text-tinta">{{ auth()->user()->name }}</div>
+                                    <div class="text-xs font-semibold text-hijau-700">{{ auth()->user()->role->label() }}</div>
+                                </div>
+                                <flux:menu.separator />
                                 @if (auth()->user()->role === \App\Enums\Peran::Kandidat && auth()->user()->candidate_id)
                                     <flux:menu.item href="{{ route('kandidat.profil', ['id' => auth()->user()->candidate_id, 'tab' => 'tanya-jawab']) }}" icon="chat-bubble-left-right" wire:navigate>Tanggapi pertanyaan</flux:menu.item>
                                 @endif
@@ -84,6 +90,16 @@
                 </div>
             </div>
         </header>
+
+        @if (session('status'))
+            {{-- Pemberitahuan singkat (mis. sesudah keluar akun) --}}
+            <div x-data="{ tampil: true }" x-init="setTimeout(() => tampil = false, 5000)" x-show="tampil" x-transition.opacity
+                 class="fixed inset-x-4 top-20 z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl bg-hijau-900 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_-12px_rgb(4_41_26/0.6)]" role="status">
+                <flux:icon.check-circle variant="mini" class="shrink-0 text-emas-300" />
+                <span class="flex-1">{{ session('status') }}</span>
+                <button type="button" x-on:click="tampil = false" class="rounded-md p-1 hover:bg-white/10" aria-label="Tutup pemberitahuan"><flux:icon.x-mark variant="micro" /></button>
+            </div>
+        @endif
 
         <main id="isi" class="flex-1 pb-28 lg:pb-16">
             {{ $slot }}

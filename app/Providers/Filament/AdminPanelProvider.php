@@ -62,6 +62,12 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            ->userMenuItems([
+                \Filament\Actions\Action::make('pengaturan-akun')->label('Pengaturan akun')
+                    ->url(fn () => route('settings.profile'))->icon(\Filament\Support\Icons\Heroicon::OutlinedCog6Tooth),
+                \Filament\Actions\Action::make('lihat-situs')->label('Lihat situs OSIM')
+                    ->url(fn () => route('home'))->icon(\Filament\Support\Icons\Heroicon::OutlinedGlobeAlt),
+            ])
             ->authMiddleware([
                 Authenticate::class,
             ]);
