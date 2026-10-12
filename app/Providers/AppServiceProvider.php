@@ -24,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(User::class, \App\Policies\UserPolicy::class);
+        Gate::policy(\App\Models\Announcement::class, \App\Policies\AnnouncementPolicy::class);
 
         foreach ([\App\Models\Division::class, \App\Models\Member::class, \App\Models\WorkProgram::class, \App\Models\Event::class] as $model) {
             Gate::policy($model, \App\Policies\KelolaOrganisasiPolicy::class);

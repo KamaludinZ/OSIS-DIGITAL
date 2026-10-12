@@ -66,6 +66,12 @@ class AdminPanelProvider extends PanelProvider
             // Pemberitahuan akun staf (tabel notifications), diperbarui berkala.
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
+            ->navigationItems([
+                \Filament\Navigation\NavigationItem::make('Media Sosial')
+                    ->url(fn () => route('kelola.sosmed'))->icon(\Filament\Support\Icons\Heroicon::OutlinedPlayCircle)
+                    ->group('Publikasi')->sort(1)
+                    ->visible(fn () => auth()->user()?->can('kelola-publikasi') ?? false),
+            ])
             ->userMenuItems([
                 \Filament\Actions\Action::make('pengaturan-akun')->label('Pengaturan akun')
                     ->url(fn () => route('settings.profile'))->icon(\Filament\Support\Icons\Heroicon::OutlinedCog6Tooth),
