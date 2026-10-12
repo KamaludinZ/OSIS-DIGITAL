@@ -15,6 +15,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Text;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -67,6 +68,15 @@ class ListVoters extends ListRecords
         ];
     }
 
+    /** Dipanggil dari tombol di notifikasi hasil impor. */
+    #[\Livewire\Attributes\On('buat-kode-pemilih-baru')]
+    public function buatKodeUntukPemilihBaru(): void
+    {
+        $sasaran = Voter::terverifikasi()->whereNull('kode_pilih')->get();
+        $sasaran->each->beriKode();
+        Notification::make()->title($sasaran->count().' kode pilih dibuat')->success()->send();
+    }
+
     private function aksiImpor(JenisPemilih $jenis): Action
     {
         $siswa = $jenis === JenisPemilih::Siswa;
@@ -85,23 +95,53 @@ class ListVoters extends ListRecords
                     ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])
                     ->maxSize(5120)
                     ->storeFiles(false)
+                    ->live()
                     ->required(),
+                Text::make(fn (Get $get) => ($berkas = self::berkasDari($get('berkas')))
+                    ? new \Illuminate\Support\HtmlString(view('filament.pratinjau-impor', [
+                        'p' => app(ImporPemilih::class)->pratinjau($berkas->getRealPath(), $jenis, $berkas->getClientOriginalName()),
+                        'jenis' => $jenis->value,
+                    ])->render())
+                    : '')
+                    ->visible(fn (Get $get) => self::berkasDari($get('berkas')) !== null),
             ])
             ->action(function (array $data) use ($jenis) {
-                /** @var TemporaryUploadedFile $berkas */
-                $berkas = $data['berkas'];
+                $berkas = self::berkasDari($data['berkas']);
                 $hasil = app(ImporPemilih::class)->impor($berkas->getRealPath(), $jenis, $berkas->getClientOriginalName());
 
-                $judul = "{$hasil['tambah']} ditambahkan, {$hasil['perbarui']} diperbarui";
-                $notif = Notification::make()->title($judul);
+                $judul = "Impor selesai: {$hasil['tambah']} ditambahkan, {$hasil['perbarui']} diperbarui";
+                $tanpaKode = Voter::terverifikasi()->whereNull('kode_pilih')->count();
+                $baris = [];
 
                 if ($hasil['gagal']) {
-                    $notif->warning()->body(count($hasil['gagal']).' baris dilewati: '.implode('; ', array_slice($hasil['gagal'], 0, 5)).(count($hasil['gagal']) > 5 ? '; …' : ''))->persistent();
-                } else {
-                    $notif->success();
+                    $baris[] = count($hasil['gagal']).' baris dilewati: '.implode('; ', array_slice($hasil['gagal'], 0, 5)).(count($hasil['gagal']) > 5 ? '; …' : '');
+                }
+                if ($tanpaKode) {
+                    $baris[] = "{$tanpaKode} pemilih terverifikasi belum punya kode pilih.";
+                }
+
+                $notif = Notification::make()
+                    ->title($judul)
+                    ->body($baris ? implode(' ', $baris) : null)
+                    ->persistent();
+                $hasil['gagal'] ? $notif->warning() : $notif->success();
+
+                if ($tanpaKode) {
+                    $notif->actions([
+                        Action::make('buatKodeSekarang')->label('Buat kode pilih')->button()
+                            ->dispatch('buat-kode-pemilih-baru'),
+                    ]);
                 }
 
                 $notif->send();
             });
+    }
+
+    /** Ambil berkas unggahan sementara dari state FileUpload (bisa berupa array). */
+    public static function berkasDari(mixed $state): ?TemporaryUploadedFile
+    {
+        $berkas = is_array($state) ? collect($state)->first() : $state;
+
+        return $berkas instanceof TemporaryUploadedFile ? $berkas : null;
     }
 }

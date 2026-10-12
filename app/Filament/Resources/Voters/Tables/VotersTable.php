@@ -28,6 +28,7 @@ class VotersTable
 
         return $table
             ->defaultSort('nama')
+            ->poll('30s') // kolom "Sudah memilih" ikut berubah selama pemungutan suara
             ->modifyQueryUsing(fn (Builder $query) => $query->withExists(['votes as sudah_memilih' => fn ($v) => $v->where('election_id', $pemilihan?->id ?? 0)]))
             ->columns([
                 TextColumn::make('nama')->label('Nama')->weight('bold')->searchable(['nama', 'nomor_induk'])->sortable()
@@ -84,7 +85,16 @@ class VotersTable
             ])
             ->searchPlaceholder('Cari nama, NISN, atau NIK')
             ->defaultPaginationPageOption(25)
-            ->emptyStateHeading('Belum ada data pemilih')
-            ->emptyStateDescription('Impor data siswa dan GTK dari file CSV/Excel lewat tombol di atas.');
+            ->emptyStateIcon(Heroicon::OutlinedIdentification)
+            ->emptyStateHeading(fn ($livewire) => filled($livewire->getTableSearch()) || filled(array_filter($livewire->getTableFiltersForm()->getRawState(), fn ($f) => filled(array_filter((array) $f, fn ($v) => $v !== null && $v !== ''))))
+                ? 'Tidak ada pemilih yang cocok'
+                : 'Belum ada data pemilih')
+            ->emptyStateDescription(fn ($livewire) => filled($livewire->getTableSearch())
+                ? 'Coba kata kunci lain atau hapus penyaring.'
+                : 'Impor data siswa (NISN) dan GTK (NIK) dari CSV/Excel lewat tombol "Impor data" di atas, lalu buat kode pilih.')
+            ->emptyStateActions([
+                \Filament\Actions\Action::make('templatSiswa')->label('Templat siswa (CSV)')->icon(Heroicon::OutlinedArrowDownTray)->url('/templat/pemilih-siswa.csv')->color('gray'),
+                \Filament\Actions\Action::make('templatGtk')->label('Templat GTK (CSV)')->icon(Heroicon::OutlinedArrowDownTray)->url('/templat/pemilih-gtk.csv')->color('gray'),
+            ]);
     }
 }

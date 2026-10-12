@@ -212,4 +212,132 @@ class RuangOsimTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
         $this->get(route('kartu-pemilih'))->assertForbidden();
     }
+
+    public function test_empty_state_data_pemilih(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Admin]));
+
+        $this->get('/admin/data-pemilih')
+            ->assertOk()
+            ->assertSee('Belum ada data pemilih')
+            ->assertSee('Templat siswa (CSV)')
+            ->assertSee('/templat/pemilih-gtk.csv');
+
+        \App\Models\Voter::factory()->create(['nama' => 'Ada Orang']);
+        \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
+            ->searchTable('zzz-tidak-ada')
+            ->assertSee('Tidak ada pemilih yang cocok')
+            ->assertSee('Coba kata kunci lain');
+    }
+
+    public function test_verifikasi_massal_dan_buat_ulang_kode(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $menunggu = \App\Models\Voter::factory()->count(3)->create(['verifikasi' => 'menunggu']);
+        $lain = \App\Models\Voter::factory()->create(['verifikasi' => 'menunggu']);
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
+            ->callTableBulkAction('verifikasi', $menunggu, data: ['verifikasi' => 'terverifikasi']);
+
+        $this->assertSame(3, \App\Models\Voter::where('verifikasi', 'terverifikasi')->count());
+        $this->assertSame('menunggu', $lain->fresh()->verifikasi);
+
+        $berkode = \App\Models\Voter::factory()->berkode('555555')->create();
+        \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
+            ->callTableBulkAction('kodeUlang', [$berkode]);
+        $this->assertNotSame('555555', $berkode->fresh()->kode_pilih);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $berkode->fresh()->kode_pilih);
+    }
+
+    public function test_pantau_partisipasi_per_kelas_dan_gtk(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $e = \App\Models\Election::first();
+        $calon = \App\Models\Candidate::first();
+        $a = \App\Models\Voter::factory()->count(4)->create(['kelas' => 'VII-A']);
+        \App\Models\Voter::factory()->count(2)->create(['kelas' => 'IX-B']);
+        $g = \App\Models\Voter::factory()->gtk()->create();
+        \App\Models\Voter::factory()->create(['kelas' => 'VII-A', 'verifikasi' => 'ditolak']);
+        foreach ([$a[0], $a[1], $a[2], $g] as $v) {
+            app(\App\Services\LayananPemilihan::class)->kirimSuara($v, $e, $calon->id);
+        }
+
+        $r = app(\App\Services\LayananPartisipasi::class)->ringkasan($e);
+        $this->assertSame(7, $r['total']);
+        $this->assertSame(4, $r['memilih']);
+        $this->assertSame(['VII-A', 'IX-B', 'GTK'], array_column($r['kelompok'], 'nama'));
+        $this->assertSame([3, 0, 1], array_column($r['kelompok'], 'memilih'));
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $this->get('/admin/partisipasi')->assertOk()->assertSee('Pantau Partisipasi')->assertSee('57,1%')->assertSee('75%')->assertDontSee('Nadia Kusuma');
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $this->get('/admin/partisipasi')->assertForbidden();
+    }
+
+    public function test_daftar_belum_memilih_per_kelompok(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $e = \App\Models\Election::first();
+        $sudah = \App\Models\Voter::factory()->create(['nama' => 'Sudah Memilih', 'kelas' => 'VIII-A']);
+        \App\Models\Voter::factory()->create(['nama' => 'Belum Satu', 'kelas' => 'VIII-A']);
+        \App\Models\Voter::factory()->gtk()->create(['nama' => 'Guru Belum']);
+        \App\Models\Voter::factory()->create(['nama' => 'Ditolak Tidak Dihitung', 'kelas' => 'VIII-A', 'verifikasi' => 'ditolak']);
+        app(\App\Services\LayananPemilihan::class)->kirimSuara($sudah, $e, \App\Models\Candidate::first()->id);
+
+        $belum = app(\App\Services\LayananPartisipasi::class)->belumMemilih($e);
+        $this->assertSame(['VIII-A' => ['Belum Satu'], 'GTK' => ['Guru Belum']], $belum);
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Admin]));
+        $this->get('/admin/partisipasi')->assertSee('Belum Satu')->assertSee('Guru Belum')->assertDontSee('Sudah Memilih')->assertSee('1 belum');
+    }
+
+    public function test_angka_partisipasi_diperbarui_otomatis(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $pemilih = \App\Models\Voter::factory()->create(['kelas' => 'VII-A']);
+
+        $this->get('/admin/partisipasi')->assertSee('wire:poll.15s.visible', false);
+        $this->get('/admin/data-pemilih')->assertSee('wire:poll.30s', false);
+
+        $halaman = \Livewire\Livewire::test(\App\Filament\Pages\Partisipasi::class)->assertSee('0 / 1 orang');
+        app(\App\Services\LayananPemilihan::class)->kirimSuara($pemilih, \App\Models\Election::first(), \App\Models\Candidate::first()->id);
+        $halaman->call('$refresh')->assertSee('1 / 1 orang')->assertSee('100%');
+    }
+
+    public function test_pratinjau_impor_tanpa_menyimpan(): void
+    {
+        \App\Models\Voter::factory()->create(['nomor_induk' => '0091234567']);
+        $csv = tempnam(sys_get_temp_dir(), 'pra').'.csv';
+        file_put_contents($csv, "nisn,nama,kelas,tanggal_lahir\n0091234567,Sudah Ada,VII-A,2013-05-21\n0091234999,Siswa Baru,VII-B,21/05/2013\nabc,Salah,VII-B,2013-01-01\n");
+
+        $p = app(\App\Services\ImporPemilih::class)->pratinjau($csv, \App\Enums\JenisPemilih::Siswa);
+
+        $this->assertSame(3, $p['total']);
+        $this->assertSame(1, $p['baru']);
+        $this->assertSame(1, $p['perbarui']);
+        $this->assertCount(1, $p['gagal']);
+        $this->assertSame(1, \App\Models\Voter::count()); // tidak ada yang tersimpan
+
+        $html = view('filament.pratinjau-impor', ['p' => $p, 'jenis' => 'siswa'])->render();
+        $this->assertStringContainsString('Siswa Baru', $html);
+        $this->assertStringContainsString('1 baris akan dilewati', $html);
+
+        // Unggah lewat modal Filament: pratinjau tampil, lalu impor tersimpan.
+        $this->actingAs(User::factory()->create(['role' => Peran::Admin]));
+        $berkas = \Illuminate\Http\UploadedFile::fake()->createWithContent('siswa.csv', file_get_contents($csv));
+        \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
+            ->mountAction('imporSiswa')
+            ->fillForm(['berkas' => $berkas])
+            ->callMountedAction()
+            ->assertNotified('Impor selesai: 1 ditambahkan, 1 diperbarui');
+        $this->assertSame(2, \App\Models\Voter::count());
+
+        // Tombol "Buat kode pilih" pada notifikasi membuat kode untuk pemilih baru.
+        \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
+            ->dispatch('buat-kode-pemilih-baru')
+            ->assertNotified('2 kode pilih dibuat');
+        $this->assertSame(0, \App\Models\Voter::whereNull('kode_pilih')->count());
+    }
 }

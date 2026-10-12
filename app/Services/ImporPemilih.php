@@ -19,9 +19,11 @@ use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 class ImporPemilih
 {
     /**
-     * @return array{tambah: int, perbarui: int, gagal: list<string>}
+     * Baca berkas tanpa menyimpan apa pun.
+     *
+     * @return array{kolom_hilang: list<string>, baris: list<array{baris: int, nomor_induk: ?string, nama: string, keterangan: ?string, tanggal_lahir: ?string, galat: ?string}>}
      */
-    public function impor(string $path, JenisPemilih $jenis, ?string $namaAsli = null): array
+    public function baca(string $path, JenisPemilih $jenis, ?string $namaAsli = null): array
     {
         $ekstensi = Str::lower(pathinfo($namaAsli ?? $path, PATHINFO_EXTENSION));
         $reader = $ekstensi === 'xlsx' ? new XlsxReader : new CsvReader;
@@ -29,23 +31,21 @@ class ImporPemilih
 
         $kolomInduk = $jenis === JenisPemilih::Siswa ? 'nisn' : 'nik';
         $kolomKet = $jenis === JenisPemilih::Siswa ? 'kelas' : 'jabatan';
-        $hasil = ['tambah' => 0, 'perbarui' => 0, 'gagal' => []];
+        $hasil = ['kolom_hilang' => [], 'baris' => []];
         $header = null;
-        $baris = 0;
+        $nomor = 0;
 
         foreach ($reader->getSheetIterator() as $sheet) {
             foreach ($sheet->getRowIterator() as $row) {
-                $baris++;
+                $nomor++;
                 $sel = $row->toArray();
 
                 if ($header === null) {
                     $header = array_map(fn ($h) => Str::snake(Str::lower(trim((string) $h))), $sel);
-                    $wajib = [$kolomInduk, 'nama', 'tanggal_lahir'];
-                    if ($hilang = array_diff($wajib, $header)) {
-                        $reader->close();
-                        $hasil['gagal'][] = 'Kolom wajib tidak ada: '.implode(', ', $hilang).'. Gunakan templat yang disediakan.';
+                    $hasil['kolom_hilang'] = array_values(array_diff([$kolomInduk, 'nama', 'tanggal_lahir'], $header));
 
-                        return $hasil;
+                    if ($hasil['kolom_hilang']) {
+                        break 2;
                     }
 
                     continue;
@@ -60,27 +60,81 @@ class ImporPemilih
                 $nama = Str::squish((string) ($data['nama'] ?? ''));
                 $tanggal = $this->tanggal($data['tanggal_lahir'] ?? null);
 
-                if (! $induk || ! $nama || ! $tanggal) {
-                    $hasil['gagal'][] = "Baris {$baris}: ".(! $induk ? strtoupper($kolomInduk).' kosong/tidak valid' : (! $nama ? 'nama kosong' : 'tanggal lahir tidak valid'));
-
-                    continue;
-                }
-
-                $pemilih = Voter::firstOrNew(['jenis' => $jenis, 'nomor_induk' => $induk]);
-                $baru = ! $pemilih->exists;
-                $pemilih->fill([
+                $hasil['baris'][] = [
+                    'baris' => $nomor,
+                    'nomor_induk' => $induk,
                     'nama' => $nama,
-                    $kolomKet => Str::squish((string) ($data[$kolomKet] ?? '')) ?: null,
+                    'keterangan' => Str::squish((string) ($data[$kolomKet] ?? '')) ?: null,
                     'tanggal_lahir' => $tanggal,
-                ]);
-                $pemilih->save();
-                $hasil[$baru ? 'tambah' : 'perbarui']++;
+                    'galat' => match (true) {
+                        ! $induk => strtoupper($kolomInduk).($jenis === JenisPemilih::Siswa ? ' kosong/lebih dari 10 angka' : ' harus 16 angka'),
+                        ! $nama => 'nama kosong',
+                        ! $tanggal => 'tanggal lahir tidak valid',
+                        default => null,
+                    },
+                ];
             }
 
             break; // hanya sheet pertama
         }
 
         $reader->close();
+
+        return $hasil;
+    }
+
+    /**
+     * @return array{total: int, valid: int, baru: int, perbarui: int, gagal: list<string>, contoh: list<array>}
+     */
+    public function pratinjau(string $path, JenisPemilih $jenis, ?string $namaAsli = null): array
+    {
+        $isi = $this->baca($path, $jenis, $namaAsli);
+
+        if ($isi['kolom_hilang']) {
+            return ['total' => 0, 'valid' => 0, 'baru' => 0, 'perbarui' => 0, 'gagal' => ['Kolom wajib tidak ada: '.implode(', ', $isi['kolom_hilang']).'. Gunakan templat yang disediakan.'], 'contoh' => []];
+        }
+
+        $valid = collect($isi['baris'])->whereNull('galat');
+        $ada = Voter::where('jenis', $jenis)->whereIn('nomor_induk', $valid->pluck('nomor_induk'))->pluck('nomor_induk')->flip();
+
+        return [
+            'total' => count($isi['baris']),
+            'valid' => $valid->count(),
+            'baru' => $valid->reject(fn ($b) => isset($ada[$b['nomor_induk']]))->count(),
+            'perbarui' => $valid->filter(fn ($b) => isset($ada[$b['nomor_induk']]))->count(),
+            'gagal' => collect($isi['baris'])->whereNotNull('galat')->map(fn ($b) => "Baris {$b['baris']}: {$b['galat']}")->values()->all(),
+            'contoh' => array_slice($isi['baris'], 0, 8),
+        ];
+    }
+
+    /**
+     * @return array{tambah: int, perbarui: int, gagal: list<string>}
+     */
+    public function impor(string $path, JenisPemilih $jenis, ?string $namaAsli = null): array
+    {
+        $isi = $this->baca($path, $jenis, $namaAsli);
+        $hasil = ['tambah' => 0, 'perbarui' => 0, 'gagal' => []];
+
+        if ($isi['kolom_hilang']) {
+            $hasil['gagal'][] = 'Kolom wajib tidak ada: '.implode(', ', $isi['kolom_hilang']).'. Gunakan templat yang disediakan.';
+
+            return $hasil;
+        }
+
+        $kolomKet = $jenis === JenisPemilih::Siswa ? 'kelas' : 'jabatan';
+
+        foreach ($isi['baris'] as $b) {
+            if ($b['galat']) {
+                $hasil['gagal'][] = "Baris {$b['baris']}: {$b['galat']}";
+
+                continue;
+            }
+
+            $pemilih = Voter::firstOrNew(['jenis' => $jenis, 'nomor_induk' => $b['nomor_induk']]);
+            $baru = ! $pemilih->exists;
+            $pemilih->fill(['nama' => $b['nama'], $kolomKet => $b['keterangan'], 'tanggal_lahir' => $b['tanggal_lahir']])->save();
+            $hasil[$baru ? 'tambah' : 'perbarui']++;
+        }
 
         return $hasil;
     }
