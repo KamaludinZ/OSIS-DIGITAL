@@ -119,4 +119,35 @@ class NotifikasiTest extends TestCase
         $kandidat->delete();
         $this->assertSame(0, \App\Models\NotificationPreference::count());
     }
+
+    public function test_daftar_dan_tanda_baca_pemberitahuan_akun(): void
+    {
+        $calon = \App\Models\Candidate::factory()->create();
+        $kandidat = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Kandidat, 'candidate_id' => $calon->id]);
+        $lain = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Admin]);
+        $tujuan = route('kandidat.profil', ['id' => $calon->id, 'tab' => 'tanya-jawab']);
+
+        \Filament\Notifications\Notification::make()->title('Pertanyaan baru untukmu')->body('Bagaimana programmu?')
+            ->actions([\Filament\Actions\Action::make('buka')->url($tujuan)])->sendToDatabase($kandidat);
+        \Filament\Notifications\Notification::make()->title('Kedua')->sendToDatabase($kandidat);
+        \Filament\Notifications\Notification::make()->title('Milik orang lain')->sendToDatabase($lain);
+
+        $this->actingAs($kandidat);
+        $this->get('/')->assertSee('$store.notif.akunBelum = 2', false);
+
+        $halaman = \Livewire\Volt\Volt::test('notifikasi')
+            ->assertSee('Untuk akunmu')->assertSee('Pertanyaan baru untukmu')->assertDontSee('Milik orang lain');
+
+        $id = $kandidat->notifications()->where('data->title', 'Pertanyaan baru untukmu')->value('id');
+        $halaman->call('bukaAkun', $id)->assertRedirect($tujuan);
+        $this->assertSame(1, $kandidat->unreadNotifications()->count());
+
+        \Livewire\Volt\Volt::test('notifikasi')->call('bacaSemuaAkun');
+        $this->assertSame(0, $kandidat->unreadNotifications()->count());
+
+        // Tidak bisa membuka pemberitahuan akun lain.
+        $milikLain = $lain->notifications()->value('id');
+        \Livewire\Volt\Volt::test('notifikasi')->call('bukaAkun', $milikLain)->assertNotFound();
+        $this->assertNull($lain->notifications()->first()->read_at);
+    }
 }

@@ -63,6 +63,13 @@ document.addEventListener('alpine:init', () => {
             return this.umpan.filter((n) => this.aktif(n));
         },
 
+        akunBelum: 0,
+
+        // Lonceng: umpan perangkat + pemberitahuan akun yang belum dibaca.
+        get totalBelum() {
+            return this.belumDibaca + this.akunBelum;
+        },
+
         get belumDibaca() {
             return this.daftar.filter((n) => !this.sudahDibaca(n.id)).length;
         },

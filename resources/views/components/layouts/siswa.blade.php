@@ -18,7 +18,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="osim flex min-h-screen flex-col antialiased"
-          x-data x-init="$store.notif.ambil('{{ route('notifikasi.umpan') }}')">
+          x-data x-init="$store.notif.akunBelum = {{ auth()->user()?->unreadNotifications()->count() ?? 0 }}; $store.notif.ambil('{{ route('notifikasi.umpan') }}')">
         <a href="#isi" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-emas-400 focus:px-4 focus:py-2 focus:font-semibold focus:text-hijau-950">Langsung ke isi</a>
 
         {{-- Kepala: pita hijau madrasah --}}
@@ -49,11 +49,11 @@
 
                 <div class="ml-auto flex items-center gap-1.5">
                     <a href="{{ route('notifikasi') }}" wire:navigate
-                       x-bind:aria-label="'Pemberitahuan' + ($store.notif.belumDibaca ? ', ' + $store.notif.belumDibaca + ' belum dibaca' : '')"
+                       x-bind:aria-label="'Pemberitahuan' + ($store.notif.totalBelum ? ', ' + $store.notif.totalBelum + ' belum dibaca' : '')"
                        aria-label="Pemberitahuan"
                        @class(['relative flex size-10 items-center justify-center rounded-full transition', 'bg-emas-400 text-hijau-950' => request()->routeIs('notifikasi'), 'text-white hover:bg-white/10' => ! request()->routeIs('notifikasi')])>
                         <flux:icon.bell variant="mini" />
-                        <span x-cloak x-show="$store.notif.belumDibaca > 0" x-text="$store.notif.belumDibaca > 9 ? '9+' : $store.notif.belumDibaca"
+                        <span x-cloak x-show="$store.notif.totalBelum > 0" x-text="$store.notif.totalBelum > 9 ? '9+' : $store.notif.totalBelum"
                               class="angka absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-emas-400 px-1 text-[11px] font-black text-hijau-950 ring-2 ring-hijau-600"></span>
                     </a>
                     <a href="{{ route('cari') }}" wire:navigate aria-label="Cari kabar OSIM"

@@ -8,7 +8,28 @@ use Livewire\Volt\Component;
 new #[Layout('components.layouts.siswa')] #[Title('Pemberitahuan')] class extends Component {
     public function with(): array
     {
-        return ['jenis' => LayananNotifikasi::JENIS];
+        return [
+            'jenis' => LayananNotifikasi::JENIS,
+            'akun' => auth()->user()?->notifications()->latest()->limit(20)->get() ?? collect(),
+        ];
+    }
+
+    /** Tandai satu pemberitahuan akun dibaca lalu buka tautannya (bila ada). */
+    public function bukaAkun(string $id): void
+    {
+        $n = auth()->user()?->notifications()->findOrFail($id) ?? abort(403);
+        $n->markAsRead();
+        $this->js('Alpine.store("notif").akunBelum = '.auth()->user()->unreadNotifications()->count());
+
+        if ($url = $n->data['actions'][0]['url'] ?? null) {
+            $this->redirect($url, navigate: true);
+        }
+    }
+
+    public function bacaSemuaAkun(): void
+    {
+        auth()->user()?->unreadNotifications->markAsRead();
+        $this->js('Alpine.store("notif").akunBelum = 0');
     }
 }; ?>
 
@@ -65,6 +86,36 @@ new #[Layout('components.layouts.siswa')] #[Title('Pemberitahuan')] class extend
                 <p class="text-tinta-2" x-show="$store.notif.izinPerangkat === 'default'">Opsional. Hanya untuk perangkat pribadimu, bukan komputer lab.</p>
             </div>
         </section>
+
+        {{-- Pemberitahuan khusus akun (kandidat/staf) dari tabel notifications --}}
+        @if ($akun->isNotEmpty())
+            <section aria-labelledby="judul-akun" class="rounded-[14px] bg-white p-5 ring-1 ring-garis">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 id="judul-akun" class="font-display text-xl font-black text-tinta">Untuk akunmu</h2>
+                    @if ($akun->whereNull('read_at')->isNotEmpty())
+                        <button type="button" wire:click="bacaSemuaAkun" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold text-hijau-700 hover:bg-hijau-100">
+                            <flux:icon.check variant="micro" /> Tandai dibaca
+                        </button>
+                    @endif
+                </div>
+                <ol class="mt-3 divide-y divide-garis">
+                    @foreach ($akun as $n)
+                        <li wire:key="akun-{{ $n->id }}">
+                            <button type="button" wire:click="bukaAkun('{{ $n->id }}')" class="flex w-full items-start gap-3 rounded-lg px-2 py-3 text-left hover:bg-hijau-50">
+                                <span @class(['mt-1.5 size-2 shrink-0 rounded-full', 'bg-hijau-600' => ! $n->read_at, 'bg-transparent' => $n->read_at])></span>
+                                <span class="min-w-0 flex-1">
+                                    <span @class(['block leading-snug text-tinta', 'font-bold' => ! $n->read_at, 'font-semibold' => $n->read_at])>{{ $n->data['title'] ?? 'Pemberitahuan' }}</span>
+                                    @if (! empty($n->data['body']))
+                                        <span class="mt-0.5 block text-sm text-tinta-2">{{ \Illuminate\Support\Str::limit(strip_tags($n->data['body']), 160) }}</span>
+                                    @endif
+                                    <span class="mt-0.5 block text-xs text-tinta-2">{{ $n->created_at->diffForHumans() }}</span>
+                                </span>
+                            </button>
+                        </li>
+                    @endforeach
+                </ol>
+            </section>
+        @endif
 
         {{-- Tab & aksi --}}
         <div class="flex flex-wrap items-center justify-between gap-3">
