@@ -48,9 +48,12 @@ COPY --chown=www-data:www-data . .
 COPY --chown=www-data:www-data --from=vendor /app/vendor ./vendor
 COPY --chown=www-data:www-data --from=assets /app/public/build ./public/build
 
+# JS/CSS/font Filament (public/js|css|fonts/filament) tidak ada di Git; biasanya dibuat skrip
+# Composer yang dimatikan (--no-scripts) di tahap vendor, jadi diterbitkan di sini.
 RUN mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && php artisan package:discover --ansi
+    && php artisan package:discover --ansi \
+    && php artisan filament:assets \
+    && chown -R www-data:www-data storage bootstrap/cache public
 
 ENV APP_ENV=production \
     APP_DEBUG=false \

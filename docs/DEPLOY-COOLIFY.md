@@ -245,6 +245,7 @@ Perlindungan yang sudah ada di aplikasi:
 | `could not translate host name "<UUID>"` | `DB_HOST` diisi resource PostgreSQL lain yang beda jaringan | Hapus `DB_HOST` (pakai `postgres` bawaan) **atau** ikuti bagian 3a |
 | Log `Menunggu basis data...` terus | Kata sandi DB berubah setelah volume dibuat | Samakan `DB_PASSWORD` dengan saat pertama deploy, atau reset volume `osis-pgdata` (data hilang!) |
 | Halaman 419 "Sesi kedaluwarsa" | Domain diakses lewat `http://` atau `APP_URL` beda dengan domain | Pakai `https://` dan samakan `APP_URL` |
+| Ruang OSIM berantakan, konsol: `/js/filament/… 404`, `filamentDropdown is not defined` | Aset Filament tidak diterbitkan ke image | Sudah ditangani `php artisan filament:assets` di Dockerfile; redeploy dengan commit terbaru |
 | Foto/poster tidak tampil | Tautan storage belum dibuat | Terminal `app`: `php artisan storage:link --force` |
 | Pemberitahuan tidak muncul | Service `worker` mati | Cek log `worker`, lalu `php artisan queue:retry all` |
 | Pengumuman terjadwal tidak tayang | Service `scheduler` mati | Cek log `scheduler` |
