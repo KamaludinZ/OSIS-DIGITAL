@@ -59,6 +59,9 @@
                                 <span class="hidden max-w-32 truncate sm:block">{{ \Illuminate\Support\Str::of(auth()->user()->name)->before(' ') }}</span>
                             </button>
                             <flux:menu>
+                                @if (auth()->user()->role === \App\Enums\Peran::Kandidat && auth()->user()->candidate_id)
+                                    <flux:menu.item href="{{ route('kandidat.profil', ['id' => auth()->user()->candidate_id, 'tab' => 'tanya-jawab']) }}" icon="chat-bubble-left-right" wire:navigate>Tanggapi pertanyaan</flux:menu.item>
+                                @endif
                                 @if (auth()->user()->canAccessPanel(\Filament\Facades\Filament::getPanel('admin')))
                                     <flux:menu.item href="/admin" icon="building-office-2">Ruang OSIM</flux:menu.item>
                                 @endif

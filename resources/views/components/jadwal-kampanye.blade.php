@@ -23,7 +23,7 @@
     @if ($daftar->isEmpty())
         <div class="flex flex-col items-center rounded-[14px] border border-2 border-dashed border-garis px-6 py-12 text-center" role="status">
             <flux:icon.calendar-days class="size-10 text-hijau-300" />
-            <p class="text-tinta-2 mt-2">Belum ada jadwal kampanye untuk pasangan calon ini.</p>
+            <p class="text-tinta-2 mt-2">Belum ada jadwal kampanye untuk {{ \App\Support\Istilah::calon() }} ini.</p>
         </div>
     @else
         <ol class="relative flex flex-col gap-3">

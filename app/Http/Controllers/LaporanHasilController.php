@@ -59,11 +59,11 @@ class LaporanHasilController extends Controller
             fputcsv($out, [], ';');
             fputcsv($out, ['No. urut', 'Calon ketua', 'Calon wakil', 'Suara', 'Persentase (%)'], ';');
             foreach ($d['baris'] as $c) {
-                fputcsv($out, [$c['nomor_urut'], $c['nama_ketua'], $c['nama_wakil'], $c['suara'], $koma($c['persen'])], ';');
+                fputcsv($out, [$c['nomor_urut'], $c['nama_ketua'], $c['nama_wakil'] ?? '', $c['suara'], $koma($c['persen'])], ';');
             }
             fputcsv($out, [], ';');
             fputcsv($out, ['Hasil', match ($d['pemenang']['status']) {
-                'menang' => 'Terpilih: No. '.$d['pemenang']['kandidat']['nomor_urut'].' '.$d['pemenang']['kandidat']['nama_ketua'].' & '.$d['pemenang']['kandidat']['nama_wakil'],
+                'menang' => 'Terpilih: No. '.$d['pemenang']['kandidat']['nomor_urut'].' '.$d['pemenang']['kandidat']['nama_tampil'],
                 'seri' => 'Seri — ditetapkan panitia sesuai tata tertib',
                 default => 'Belum ada suara',
             }], ';');

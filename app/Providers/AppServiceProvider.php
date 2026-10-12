@@ -37,6 +37,14 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('kelola-pemilih', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Panitia, \App\Enums\Peran::Admin], true));
 
+        Gate::define('kelola-pemilihan', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Panitia, \App\Enums\Peran::Admin], true));
+
+        Gate::define('kelola-akun', fn (User $pengguna) => $pengguna->role === \App\Enums\Peran::Admin);
+
+        // Kandidat hanya menanggapi pertanyaan untuk dirinya sendiri.
+        Gate::define('jawab-pertanyaan', fn (User $pengguna, \App\Models\CandidateQuestion $tanya) => $pengguna->role === \App\Enums\Peran::Kandidat
+            && $pengguna->candidate_id !== null && $pengguna->candidate_id === $tanya->candidate_id);
+
         Gate::define('publikasikan-hasil', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Panitia, \App\Enums\Peran::Admin], true));
 
     }

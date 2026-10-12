@@ -35,6 +35,7 @@ class LayananPemilihan
         return [
             'id' => $pemilihan->id,
             'judul' => $pemilihan->judul,
+            'format_kandidat' => $pemilihan->format_kandidat->value,
             'status' => $this->statusEfektif($pemilihan)->value,
             'mulai' => $pemilihan->mulai->toDateTimeString(),
             'selesai' => $pemilihan->selesai->toDateTimeString(),
@@ -136,7 +137,7 @@ class LayananPemilihan
         $calon = $pemilihan->candidates()->whereKey($kandidatId)->first();
 
         if (! $calon) {
-            throw new SuaraDitolak('Pasangan calon tidak ditemukan pada pemilihan ini.', 'kandidat_tidak_valid');
+            throw new SuaraDitolak(ucfirst(\App\Support\Istilah::calon()).' tidak ditemukan pada pemilihan ini.', 'kandidat_tidak_valid');
         }
 
         try {
@@ -196,11 +197,13 @@ class LayananPemilihan
             'kelas_ketua' => $calon->kelas_ketua,
             'nama_wakil' => $calon->nama_wakil,
             'kelas_wakil' => $calon->kelas_wakil,
+            'berpasangan' => $calon->berpasangan(),
+            'nama_tampil' => $calon->namaTampil(),
             'slogan' => $calon->slogan,
             'latar_belakang' => $calon->latar_belakang,
             'visi' => $calon->visi,
             'misi' => $calon->misi ?? [],
-            'foto_url' => $calon->foto_url,
+            'foto_url' => $calon->fotoPublik(),
         ];
     }
 }

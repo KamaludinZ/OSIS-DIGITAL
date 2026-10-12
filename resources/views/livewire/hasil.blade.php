@@ -143,7 +143,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class exte
                 </h2>
                 <p class="text-tinta-2 max-w-md">
                     @if ($berjalan)
-                        Perolehan suara tiap pasangan calon dirahasiakan sampai pemilihan ditutup, agar tidak memengaruhi pemilih yang belum memilih.
+                        Perolehan suara tiap {{ \App\Support\Istilah::calon() }} dirahasiakan sampai pemilihan ditutup, agar tidak memengaruhi pemilih yang belum memilih.
                     @else
                         Pemilihan sudah ditutup. Panitia sedang memverifikasi hasil dan akan mempublikasikannya segera.
                     @endif

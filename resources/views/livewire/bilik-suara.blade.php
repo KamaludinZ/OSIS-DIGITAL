@@ -101,7 +101,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
         }
 
         if ($this->calonTerpilih() === null) {
-            $this->addError('dipilih', 'Pilih salah satu pasangan calon terlebih dahulu.');
+            $this->addError('dipilih', 'Pilih salah satu '.\App\Support\Istilah::calon().' terlebih dahulu.');
 
             return;
         }
@@ -186,7 +186,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                 'draft' => [
                     'ikon' => 'clock',
                     'judul' => 'Pemilihan belum dibuka',
-                    'isi' => 'Bilik suara akan dibuka pada '.Carbon::parse($pemilihan['mulai'])->translatedFormat('l, j F Y \p\u\k\u\l H:i').' WIB. Sambil menunggu, kenali dulu para pasangan calon.',
+                    'isi' => 'Bilik suara akan dibuka pada '.Carbon::parse($pemilihan['mulai'])->translatedFormat('l, j F Y \p\u\k\u\l H:i').' WIB. Sambil menunggu, kenali dulu para '.\App\Support\Istilah::calon().'.',
                 ],
                 'selesai' => [
                     'ikon' => 'lock-closed',
@@ -220,7 +220,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
         @if ($status === 'draft')
             <x-osim.wadah class="-mt-14">
                 <section aria-labelledby="judul-kandidat">
-                    <x-osim.tab id="judul-kandidat" warna="putih" ikon="user-group">Kenali Pasangan Calon</x-osim.tab>
+                    <x-osim.tab id="judul-kandidat" warna="putih" ikon="user-group">Kenali {{ \App\Support\Istilah::judul() }}</x-osim.tab>
                     <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                         @foreach (collect($kandidat)->sortBy('nomor_urut') as $calon)
                             <x-kartu-kandidat :calon="$calon" wire:key="kandidat-{{ $calon['id'] }}">
@@ -239,7 +239,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
             <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <h1 class="font-display text-3xl font-black leading-tight sm:text-5xl">{{ $pemilihan['judul'] }}</h1>
-                    <p class="mt-2 max-w-xl text-hijau-50">Pilih satu pasangan calon. Suara bersifat rahasia dan tidak bisa diubah setelah dikirim.</p>
+                    <p class="mt-2 max-w-xl text-hijau-50">Pilih satu {{ \App\Support\Istilah::calon() }}. Suara bersifat rahasia dan tidak bisa diubah setelah dikirim.</p>
                 </div>
                 <div class="flex shrink-0 items-center gap-3 rounded-xl bg-hijau-900/40 px-4 py-2.5 ring-1 ring-white/15">
                     <flux:icon.clock variant="mini" class="text-emas-300" />
@@ -285,7 +285,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                     <ol class="grid gap-px bg-garis sm:grid-cols-2 lg:grid-cols-4">
                         @foreach ([
                             ['user-group', 'Kenali kandidat', 'Lihat foto, nomor urut, dan buka profil untuk membaca visi misi.'],
-                            ['cursor-arrow-rays', 'Pilih satu nomor', 'Tekan tombol “Pilih” pada satu pasangan calon. Tekan lagi untuk membatalkan.'],
+                            ['cursor-arrow-rays', 'Pilih satu nomor', 'Tekan tombol “Pilih” pada satu '.\App\Support\Istilah::calon().'. Tekan lagi untuk membatalkan.'],
                             ['shield-check', 'Konfirmasi', 'Periksa kembali pilihanmu di layar konfirmasi, lalu tekan “Kirim Suara”.'],
                             ['check-badge', 'Simpan bukti', 'Suara langsung tercatat dan terkunci. Kamu akan mendapat kode bukti.'],
                         ] as $i => [$ikon, $judul, $isi])
@@ -361,13 +361,13 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                 {{-- Daftar pasangan calon --}}
                 <section aria-labelledby="judul-kandidat" @class(['pt-0' => true])>
                     <div class="flex items-end justify-between gap-3">
-                        <x-osim.tab id="judul-kandidat" warna="putih" ikon="user-group" class="whitespace-nowrap">Pasangan Calon ({{ count($kandidat) }})</x-osim.tab>
+                        <x-osim.tab id="judul-kandidat" warna="putih" ikon="user-group" class="whitespace-nowrap">{{ \App\Support\Istilah::judul() }} ({{ count($kandidat) }})</x-osim.tab>
                         <button type="button" wire:click="bukaPanduan" class="mb-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-bold text-hijau-700 hover:bg-hijau-100">
                             <flux:icon.question-mark-circle variant="micro" /> <span class="sm:hidden">Panduan</span><span class="hidden sm:inline">Lihat panduan cara memilih</span>
                         </button>
                     </div>
 
-                    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Pilih pasangan calon">
+                    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Pilih {{ \App\Support\Istilah::calon() }}">
                         @foreach (collect($kandidat)->sortBy('nomor_urut') as $calon)
                             @php($terpilih = $dipilih === $calon['id'])
                             <x-kartu-kandidat :calon="$calon" :terpilih="$terpilih" wire:key="kandidat-{{ $calon['id'] }}">
@@ -400,12 +400,12 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                                 <span class="font-display angka flex size-12 shrink-0 items-center justify-center rounded-xl bg-emas-400 text-3xl font-black text-hijau-950">{{ $calon['nomor_urut'] }}</span>
                                 <div>
                                     <x-osim.label class="text-hijau-200">Pilihanmu</x-osim.label>
-                                    <div class="font-bold leading-tight">Nomor {{ $calon['nomor_urut'] }} — {{ $calon['nama_ketua'] }} &amp; {{ $calon['nama_wakil'] }}</div>
+                                    <div class="font-bold leading-tight">Nomor {{ $calon['nomor_urut'] }} — {{ $calon['nama_tampil'] }}</div>
                                 </div>
                             </div>
                         @else
                             <div>
-                                <p class="text-hijau-50">Belum ada pasangan calon yang dipilih. Tekan <strong class="text-white">Pilih</strong> pada salah satu kartu.</p>
+                                <p class="text-hijau-50">Belum ada {{ \App\Support\Istilah::calon() }} yang dipilih. Tekan <strong class="text-white">Pilih</strong> pada salah satu kartu.</p>
                                 @error('dipilih')
                                     <p class="mt-1 flex items-center gap-1.5 font-bold text-emas-300" role="alert">
                                         <flux:icon.exclamation-circle variant="micro" /> {{ $message }}
@@ -441,7 +441,9 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                             <span class="font-display angka flex h-24 w-20 shrink-0 items-center justify-center rounded-xl bg-hijau-50 text-7xl font-black text-hijau-700 ring-1 ring-garis">{{ $calon['nomor_urut'] }}</span>
                             <div class="min-w-0">
                                 <div class="font-bold leading-tight text-tinta">{{ $calon['nama_ketua'] }}</div>
-                                <div class="font-bold leading-tight text-tinta">&amp; {{ $calon['nama_wakil'] }}</div>
+                                @if ($calon['berpasangan'])
+                                    <div class="font-bold leading-tight text-tinta">&amp; {{ $calon['nama_wakil'] }}</div>
+                                @endif
                             </div>
                         </div>
                     </div>

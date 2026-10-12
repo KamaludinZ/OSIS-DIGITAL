@@ -7,7 +7,7 @@
 @endphp
 
 {{--
-    Papan perolehan suara: satu baris per pasangan calon dengan sel tetap
+    Papan perolehan suara: satu baris per kandidat dengan sel tetap
     (nomor, nama + batang, suara, persen). Batang = persen dari suara masuk.
 --}}
 <figure {{ $attributes->class('flex flex-col gap-4') }}>
@@ -21,7 +21,7 @@
 
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="font-bold leading-tight text-tinta">{{ $calon['nama_ketua'] }} &amp; {{ $calon['nama_wakil'] }}</span>
+                        <span class="font-bold leading-tight text-tinta">{{ ($calon['nama_tampil'] ?? trim($calon['nama_ketua'].(filled($calon['nama_wakil'] ?? null) ? ' & '.$calon['nama_wakil'] : ''))) }}</span>
                         @if ($terpilih === $calon['id'])
                             <span class="font-sempit inline-flex items-center gap-1 rounded-md bg-emas-400 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-hijau-950"><flux:icon.trophy variant="micro" /> Terpilih</span>
                         @endif
@@ -53,7 +53,7 @@
             <thead class="text-left text-tinta-2">
                 <tr>
                     <th class="px-4 py-2 font-medium">No.</th>
-                    <th class="px-4 py-2 font-medium">Pasangan calon</th>
+                    <th class="px-4 py-2 font-medium">{{ ucfirst(\App\Support\Istilah::calon()) }}</th>
                     <th class="px-4 py-2 text-right font-medium">Suara</th>
                     <th class="px-4 py-2 text-right font-medium">Persentase</th>
                 </tr>
@@ -62,7 +62,7 @@
                 @foreach ($baris as $calon)
                     <tr>
                         <td class="px-4 py-2">{{ $calon['nomor_urut'] }}</td>
-                        <td class="px-4 py-2">{{ $calon['nama_ketua'] }} &amp; {{ $calon['nama_wakil'] }}</td>
+                        <td class="px-4 py-2">{{ ($calon['nama_tampil'] ?? trim($calon['nama_ketua'].(filled($calon['nama_wakil'] ?? null) ? ' & '.$calon['nama_wakil'] : ''))) }}</td>
                         <td class="px-4 py-2 text-right">{{ number_format($calon['suara'], 0, ',', '.') }}</td>
                         <td class="px-4 py-2 text-right">{{ $format($persen($calon['suara'])) }}</td>
                     </tr>

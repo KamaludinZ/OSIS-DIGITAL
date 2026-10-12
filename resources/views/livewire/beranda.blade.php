@@ -87,7 +87,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Beranda')] class extends Comp
                             @if ($status === 'berjalan')
                                 Satu siswa, satu suara. Pilihanmu rahasia dan langsung terhitung.
                             @elseif ($status === 'draft')
-                                Bilik suara belum dibuka. Kenali dulu para pasangan calon.
+                                Bilik suara belum dibuka. Kenali dulu para {{ \App\Support\Istilah::calon() }}.
                             @else
                                 Bilik suara sudah ditutup. Terima kasih atas partisipasinya.
                             @endif

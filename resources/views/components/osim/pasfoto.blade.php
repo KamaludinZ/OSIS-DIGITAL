@@ -11,7 +11,7 @@
                 <circle cx="24" cy="17" r="9" opacity=".55" />
                 <path d="M6 46c1.5-10 8.6-16 18-16s16.5 6 18 16z" opacity=".55" />
             </svg>
-            <span class="font-sempit text-[10px] font-bold uppercase leading-tight tracking-[0.12em]">Foto pasangan belum tersedia</span>
+            <span class="font-sempit text-[10px] font-bold uppercase leading-tight tracking-[0.12em]">Foto calon belum tersedia</span>
         </div>
     </div>
     {{-- Sudut tempel --}}

@@ -34,6 +34,33 @@ class Candidate extends Model
         ];
     }
 
+    /** Ketua + wakil? (pemilihan berformat ketua saja tidak punya wakil). */
+    public function berpasangan(): bool
+    {
+        return filled($this->nama_wakil);
+    }
+
+    /** "Ketua & Wakil" atau "Ketua". */
+    public function namaTampil(): string
+    {
+        return $this->berpasangan() ? $this->nama_ketua.' & '.$this->nama_wakil : $this->nama_ketua;
+    }
+
+    /** Alamat foto untuk ditampilkan: unggahan panel (disk public) atau URL lengkap. */
+    public function fotoPublik(): ?string
+    {
+        if (blank($this->foto_url) || str_starts_with($this->foto_url, 'http') || str_starts_with($this->foto_url, '/')) {
+            return $this->foto_url ?: null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->foto_url);
+    }
+
+    public function akun(): HasMany
+    {
+        return $this->hasMany(User::class, 'candidate_id');
+    }
+
     public function election(): BelongsTo
     {
         return $this->belongsTo(Election::class);

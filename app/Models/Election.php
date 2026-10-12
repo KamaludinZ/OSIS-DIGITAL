@@ -15,6 +15,7 @@ class Election extends Model
 
     protected $fillable = [
         'judul',
+        'format_kandidat',
         'mulai',
         'selesai',
         'status',
@@ -33,6 +34,7 @@ class Election extends Model
             'mulai' => 'datetime',
             'selesai' => 'datetime',
             'status' => StatusPemilihan::class,
+            'format_kandidat' => \App\Enums\FormatKandidat::class,
             'hasil_publik' => 'boolean',
         ];
     }

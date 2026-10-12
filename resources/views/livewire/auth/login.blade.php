@@ -36,13 +36,25 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
             ]);
         }
 
-        // Login hanya untuk admin, pengurus, dan panitia. Siswa & GTK
+        // Login hanya untuk admin, pengurus, panitia, dan akun kandidat. Siswa & GTK
         // memilih dengan kode pilih dan bertanya lewat verifikasi NISN/NIK.
-        if (! Auth::user()->canAccessPanel(\Filament\Facades\Filament::getPanel('admin'))) {
+        $pengguna = Auth::user();
+
+        if ($pengguna->role === \App\Enums\Peran::Kandidat && $pengguna->candidate_id) {
+            RateLimiter::clear($this->throttleKey());
+            Session::regenerate();
+
+            // Kandidat langsung ke tanya jawab miliknya untuk menanggapi pertanyaan.
+            $this->redirect(route('kandidat.profil', ['id' => $pengguna->candidate_id, 'tab' => 'tanya-jawab']), navigate: false);
+
+            return;
+        }
+
+        if (! $pengguna->canAccessPanel(\Filament\Facades\Filament::getPanel('admin'))) {
             Auth::logout();
 
             throw ValidationException::withMessages([
-                'email' => 'Login hanya untuk admin, pengurus, dan panitia. Untuk memilih, gunakan kode pilih di Bilik Suara.',
+                'email' => 'Login hanya untuk admin, pengurus, panitia, dan kandidat. Untuk memilih, gunakan kode pilih di Bilik Suara.',
             ]);
         }
 

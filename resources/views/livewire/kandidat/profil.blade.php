@@ -8,7 +8,7 @@ use Livewire\Volt\Component;
 new #[Layout('components.layouts.siswa')] class extends Component {
     public array $calon = [];
 
-    /** Pasangan calon sebelum & sesudah (urut nomor) untuk navigasi. */
+    /** Kandidat sebelum & sesudah (urut nomor) untuk navigasi. */
     public ?array $sebelumnya = null;
 
     public ?array $berikutnya = null;
@@ -56,6 +56,10 @@ new #[Layout('components.layouts.siswa')] class extends Component {
             $this->dari = 'kandidat';
         }
 
+        if ($this->kandidatSaya()) {
+            $this->tanggapan = collect($this->tanyaJawab)->mapWithKeys(fn ($q) => [$q['id'] => $q['jawaban'] ?? ''])->all();
+        }
+
 
     }
 
@@ -66,10 +70,43 @@ new #[Layout('components.layouts.siswa')] class extends Component {
 
     public string $tanggalLahir = '';
 
-    /** Penanya: pemilih terverifikasi di sesi ini, atau akun pengurus/panitia/admin. */
+    /** Penanya: pemilih terverifikasi di sesi ini, atau akun pengurus/panitia/admin (bukan akun kandidat). */
     public function penanya(): \App\Models\Voter|\App\Models\User|null
     {
-        return app(\App\Services\SesiPemilih::class)->penanya() ?? auth()->user();
+        $akun = auth()->user();
+
+        return app(\App\Services\SesiPemilih::class)->penanya()
+            ?? ($akun?->role === \App\Enums\Peran::Kandidat ? null : $akun);
+    }
+
+    /** Akun kandidat yang sedang masuk adalah pemilik profil ini? */
+    public function kandidatSaya(): bool
+    {
+        $akun = auth()->user();
+
+        return $akun?->role === \App\Enums\Peran::Kandidat && $akun->candidate_id === $this->calon['id'];
+    }
+
+    /** Draf tanggapan kandidat per pertanyaan (id => teks). */
+    public array $tanggapan = [];
+
+    public ?int $tanggapanTersimpan = null;
+
+    public function tanggapi(int $id): void
+    {
+        $tanya = \App\Models\CandidateQuestion::where('candidate_id', $this->calon['id'])->tampil()->findOrFail($id);
+
+        $this->resetErrorBag('tanggapan.'.$id);
+        $this->validate(['tanggapan.'.$id => ['nullable', 'string', 'max:1000']], [], ['tanggapan.'.$id => 'Tanggapan']);
+
+        try {
+            $baru = app(\App\Services\LayananKampanye::class)->jawabPertanyaan(auth()->user() ?? abort(403), $tanya, $this->tanggapan[$id] ?? '');
+        } catch (\Illuminate\Auth\Access\AuthorizationException) {
+            abort(403);
+        }
+
+        $this->tanyaJawab = collect($this->tanyaJawab)->map(fn ($q) => $q['id'] === $id ? $baru : $q)->all();
+        $this->tanggapanTersimpan = $id;
     }
 
     public function verifikasiPenanya(): void
@@ -128,7 +165,7 @@ new #[Layout('components.layouts.siswa')] class extends Component {
 
     public function rendering($view): void
     {
-        $view->title("Profil Paslon {$this->calon['nomor_urut']}");
+        $view->title(($this->calon['berpasangan'] ? 'Profil Paslon ' : 'Profil Calon ').$this->calon['nomor_urut']);
     }
 }; ?>
 
@@ -148,13 +185,15 @@ new #[Layout('components.layouts.siswa')] class extends Component {
         <div class="mt-4 grid items-end gap-6 pb-8 md:grid-cols-[auto_1fr]">
             <div class="flex items-end gap-4">
                 <span class="font-display angka text-[7.5rem] font-black leading-[0.8] text-emas-300 sm:text-[9rem]" aria-hidden="true">{{ $calon['nomor_urut'] }}</span>
-                <x-osim.pasfoto gelap class="aspect-[4/3] w-44 ring-4 ring-white/15 sm:w-60" :foto="$calon['foto_url']" alt="Foto {{ $calon['nama_ketua'] }} dan {{ $calon['nama_wakil'] }}" />
+                <x-osim.pasfoto gelap class="aspect-[4/3] w-44 ring-4 ring-white/15 sm:w-60" :foto="$calon['foto_url']" alt="Foto {{ $calon['berpasangan'] ? $calon['nama_ketua'].' dan '.$calon['nama_wakil'] : $calon['nama_ketua'] }}" />
             </div>
             <div class="min-w-0">
-                <h1 class="font-display text-3xl font-black leading-[1.02] sm:text-5xl"><span class="sr-only">Pasangan Calon {{ $calon['nomor_urut'] }}: </span>{{ $calon['nama_ketua'] }} &amp; {{ $calon['nama_wakil'] }}</h1>
+                <h1 class="font-display text-3xl font-black leading-[1.02] sm:text-5xl"><span class="sr-only">{{ $calon['berpasangan'] ? 'Pasangan Calon' : 'Calon Ketua' }} {{ $calon['nomor_urut'] }}: </span>{{ $calon['nama_tampil'] }}</h1>
                 <dl class="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-                    <div><dt class="sr-only">Calon Ketua</dt><dd><span class="text-hijau-200">Ketua ·</span> {{ $calon['nama_ketua'] }}, {{ $calon['kelas_ketua'] }}</dd></div>
-                    <div><dt class="sr-only">Calon Wakil</dt><dd><span class="text-hijau-200">Wakil ·</span> {{ $calon['nama_wakil'] }}, {{ $calon['kelas_wakil'] }}</dd></div>
+                    <div><dt class="sr-only">Calon Ketua</dt><dd><span class="text-hijau-200">{{ $calon['berpasangan'] ? 'Ketua ·' : 'Calon ketua ·' }}</span> {{ $calon['nama_ketua'] }}, {{ $calon['kelas_ketua'] }}</dd></div>
+                    @if ($calon['berpasangan'])
+                        <div><dt class="sr-only">Calon Wakil</dt><dd><span class="text-hijau-200">Wakil ·</span> {{ $calon['nama_wakil'] }}, {{ $calon['kelas_wakil'] }}</dd></div>
+                    @endif
                 </dl>
                 @if (! empty($calon['slogan']))
                     <p class="mt-3 inline-block rounded-lg bg-emas-400 px-3 py-1.5 font-bold italic text-hijau-950">“{{ $calon['slogan'] }}”</p>
@@ -216,10 +255,24 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                 <h2 id="judul-tanya" class="font-display text-2xl font-black text-tinta">Tanya Jawab</h2>
 
                 <div class="rounded-[14px] bg-white p-5 ring-1 ring-garis">
-                    @if ($penanya = $this->penanya())
+                    @if ($this->kandidatSaya())
+                        @php($menunggu = collect($tanyaJawab)->whereNull('jawaban')->count())
+                        <div class="flex items-start gap-3">
+                            <span class="font-display angka flex size-10 shrink-0 items-center justify-center rounded-lg bg-hijau-600 text-xl font-black text-emas-300">{{ $calon['nomor_urut'] }}</span>
+                            <div>
+                                <h3 class="font-bold text-tinta">Kamu masuk sebagai kandidat nomor {{ $calon['nomor_urut'] }}</h3>
+                                <p class="text-sm text-tinta-2">
+                                    {{ $menunggu ? $menunggu.' pertanyaan menunggu tanggapanmu.' : 'Semua pertanyaan sudah kamu tanggapi.' }}
+                                    Tanggapan tampil untuk semua siswa dan GTK dengan label nomor urutmu.
+                                </p>
+                            </div>
+                        </div>
+                    @elseif (auth()->user()?->role === \App\Enums\Peran::Kandidat)
+                        <p class="flex items-center gap-2 text-sm text-tinta-2"><flux:icon.information-circle variant="mini" class="text-hijau-600" /> Akun kandidat hanya bisa menanggapi pertanyaan di profilnya sendiri.</p>
+                    @elseif ($penanya = $this->penanya())
                         <p class="mb-3 text-sm text-tinta-2">Bertanya sebagai <strong class="text-tinta">{{ $penanya instanceof \App\Models\Voter ? $penanya->nama.' · '.$penanya->keterangan() : $penanya->name }}</strong></p>
                         <form wire:submit="kirimPertanyaan" class="flex flex-col gap-3">
-                            <label for="pertanyaan-baru" class="font-bold text-tinta">Tanyakan sesuatu kepada Paslon {{ $calon['nomor_urut'] }}</label>
+                            <label for="pertanyaan-baru" class="font-bold text-tinta">Tanyakan sesuatu kepada {{ $calon['berpasangan'] ? 'Paslon' : 'Calon' }} {{ $calon['nomor_urut'] }}</label>
                             <textarea id="pertanyaan-baru" wire:model="pertanyaanBaru" rows="3" maxlength="500"
                                       placeholder="Contoh: Bagaimana cara menjalankan program ini tanpa mengganggu jam belajar?"
                                       class="w-full rounded-xl border-2 border-garis bg-hijau-50/50 px-4 py-3 text-tinta placeholder:text-tinta-2/70 focus:border-hijau-600 focus:bg-white focus:outline-none"></textarea>
@@ -283,11 +336,27 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                         </div>
                         <p class="mt-2 text-lg font-bold leading-snug text-tinta">{{ $item['pertanyaan'] }}</p>
 
-                        @if ($item['jawaban'])
+                        @if ($this->kandidatSaya())
+                            <form wire:submit="tanggapi({{ $item['id'] }})" class="mt-3 flex flex-col gap-2 rounded-xl bg-hijau-50 p-3 ring-1 ring-garis">
+                                <label for="tanggapan-{{ $item['id'] }}" class="text-xs font-bold text-hijau-700">{{ $item['jawaban'] ? 'Tanggapanmu' : 'Tulis tanggapanmu' }}</label>
+                                <textarea id="tanggapan-{{ $item['id'] }}" wire:model="tanggapan.{{ $item['id'] }}" rows="3" maxlength="1000"
+                                          class="w-full rounded-lg border-2 border-garis bg-white px-3 py-2 text-tinta focus:border-hijau-600 focus:outline-none"></textarea>
+                                @error('tanggapan.'.$item['id']) <p class="text-sm font-bold text-cap" role="alert">{{ $message }}</p> @enderror
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <button type="submit" wire:loading.attr="disabled" wire:target="tanggapi({{ $item['id'] }})"
+                                            class="inline-flex items-center gap-2 rounded-lg bg-hijau-600 px-4 py-2 text-sm font-bold text-white hover:bg-hijau-700 disabled:opacity-60">
+                                        <flux:icon.chat-bubble-left-ellipsis variant="micro" /> {{ $item['jawaban'] ? 'Perbarui tanggapan' : 'Kirim tanggapan' }}
+                                    </button>
+                                    @if ($tanggapanTersimpan === $item['id'])
+                                        <span class="flex items-center gap-1 text-sm font-bold text-hijau-700" role="status"><flux:icon.check-circle variant="micro" /> {{ $item['jawaban'] ? 'Tanggapan tersimpan' : 'Tanggapan ditarik' }}</span>
+                                    @endif
+                                </div>
+                            </form>
+                        @elseif ($item['jawaban'])
                             <div class="mt-3 rounded-xl bg-hijau-50 px-4 py-3 ring-1 ring-garis">
                                 <div class="flex items-center gap-2 text-xs font-bold text-hijau-700">
                                     <span class="font-display angka flex size-5 items-center justify-center rounded bg-hijau-600 text-[11px] font-black text-white">{{ $calon['nomor_urut'] }}</span>
-                                    Jawaban Paslon {{ $calon['nomor_urut'] }}
+                                    Jawaban {{ $calon['berpasangan'] ? 'Paslon' : 'Calon' }} {{ $calon['nomor_urut'] }}
                                 </div>
                                 <p class="mt-1 text-tinta">{{ $item['jawaban'] }}</p>
                             </div>
@@ -303,14 +372,14 @@ new #[Layout('components.layouts.siswa')] class extends Component {
         @endif
 
         {{-- Navigasi antar pasangan calon --}}
-        <nav aria-label="Pasangan calon lain" class="flex flex-col gap-4 border-t border-dashed border-garis pt-6 sm:flex-row sm:items-center">
+        <nav aria-label="{{ $calon['berpasangan'] ? 'Pasangan calon' : 'Calon ketua' }} lain" class="flex flex-col gap-4 border-t border-dashed border-garis pt-6 sm:flex-row sm:items-center">
             <div class="grid flex-1 grid-cols-2 gap-3 sm:max-w-md">
                 @if ($sebelumnya)
                     <a href="{{ route('kandidat.profil', ['id' => $sebelumnya['id'], 'dari' => $dari === 'kandidat' ? null : $dari]) }}" wire:navigate
                        class="flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-garis hover:ring-hijau-500">
                         <span class="font-display angka text-3xl font-black text-hijau-600">{{ $sebelumnya['nomor_urut'] }}</span>
                         <span class="min-w-0">
-                            <span class="flex items-center gap-0.5 text-xs font-semibold text-tinta-2"><flux:icon.chevron-left variant="micro" /> Paslon {{ $sebelumnya['nomor_urut'] }}</span>
+                            <span class="flex items-center gap-0.5 text-xs font-semibold text-tinta-2"><flux:icon.chevron-left variant="micro" /> {{ $sebelumnya['berpasangan'] ? 'Paslon' : 'Calon' }} {{ $sebelumnya['nomor_urut'] }}</span>
                             <span class="block truncate text-sm font-bold text-tinta">{{ $sebelumnya['nama_ketua'] }}</span>
                         </span>
                     </a>
@@ -322,7 +391,7 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                     <a href="{{ route('kandidat.profil', ['id' => $berikutnya['id'], 'dari' => $dari === 'kandidat' ? null : $dari]) }}" wire:navigate
                        class="flex items-center justify-end gap-3 rounded-xl bg-white p-3 text-right ring-1 ring-garis hover:ring-hijau-500">
                         <span class="min-w-0">
-                            <span class="flex items-center justify-end gap-0.5 text-xs font-semibold text-tinta-2">Paslon {{ $berikutnya['nomor_urut'] }} <flux:icon.chevron-right variant="micro" /></span>
+                            <span class="flex items-center justify-end gap-0.5 text-xs font-semibold text-tinta-2">{{ $berikutnya['berpasangan'] ? 'Paslon' : 'Calon' }} {{ $berikutnya['nomor_urut'] }} <flux:icon.chevron-right variant="micro" /></span>
                             <span class="block truncate text-sm font-bold text-tinta">{{ $berikutnya['nama_ketua'] }}</span>
                         </span>
                         <span class="font-display angka text-3xl font-black text-hijau-600">{{ $berikutnya['nomor_urut'] }}</span>

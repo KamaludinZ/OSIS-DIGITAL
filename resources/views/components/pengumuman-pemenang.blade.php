@@ -27,12 +27,12 @@
             <div class="grid gap-5 p-5 sm:grid-cols-[auto_1fr] sm:items-center sm:p-6">
                 <div class="flex items-end gap-3">
                     <span class="font-display angka text-[7rem] font-black leading-[0.8] text-hijau-600" aria-label="Nomor urut {{ $teratas['nomor_urut'] }}">{{ $teratas['nomor_urut'] }}</span>
-                    <x-osim.pasfoto class="aspect-[4/3] w-40" :foto="$teratas['foto_url'] ?? null" alt="Foto pasangan calon terpilih nomor {{ $teratas['nomor_urut'] }}" />
+                    <x-osim.pasfoto class="aspect-[4/3] w-40" :foto="$teratas['foto_url'] ?? null" alt="Foto {{ ($teratas['berpasangan'] ?? true) ? 'pasangan calon' : 'calon ketua' }} terpilih nomor {{ $teratas['nomor_urut'] }}" />
                 </div>
                 <div class="relative min-w-0 pr-24 sm:pr-36">
                     <span class="font-sempit inline-flex items-center gap-1 rounded-md bg-emas-400 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-hijau-950"><flux:icon.trophy variant="micro" /> Terpilih</span>
                     <h2 id="judul-pemenang" class="font-display mt-2 text-3xl font-black leading-tight text-tinta">
-                        {{ $teratas['nama_ketua'] }} &amp; {{ $teratas['nama_wakil'] }}
+                        {{ ($teratas['nama_tampil'] ?? trim($teratas['nama_ketua'].(filled($teratas['nama_wakil'] ?? null) ? ' & '.$teratas['nama_wakil'] : ''))) }}
                     </h2>
                     <p class="mt-2 text-tinta-2">
                         Memperoleh <strong class="text-tinta">{{ number_format($teratas['suara'], 0, ',', '.') }} suara ({{ $persen }}%)</strong>

@@ -27,6 +27,7 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
         'password',
         'role',
         'kelas',
+        'candidate_id',
     ];
 
     /**
@@ -65,6 +66,12 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
     }
 
     /** Ruang OSIM (panel Filament) hanya untuk pengurus, panitia, dan admin. */
+    /** Kandidat yang diwakili akun berperan kandidat. */
+    public function kandidat(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Candidate::class, 'candidate_id');
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return in_array($this->role, [Peran::Pengurus, Peran::Panitia, Peran::Admin], true);

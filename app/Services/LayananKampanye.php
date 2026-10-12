@@ -113,6 +113,32 @@ class LayananKampanye
         return $this->tanyaKeArray($hasil->setRelation($penanya instanceof Voter ? 'voter' : 'penanya', $penanya));
     }
 
+    /**
+     * Tanggapan kandidat atas pertanyaan untuk dirinya. Menanggapi ulang
+     * memperbarui jawaban; jawaban kosong menarik tanggapan.
+     *
+     * @throws ValidationException
+     */
+    public function jawabPertanyaan(User $kandidat, CandidateQuestion $tanya, ?string $jawaban): array
+    {
+        if (! $kandidat->can('jawab-pertanyaan', $tanya)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Hanya kandidat yang ditanya yang boleh menanggapi.');
+        }
+
+        $jawaban = trim((string) $jawaban);
+
+        if (mb_strlen($jawaban) > 1000) {
+            throw ValidationException::withMessages(['jawaban' => 'Tanggapan paling panjang 1000 karakter.']);
+        }
+
+        $tanya->update([
+            'jawaban' => $jawaban !== '' ? $jawaban : null,
+            'dijawab_pada' => $jawaban !== '' ? now() : null,
+        ]);
+
+        return $this->tanyaKeArray($tanya->load(['penanya:id,name,kelas', 'voter:id,jenis,nama,kelas,jabatan']));
+    }
+
     private function tanyaKeArray(CandidateQuestion $q): array
     {
         $nama = match (true) {
@@ -126,6 +152,7 @@ class LayananKampanye
             'pertanyaan' => $q->pertanyaan,
             'penanya' => $nama,
             'jawaban' => $q->jawaban,
+            'dijawab_pada' => $q->dijawab_pada?->toDateTimeString(),
             'created_at' => $q->created_at->toDateTimeString(),
         ];
     }

@@ -19,7 +19,7 @@ class SeederTest extends TestCase
         $this->seed();
         $this->seed();
 
-        $this->assertSame(3, User::count());
+        $this->assertSame(4, User::count()); // 3 staf + 1 akun kandidat
         $this->assertSame(1, \App\Models\Voter::where('kode_pilih', '246810')->count());
         $this->assertSame(3, Candidate::count());
         $this->assertSame(5, Announcement::count());

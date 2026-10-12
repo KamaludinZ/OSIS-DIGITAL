@@ -13,7 +13,8 @@ class DatabaseSeeder extends Seeder
      * (php artisan db:seed) karena memakai updateOrCreate.
      *
      * Akun contoh (login hanya untuk staf) — kata sandi "password":
-     *   admin@osis.test, panitia@osis.test, pengurus@osis.test
+     *   admin@osis.test, panitia@osis.test, pengurus@osis.test,
+ *   kandidat1@osis.test (akun kandidat nomor urut 1, untuk menanggapi tanya jawab)
      * Siswa & GTK tidak punya akun: lihat PemilihSeeder untuk kode pilih contoh.
      */
     public function run(): void
@@ -43,5 +44,17 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call([PemilihSeeder::class, PemilihanSeeder::class, KampanyeSeeder::class, PublikasiSeeder::class, OrganisasiSeeder::class, SosmedSeeder::class]);
+
+        $calon = \App\Models\Election::aktif()?->candidates()->where('nomor_urut', 1)->first();
+
+        if ($calon) {
+            User::updateOrCreate(['email' => 'kandidat1@osis.test'], [
+                'name' => $calon->nama_ketua,
+                'password' => 'password',
+                'role' => Peran::Kandidat,
+                'candidate_id' => $calon->id,
+                'email_verified_at' => now(),
+            ]);
+        }
     }
 }

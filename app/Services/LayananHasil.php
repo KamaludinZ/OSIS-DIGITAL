@@ -21,7 +21,7 @@ class LayananHasil
      * Jumlah suara per kandidat (kandidat tanpa suara tetap muncul dengan 0),
      * urut nomor urut.
      *
-     * @return array<int, array{id: int, nomor_urut: int, nama_ketua: string, nama_wakil: string, foto_url: ?string, suara: int}>
+     * @return array<int, array{id: int, nomor_urut: int, nama_ketua: string, nama_wakil: ?string, berpasangan: bool, nama_tampil: string, foto_url: ?string, suara: int}>
      */
     public function perolehanSuara(Election $pemilihan): array
     {
@@ -38,7 +38,9 @@ class LayananHasil
                 'nomor_urut' => $c->nomor_urut,
                 'nama_ketua' => $c->nama_ketua,
                 'nama_wakil' => $c->nama_wakil,
-                'foto_url' => $c->foto_url,
+                'berpasangan' => $c->berpasangan(),
+                'nama_tampil' => $c->namaTampil(),
+                'foto_url' => $c->fotoPublik(),
                 'suara' => (int) ($hitungan[$c->id] ?? 0),
             ])
             ->values()

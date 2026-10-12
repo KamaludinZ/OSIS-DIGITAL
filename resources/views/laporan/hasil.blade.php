@@ -36,7 +36,7 @@
                 <thead>
                     <tr class="bg-hijau-100 text-left">
                         <th class="border border-garis px-3 py-2">No.</th>
-                        <th class="border border-garis px-3 py-2">Pasangan calon</th>
+                        <th class="border border-garis px-3 py-2">{{ ucfirst(\App\Support\Istilah::calon()) }}</th>
                         <th class="border border-garis px-3 py-2 text-right">Suara</th>
                         <th class="border border-garis px-3 py-2 text-right">%</th>
                     </tr>
@@ -45,7 +45,7 @@
                     @foreach ($baris as $c)
                         <tr @class(['font-bold' => $pemenang['status'] === 'menang' && $pemenang['kandidat']['id'] === $c['id']])>
                             <td class="border border-garis px-3 py-2">{{ $c['nomor_urut'] }}</td>
-                            <td class="border border-garis px-3 py-2">{{ $c['nama_ketua'] }} &amp; {{ $c['nama_wakil'] }}</td>
+                            <td class="border border-garis px-3 py-2">{{ $c['nama_tampil'] }}</td>
                             <td class="border border-garis px-3 py-2 text-right">{{ number_format($c['suara'], 0, ',', '.') }}</td>
                             <td class="border border-garis px-3 py-2 text-right">{{ str_replace('.', ',', $c['persen']) }}</td>
                         </tr>
@@ -55,8 +55,8 @@
 
             <p class="mt-6 text-tinta">
                 @if ($pemenang['status'] === 'menang')
-                    Berdasarkan perolehan suara di atas, pasangan calon nomor urut <strong>{{ $pemenang['kandidat']['nomor_urut'] }}</strong>,
-                    <strong>{{ $pemenang['kandidat']['nama_ketua'] }} &amp; {{ $pemenang['kandidat']['nama_wakil'] }}</strong>, memperoleh suara terbanyak.
+                    Berdasarkan perolehan suara di atas, {{ $pemenang['kandidat']['berpasangan'] ? 'pasangan calon' : 'calon ketua' }} nomor urut <strong>{{ $pemenang['kandidat']['nomor_urut'] }}</strong>,
+                    <strong>{{ $pemenang['kandidat']['nama_tampil'] }}</strong>, memperoleh suara terbanyak.
                 @elseif ($pemenang['status'] === 'seri')
                     Perolehan suara teratas seri. Pemenang ditetapkan oleh panitia sesuai tata tertib pemilihan.
                 @else

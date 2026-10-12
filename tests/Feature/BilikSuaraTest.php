@@ -43,7 +43,7 @@ class BilikSuaraTest extends TestCase
         $this->masuk()->withSession(['panduan_dilewati' => true])->get('/bilik-suara')
             ->assertOk()
             ->assertSeeInOrder(['Pasangan Calon 1', 'Pasangan Calon 2', 'Pasangan Calon 3'])
-            ->assertSee('Foto pasangan belum tersedia');
+            ->assertSee('Foto calon belum tersedia');
     }
 
     public function test_profil_kandidat_menampilkan_visi_dan_misi(): void

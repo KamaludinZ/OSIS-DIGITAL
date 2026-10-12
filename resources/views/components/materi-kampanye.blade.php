@@ -21,7 +21,7 @@
         <section class="flex flex-col items-center rounded-[14px] border border-2 border-dashed border-garis px-6 py-12 text-center" role="status">
             <flux:icon.photo class="size-10 text-hijau-300" />
             <h2 class="font-display text-2xl font-black text-tinta mt-3">Belum ada materi kampanye</h2>
-            <p class="text-tinta-2 mt-1">Pasangan calon ini belum mengunggah poster, video, atau janji kerja.</p>
+            <p class="text-tinta-2 mt-1">{{ ucfirst(\App\Support\Istilah::calon()) }} ini belum mengunggah poster, video, atau janji kerja.</p>
         </section>
     @endif
 
