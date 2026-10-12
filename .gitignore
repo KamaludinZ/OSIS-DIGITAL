@@ -30,3 +30,7 @@ yarn-error.log
 .env.*
 !.env.example
 /.impeccable/review/
+
+# Artefak lokal sinkronisasi NgodingPakeAI (dibuat ulang tiap sync)
+/.ngodingpakeai/summaries.json
+/.ngodingpakeai/pending.json
