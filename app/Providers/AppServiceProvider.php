@@ -25,6 +25,12 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::define('kelola-publikasi', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Pengurus, \App\Enums\Peran::Admin], true));
 
+        // Perolehan per kandidat: publik setelah dipublikasikan; panitia & admin selalu.
+        Gate::define('lihat-perolehan', fn (?User $pengguna, Election $pemilihan) => $pemilihan->hasil_publik
+            || in_array($pengguna?->role, [\App\Enums\Peran::Panitia, \App\Enums\Peran::Admin], true));
+
+        Gate::define('publikasikan-hasil', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Panitia, \App\Enums\Peran::Admin], true));
+
         Gate::define('memilih', fn (User $pengguna, Election $pemilihan) => app(LayananPemilihan::class)->kelayakan($pengguna, $pemilihan)['boleh']);
     }
 }

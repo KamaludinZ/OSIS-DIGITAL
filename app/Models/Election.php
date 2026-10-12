@@ -21,6 +21,12 @@ class Election extends Model
         'hasil_publik',
     ];
 
+    protected static function booted(): void
+    {
+        // Status / publikasi berubah -> rekap di halaman Hasil harus ikut berubah.
+        static::saved(fn (Election $pemilihan) => \App\Services\LayananHasil::lupakanCache($pemilihan->id));
+    }
+
     protected function casts(): array
     {
         return [

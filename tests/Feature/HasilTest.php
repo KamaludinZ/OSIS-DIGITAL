@@ -2,8 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Peran;
+use App\Models\Candidate;
+use App\Models\Election;
+use App\Models\User;
+use App\Models\Vote;
 use Database\Seeders\PemilihanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
 
@@ -11,16 +17,123 @@ class HasilTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_halaman_hasil_menampilkan_ringkasan_dan_perolehan(): void
+    /** Suara contoh: paslon 1 = 3, paslon 2 = 5, paslon 3 = 2, plus 2 siswa belum memilih. */
+    private function siapkanSuara(): Election
     {
         $this->seed(PemilihanSeeder::class);
+        $e = Election::firstOrFail();
+        foreach ([1 => 3, 2 => 5, 3 => 2] as $nomor => $jumlah) {
+            $calon = Candidate::where('nomor_urut', $nomor)->first();
+            User::factory()->count($jumlah)->create()->each(fn ($u) => Vote::create([
+                'election_id' => $e->id, 'user_id' => $u->id, 'candidate_id' => $calon->id, 'kode_bukti' => 'OSIM-'.Str::upper(Str::random(9)),
+            ]));
+        }
+        User::factory()->count(2)->create();
 
-        $this->get('/hasil?simulasi=publik')
+        return $e;
+    }
+
+    public function test_hasil_publik_menampilkan_perolehan_dari_database(): void
+    {
+        $this->siapkanSuara()->update(['hasil_publik' => true]);
+
+        $this->get('/hasil')
             ->assertOk()
-            ->assertSeeInOrder(['Suara masuk', '612', 'Total pemilih', '840', 'Belum memilih', '228', 'Partisipasi pemilih', '72,9%'])
-            ->assertSeeInOrder(['Rizky Pratama', '35%', '214 suara', 'Nadia Kusuma', '41%', '251 suara', 'Dimas Aditya', '24%', '147 suara'])
-            ->assertSee('Lihat sebagai tabel')
-            ->assertSee('width: max(41%, 2px)', false);
+            ->assertSeeInOrder(['Suara masuk', '10', 'Total pemilih', '12', 'Belum memilih', '2', 'Partisipasi pemilih', '83,3%'])
+            ->assertSeeInOrder(['Rizky Pratama', '30%', '3 suara', 'Nadia Kusuma', '50%', '5 suara', 'Dimas Aditya', '20%', '2 suara']);
+    }
+
+    public function test_perolehan_tidak_bocor_ke_siswa_sebelum_dipublikasikan(): void
+    {
+        $this->siapkanSuara();
+        $this->actingAs(User::factory()->create());
+
+        $html = $this->get('/hasil')->assertOk()->assertSee('Hasil belum bisa dilihat')->assertSee('Partisipasi pemilih')->getContent();
+
+        // Angka per kandidat tidak boleh ada di HTML maupun state Livewire.
+        $this->assertStringNotContainsString('5 suara', $html);
+        $this->assertStringNotContainsString('&quot;suara&quot;', $html);
+        $this->get('/hasil/laporan.csv')->assertForbidden();
+        $this->get('/hasil/laporan')->assertForbidden();
+    }
+
+    public function test_panitia_bisa_memantau_perolehan_sebelum_publik(): void
+    {
+        $this->siapkanSuara();
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+
+        $this->get('/hasil')
+            ->assertSee('hanya terlihat oleh panitia')
+            ->assertSee('5 suara')
+            ->assertDontSee('Ketua &amp; Wakil Ketua OSIM Terpilih', false);
+    }
+
+    public function test_pemenang_diumumkan_setelah_ditutup_dan_publik(): void
+    {
+        $this->siapkanSuara()->update(['status' => 'selesai', 'hasil_publik' => true]);
+
+        $this->get('/hasil')
+            ->assertSee('Pemilihan ditutup')
+            ->assertDontSee('wire:poll', false)
+            ->assertSeeInOrder(['Terpilih', 'Nadia Kusuma &amp; Fajar Ramadhan', '5 suara (50%)'], false);
+    }
+
+    public function test_menunggu_pengumuman_resmi_setelah_ditutup(): void
+    {
+        $this->siapkanSuara()->update(['status' => 'selesai']);
+
+        $this->get('/hasil')->assertSee('Menunggu pengumuman resmi')->assertDontSee('Perolehan Suara');
+    }
+
+    public function test_rekap_dimuat_ulang_dan_polling_saat_berjalan(): void
+    {
+        $e = $this->siapkanSuara();
+        $this->get('/hasil')->assertSee('wire:poll.10s.visible="muatUlang"', false)->assertSee('Pemilihan berlangsung');
+
+        $komponen = Volt::test('hasil')->assertSet('rekap.suara_masuk', 10);
+
+        // Suara yang masuk lewat bilik suara langsung membuang cache rekap.
+        $siswa = User::factory()->create();
+        app(\App\Services\LayananPemilihan::class)->kirimSuara($siswa, $e, Candidate::first()->id);
+        $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 11);
+
+        // Tanpa pembuangan cache, angka bertahan sampai cache kedaluwarsa.
+        Vote::create(['election_id' => $e->id, 'user_id' => User::factory()->create()->id, 'candidate_id' => Candidate::first()->id, 'kode_bukti' => 'OSIM-LANGSUNG-1']);
+        $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 11);
+        $this->travel(\App\Services\LayananHasil::CACHE_DETIK + 1)->seconds();
+        $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 12);
+    }
+
+    public function test_laporan_csv_dan_berita_acara_bila_perolehan_terlihat(): void
+    {
+        $this->siapkanSuara()->update(['status' => 'selesai', 'hasil_publik' => true]);
+
+        $this->get('/hasil')->assertSee('Unduh laporan')->assertSee(route('hasil.laporan.csv'))->assertSee(route('hasil.laporan'));
+
+        $csv = $this->get('/hasil/laporan.csv');
+        $csv->assertOk()->assertDownload('laporan-hasil-pemilihan-ketua-osim-20262027.csv');
+        $isi = $csv->streamedContent();
+        $baris = array_map(fn ($b) => str_getcsv($b, ';'), preg_split('/\R/', trim(ltrim($isi, "\xEF\xBB\xBF"))));
+        $this->assertContains(['Total pemilih', '12'], $baris);
+        $this->assertContains(['Suara masuk', '10'], $baris);
+        $this->assertContains(['2', 'Nadia Kusuma', 'Fajar Ramadhan', '5', '50'], $baris);
+        $this->assertContains(['Hasil', 'Terpilih: No. 2 Nadia Kusuma & Fajar Ramadhan'], $baris);
+
+        $this->get('/hasil/laporan')
+            ->assertOk()
+            ->assertSee('Berita Acara Hasil Pemilihan')
+            ->assertSee('Ketua Panitia Pemilihan')
+            ->assertSeeInOrder(['Nadia Kusuma', '5', '50'])
+            ->assertSee('memperoleh suara terbanyak');
+    }
+
+    public function test_panitia_bisa_mengunduh_laporan_sebelum_publik(): void
+    {
+        $this->siapkanSuara();
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+
+        $this->get('/hasil/laporan.csv')->assertOk();
+        $this->get('/hasil/laporan')->assertOk()->assertSee('hasil belum dipublikasikan');
     }
 
     public function test_hasil_kosong_tanpa_pemilihan(): void
@@ -44,34 +157,6 @@ class HasilTest extends TestCase
             ->assertSee('Belum ada suara masuk.');
     }
 
-    public function test_panel_rekap_bisa_dimuat_ulang_dan_polling_saat_berjalan(): void
-    {
-        $this->seed(PemilihanSeeder::class);
-        $this->travelTo(now()->setTime(10, 0, 0));
-
-        $this->get('/hasil')
-            ->assertSee('Rekap Suara Masuk')
-            ->assertSee('wire:poll.30s="muatUlang"', false)
-            ->assertSee('Partisipasi pemilih');
-
-        $komponen = Volt::test('hasil')->assertSee('10:00:00');
-        $this->travel(5)->minutes();
-        $komponen->call('muatUlang')->assertSee('10:05:00');
-
-        $this->get('/hasil?simulasi=selesai')->assertDontSee('wire:poll', false)->assertSee('Pemilihan ditutup');
-    }
-
-    public function test_pengumuman_pemenang_hanya_setelah_ditutup(): void
-    {
-        $this->seed(PemilihanSeeder::class);
-
-        $this->get('/hasil')->assertDontSee('Ketua &amp; Wakil Ketua OSIM Terpilih', false);
-
-        $this->get('/hasil?simulasi=publik')
-            ->assertSee('Ketua &amp; Wakil Ketua OSIM Terpilih', false)
-            ->assertSeeInOrder(['Terpilih', 'Nadia Kusuma &amp; Fajar Ramadhan', '251 suara (41%)'], false);
-    }
-
     public function test_pemenang_seri_tidak_diumumkan(): void
     {
         $kandidat = [
@@ -84,37 +169,53 @@ class HasilTest extends TestCase
             ->assertDontSee('Terpilih');
     }
 
-    public function test_pesan_menunggu_saat_hasil_belum_dipublikasikan(): void
+    public function test_pemenang_dari_layanan_termasuk_seri_dan_kosong(): void
     {
-        $this->seed(PemilihanSeeder::class);
+        $e = $this->siapkanSuara();
+        $layanan = app(\App\Services\LayananHasil::class);
 
-        $this->get('/hasil')
-            ->assertOk()
-            ->assertSee('Pemilihan berlangsung')
-            ->assertSee('Hasil belum bisa dilihat')
-            ->assertSee('Partisipasi pemilih')
-            ->assertDontSee('Perolehan Suara')
-            ->assertDontSee('251 suara');
+        $hasil = $layanan->pemenang($e);
+        $this->assertSame('menang', $hasil['status']);
+        $this->assertSame('Nadia Kusuma', $hasil['kandidat']['nama_ketua']);
+        $this->assertSame(10, $hasil['suara_masuk']);
 
-        $this->get('/hasil?simulasi=selesai')
-            ->assertSee('Menunggu pengumuman resmi')
-            ->assertDontSee('Perolehan Suara')
-            ->assertDontSee('Terpilih');
+        // Paslon 1 menyusul jadi 5 suara -> seri.
+        $satu = Candidate::where('nomor_urut', 1)->first();
+        User::factory()->count(2)->create()->each(fn ($u) => Vote::create(['election_id' => $e->id, 'user_id' => $u->id, 'candidate_id' => $satu->id, 'kode_bukti' => 'OSIM-'.Str::upper(Str::random(9))]));
+        $this->assertSame('seri', $layanan->pemenang($e)['status']);
+
+        $kosong = Election::factory()->create();
+        Candidate::factory()->for($kosong)->create();
+        $this->assertSame('kosong', $layanan->pemenang($kosong)['status']);
     }
 
-    public function test_unduh_laporan_csv_setelah_hasil_dipublikasikan(): void
+    public function test_panitia_mempublikasikan_hasil_hanya_setelah_ditutup(): void
     {
-        $this->seed(PemilihanSeeder::class);
+        $e = $this->siapkanSuara();
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
 
-        $this->get('/hasil')->assertDontSee('Unduh laporan');
-        $this->get('/hasil?simulasi=publik')->assertSee('Unduh laporan')->assertSee('Cetak / simpan PDF');
+        // Masih berjalan: tidak boleh dipublikasikan.
+        Volt::test('hasil')->call('aturPublikasi', true)->assertHasErrors('publikasi');
+        $this->assertFalse($e->fresh()->hasil_publik);
 
-        Volt::test('hasil')
-            ->set('simulasi', 'publik')
-            ->call('muatUlang')
-            ->call('unduhCsv')
-            ->assertFileDownloaded('laporan-hasil-pemilihan-ketua-osim-20262027.csv');
+        $e->update(['status' => 'selesai']);
+        $this->get('/hasil')->assertSee('Publikasikan hasil');
 
-        Volt::test('hasil')->call('unduhCsv')->assertNoFileDownloaded();
+        Volt::test('hasil')->call('aturPublikasi', true)->assertHasNoErrors()->assertSee('Ketua &amp; Wakil Ketua OSIM Terpilih', false);
+        $this->assertTrue($e->fresh()->hasil_publik);
+
+        Volt::test('hasil')->call('aturPublikasi', false);
+        $this->assertFalse($e->fresh()->hasil_publik);
+    }
+
+    public function test_siswa_tidak_bisa_mempublikasikan_hasil(): void
+    {
+        $e = $this->siapkanSuara();
+        $e->update(['status' => 'selesai']);
+        $this->actingAs(User::factory()->create());
+
+        $this->get('/hasil')->assertDontSee('Publikasikan hasil');
+        Volt::test('hasil')->call('aturPublikasi', true)->assertForbidden();
+        $this->assertFalse($e->fresh()->hasil_publik);
     }
 }

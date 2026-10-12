@@ -1,71 +1,63 @@
 <?php
 
-use App\Services\LayananPemilihan;
-use App\Support\DataTiruanHasil;
+use App\Services\LayananHasil;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class extends Component {
     public ?array $rekap = null;
 
-    /** Data tiruan — ?simulasi=berjalan|selesai|publik untuk mencoba tampilan. */
-    #[Url]
-    public ?string $simulasi = null;
-
-    public function mount(LayananPemilihan $layanan): void
+    public function mount(): void
     {
-        $this->muatUlang($layanan);
+        $this->muatUlang();
     }
 
-    /** Ambil ulang rekap (tombol "Muat ulang" & polling otomatis). */
-    public function muatUlang(LayananPemilihan $layanan): void
+    /**
+     * Ambil ulang rekap (tombol "Muat ulang" & polling otomatis).
+     * Perolehan per kandidat TIDAK dimasukkan ke state komponen bila pengguna
+     * belum berhak melihatnya — state Livewire ikut terkirim ke HTML halaman.
+     */
+    public function muatUlang(): void
     {
-        $pemilihan = $layanan->ringkasanPemilihan();
+        $pemilihan = app(\App\Services\LayananPemilihan::class)->pemilihanAktif();
+        $rekap = $pemilihan ? app(LayananHasil::class)->rekap($pemilihan) : null;
 
-        $this->rekap = $pemilihan
-            ? DataTiruanHasil::rekap($layanan->daftarKandidat(), $pemilihan, $this->simulasi)
-            : null;
+        if ($rekap) {
+            $rekap['perolehan_terlihat'] = Gate::allows('lihat-perolehan', $pemilihan);
+
+            if (! $rekap['perolehan_terlihat']) {
+                $rekap['kandidat'] = [];
+            }
+        }
+
+        $this->rekap = $rekap;
     }
 
-    /** ID pemenang tunggal; null bila belum ada suara atau hasil seri. */
+    /** ID pemenang tunggal; null bila belum ada suara, hasil seri, atau belum boleh dilihat. */
     public function idPemenang(): ?int
     {
-        $urut = collect($this->rekap['kandidat'] ?? [])->sortByDesc('suara')->values();
-
-        if ($urut->isEmpty() || $urut[0]['suara'] === 0 || ($urut[1]['suara'] ?? -1) === $urut[0]['suara']) {
+        if (empty($this->rekap['perolehan_terlihat'])) {
             return null;
         }
 
-        return $urut[0]['id'];
+        $pemilihan = app(\App\Services\LayananPemilihan::class)->pemilihanAktif();
+        $hasil = $pemilihan ? app(LayananHasil::class)->pemenang($pemilihan) : null;
+
+        return $hasil && $hasil['status'] === 'menang' ? $hasil['kandidat']['id'] : null;
     }
 
-    /** Unduh laporan hasil sebagai CSV (dibuka di Excel / Google Sheets). */
-    public function unduhCsv()
+    /** Panitia/admin mempublikasikan atau menarik hasil. */
+    public function aturPublikasi(bool $publik): void
     {
-        if (! $this->rekap || ! $this->rekap['hasil_publik']) {
-            return null;
-        }
+        $this->authorize('publikasikan-hasil');
 
-        $rekap = $this->rekap;
-        $nama = 'laporan-hasil-'.\Illuminate\Support\Str::slug($rekap['judul']).'.csv';
+        $pemilihan = app(\App\Services\LayananPemilihan::class)->pemilihanAktif();
+        abort_unless($pemilihan, 404);
 
-        return response()->streamDownload(function () use ($rekap) {
-            $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF"); // BOM agar Excel membaca UTF-8
-            fputcsv($out, ['Laporan Hasil', $rekap['judul']], ';');
-            fputcsv($out, ['Dibuat', now()->translatedFormat('j F Y H:i').' WIB'], ';');
-            fputcsv($out, ['Total pemilih', $rekap['total_pemilih']], ';');
-            fputcsv($out, ['Suara masuk', $rekap['suara_masuk']], ';');
-            fputcsv($out, ['Partisipasi (%)', str_replace('.', ',', $this->persen($rekap['suara_masuk'], $rekap['total_pemilih']))], ';');
-            fputcsv($out, [], ';');
-            fputcsv($out, ['No. urut', 'Calon ketua', 'Calon wakil', 'Suara', 'Persentase (%)'], ';');
-            foreach (collect($rekap['kandidat'])->sortBy('nomor_urut') as $c) {
-                fputcsv($out, [$c['nomor_urut'], $c['nama_ketua'], $c['nama_wakil'], $c['suara'], str_replace('.', ',', $this->persen($c['suara'], $rekap['suara_masuk']))], ';');
-            }
-            fclose($out);
-        }, $nama, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        app(LayananHasil::class)->aturPublikasi($pemilihan, $publik);
+        $this->muatUlang();
     }
 
     public function persen(int $nilai, int $total): float
@@ -102,25 +94,44 @@ new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class exte
                         {{ $berjalan ? 'Pemilihan berlangsung' : 'Pemilihan ditutup' }}
                     </p>
                 </div>
-                @if ($rekap['hasil_publik'])
+                <div class="flex flex-wrap items-center gap-2">
+                @can('publikasikan-hasil')
+                    @if (! $berjalan)
+                        <button type="button" wire:click="aturPublikasi({{ $rekap['hasil_publik'] ? 'false' : 'true' }})"
+                                wire:confirm="{{ $rekap['hasil_publik'] ? 'Tarik publikasi hasil? Siswa tidak akan bisa melihat perolehan.' : 'Publikasikan hasil? Siswa akan langsung melihat perolehan dan pemenang.' }}"
+                                class="print:hidden inline-flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 font-bold {{ $rekap['hasil_publik'] ? 'bg-hijau-900/40 text-white ring-1 ring-white/20 hover:bg-hijau-900/60' : 'bg-emas-400 text-hijau-950 hover:bg-emas-300' }}">
+                            <flux:icon :name="$rekap['hasil_publik'] ? 'eye-slash' : 'megaphone'" variant="mini" />
+                            {{ $rekap['hasil_publik'] ? 'Tarik publikasi' : 'Publikasikan hasil' }}
+                        </button>
+                    @endif
+                @endcan
+                @error('publikasi') <p class="text-sm font-bold text-emas-300" role="alert">{{ $message }}</p> @enderror
+                @if ($rekap['perolehan_terlihat'])
                     <flux:dropdown position="bottom" align="end" class="print:hidden">
                         <button type="button" class="inline-flex items-center gap-2 whitespace-nowrap rounded-xl bg-white px-4 py-2.5 font-bold text-hijau-800 hover:bg-hijau-50">
                             <flux:icon.arrow-down-tray variant="mini" /> Unduh laporan <flux:icon.chevron-down variant="micro" />
                         </button>
                         <flux:menu>
-                            <flux:menu.item icon="table-cells" wire:click="unduhCsv">CSV (Excel)</flux:menu.item>
-                            <flux:menu.item icon="printer" x-on:click="window.print()">Cetak / simpan PDF</flux:menu.item>
+                            <flux:menu.item icon="table-cells" href="{{ route('hasil.laporan.csv') }}">CSV (Excel)</flux:menu.item>
+                            <flux:menu.item icon="printer" href="{{ route('hasil.laporan') }}" target="_blank">Berita acara (cetak / PDF)</flux:menu.item>
                         </flux:menu>
                     </flux:dropdown>
                 @endif
+                </div>
             </div>
         </x-osim.pita>
 
         <x-osim.wadah class="-mt-16 flex flex-col gap-6">
-        @php($publik = $rekap['hasil_publik'])
+        @php($publik = $rekap['perolehan_terlihat'])
 
         {{-- Pengumuman pemenang (hanya setelah ditutup & hasil dipublikasikan) --}}
-        @if (! $berjalan && $publik)
+        @if ($publik && ! $rekap['hasil_publik'])
+            <p class="flex items-center gap-2 rounded-xl bg-emas-200 px-4 py-3 text-sm font-bold text-hijau-950" role="note">
+                <flux:icon.eye variant="mini" /> Perolehan per kandidat hanya terlihat oleh panitia sampai hasil dipublikasikan.
+            </p>
+        @endif
+
+        @if (! $berjalan && $rekap['hasil_publik'])
             <x-pengumuman-pemenang :kandidat="$rekap['kandidat']" :suara-masuk="$rekap['suara_masuk']" />
         @elseif (! $publik)
             <section class="flex flex-col items-center gap-2 rounded-[14px] border border-2 border-dashed border-garis bg-white px-6 py-10 text-center" role="status">
@@ -142,13 +153,13 @@ new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class exte
 
         {{-- Rekap suara masuk: papan baris --}}
         <section aria-labelledby="judul-rekap" class="overflow-hidden rounded-[14px] bg-hijau-950 text-white shadow-[0_18px_40px_-18px_rgb(4_41_26/0.6)]"
-                 @if ($berjalan) wire:poll.30s="muatUlang" @endif>
+                 @if ($berjalan) wire:poll.10s.visible="muatUlang" @endif>
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
                 <div>
                     <h2 id="judul-rekap" class="font-display text-xl font-black">Rekap Suara Masuk</h2>
                     <p class="angka text-sm text-hijau-200" aria-live="polite">
                         Diperbarui {{ \Illuminate\Support\Carbon::parse($rekap['diperbarui'])->translatedFormat('j F Y, H:i:s') }} WIB
-                        @if ($berjalan) · otomatis tiap 30 detik @endif
+                        @if ($berjalan) · otomatis tiap 10 detik @endif
                     </p>
                 </div>
                 <button type="button" class="print:hidden inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-3.5 py-2 text-sm font-bold text-white hover:bg-white/20 disabled:opacity-60" wire:click="muatUlang" wire:loading.attr="disabled" wire:target="muatUlang">

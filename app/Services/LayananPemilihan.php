@@ -139,12 +139,17 @@ class LayananPemilihan
         }
 
         try {
-            return DB::transaction(fn () => Vote::create([
+            $suara = DB::transaction(fn () => Vote::create([
                 'election_id' => $pemilihan->id,
                 'user_id' => $pengguna->id,
                 'candidate_id' => $calon->id,
                 'kode_bukti' => $this->buatKodeBukti(),
             ]));
+
+            // Rekap di halaman Hasil langsung ikut berubah.
+            LayananHasil::lupakanCache($pemilihan->id);
+
+            return $suara;
         } catch (UniqueConstraintViolationException) {
             throw new SuaraDitolak('Anda sudah menggunakan hak pilih pada pemilihan ini.', 'sudah_memilih');
         }
