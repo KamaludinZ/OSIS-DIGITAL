@@ -101,4 +101,22 @@ class NotifikasiTest extends TestCase
         $this->assertSame(1, $admin->unreadNotifications()->count());
         $this->actingAs($admin)->followingRedirects()->get('/admin')->assertOk()->assertSee('database-notifications', false);
     }
+
+    public function test_preferensi_notifikasi_akun(): void
+    {
+        $calon = \App\Models\Candidate::factory()->create();
+        $kandidat = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Kandidat, 'candidate_id' => $calon->id]);
+        $panitia = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Panitia]);
+
+        $this->assertTrue($kandidat->mauMenerima('pertanyaan'));      // bawaan aktif
+        $this->assertFalse($panitia->mauMenerima('pertanyaan'));      // tidak relevan untuk panitia
+
+        $kandidat->aturNotifikasi('pertanyaan', false);
+        $kandidat->aturNotifikasi('pertanyaan', false);               // idempoten
+        $this->assertFalse($kandidat->fresh()->mauMenerima('pertanyaan'));
+        $this->assertSame(1, \App\Models\NotificationPreference::count());
+
+        $kandidat->delete();
+        $this->assertSame(0, \App\Models\NotificationPreference::count());
+    }
 }

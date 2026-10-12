@@ -78,6 +78,38 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
         return $this->belongsTo(Candidate::class, 'candidate_id');
     }
 
+    public function preferensiNotifikasi(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
+    /** Jenis pemberitahuan yang relevan untuk peran ini. */
+    public function jenisNotifikasi(): array
+    {
+        return match ($this->role) {
+            Peran::Kandidat => ['pertanyaan', 'pemilihan', 'pengumuman'],
+            Peran::Panitia, Peran::Admin => ['pemilihan', 'pengumuman'],
+            Peran::Pengurus => ['pengumuman', 'pemilihan'],
+            default => [],
+        };
+    }
+
+    /** Mau menerima jenis ini? Bawaan: ya, selama relevan untuk perannya. */
+    public function mauMenerima(string $jenis): bool
+    {
+        if (! in_array($jenis, $this->jenisNotifikasi(), true)) {
+            return false;
+        }
+
+        return $this->preferensiNotifikasi->firstWhere('jenis', $jenis)?->aktif ?? true;
+    }
+
+    public function aturNotifikasi(string $jenis, bool $aktif): void
+    {
+        $this->preferensiNotifikasi()->updateOrCreate(['jenis' => $jenis], ['aktif' => $aktif]);
+        $this->unsetRelation('preferensiNotifikasi');
+    }
+
     /** Halaman pertama setelah masuk, sesuai peran. */
     public function halamanAwal(): string
     {
