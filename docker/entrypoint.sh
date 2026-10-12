@@ -32,6 +32,13 @@ fi
 mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
 
+# Laravel memakai DB_URL di atas DB_HOST/DB_DATABASE/... Stack ini dikonfigurasi lewat variabel DB_*,
+# jadi DB_URL (sering tersalin dari "Postgres URL" resource lain di Coolify) diabaikan.
+if [ -n "${DB_URL:-}" ] || [ -n "${DATABASE_URL:-}" ]; then
+    echo "[osis] PERINGATAN: DB_URL/DATABASE_URL diabaikan; koneksi memakai DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD. Hapus DB_URL di Coolify." >&2
+    unset DB_URL DATABASE_URL
+fi
+
 # DB_HOST salah isi di panel (mis. "db" atau UUID resource lain) tetapi service "postgres" bawaan ada:
 # pakai yang bawaan dan beri tahu di log, daripada kontainer gagal terus.
 DB_HOST=${DB_HOST:-postgres}
@@ -53,7 +60,7 @@ until php -r 'try { new PDO("pgsql:host=".getenv("DB_HOST").";port=".(getenv("DB
     [ "$i" -ge 45 ] && { echo "Basis data tidak bisa dihubungi. Periksa DB_HOST/DB_DATABASE/DB_USERNAME/DB_PASSWORD." >&2; exit 1; }
     log "menunggu basis data ${DB_HOST}:${DB_PORT:-5432}... ($i)"; sleep 2
 done
-log "basis data terhubung"
+log "basis data terhubung (${DB_USERNAME}@${DB_HOST}:${DB_PORT:-5432}/${DB_DATABASE})"
 
 # Worker & scheduler menunggu migrasi dari service app selesai (tabel jobs ada).
 tunggu_migrasi() {

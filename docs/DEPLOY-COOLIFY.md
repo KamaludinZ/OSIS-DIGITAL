@@ -241,6 +241,7 @@ Perlindungan yang sudah ada di aplikasi:
 | `pull access denied for osis-digital` | Service tanpa `build` dicoba di-*pull* dari Docker Hub | Pastikan `app`, `worker`, `scheduler` sama-sama memakai `build: *osis-build` (sudah di repo terbaru) |
 | Log `APP_KEY belum diisi` | Variabel kosong | Isi `APP_KEY`, redeploy |
 | Log `APP_KEY tidak valid (panjang …, hasil decode … byte)` | Kunci terpotong/salah salin | Buat ulang (lihat bagian 2), tempel utuh tanpa kutip; harus berbentuk `base64:` + 44 karakter |
+| Log `PERINGATAN: DB_URL/DATABASE_URL diabaikan` | `DB_URL` disalin dari resource PostgreSQL lain | Hapus `DB_URL` di Coolify; stack memakai `DB_HOST`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD` |
 | `could not translate host name "<UUID>"` | `DB_HOST` diisi resource PostgreSQL lain yang beda jaringan | Hapus `DB_HOST` (pakai `postgres` bawaan) **atau** ikuti bagian 3a |
 | Log `Menunggu basis data...` terus | Kata sandi DB berubah setelah volume dibuat | Samakan `DB_PASSWORD` dengan saat pertama deploy, atau reset volume `osis-pgdata` (data hilang!) |
 | Halaman 419 "Sesi kedaluwarsa" | Domain diakses lewat `http://` atau `APP_URL` beda dengan domain | Pakai `https://` dan samakan `APP_URL` |
