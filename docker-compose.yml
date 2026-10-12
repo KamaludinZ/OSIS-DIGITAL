@@ -31,11 +31,15 @@ x-osis-env: &osis-env
   MAIL_MAILER: ${MAIL_MAILER:-log}
   TRUSTED_PROXIES: ${TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
 
+# Ketiga service aplikasi memakai build yang sama. Tanpa "build", Coolify mencoba
+# menarik (pull) image dari Docker Hub dan gagal: "pull access denied for osis-digital".
+x-osis-build: &osis-build
+  context: .
+  dockerfile: Dockerfile
+
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: *osis-build
     image: osis-digital:latest
     restart: unless-stopped
     environment:
@@ -57,6 +61,7 @@ services:
       start_period: 90s
 
   worker:
+    build: *osis-build
     image: osis-digital:latest
     restart: unless-stopped
     environment:
@@ -74,6 +79,7 @@ services:
       retries: 3
 
   scheduler:
+    build: *osis-build
     image: osis-digital:latest
     restart: unless-stopped
     environment:

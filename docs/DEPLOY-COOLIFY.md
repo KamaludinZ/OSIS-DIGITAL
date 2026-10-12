@@ -221,6 +221,7 @@ Perlindungan yang sudah ada di aplikasi:
 | Gejala | Penyebab umum | Solusi |
 |---|---|---|
 | Deploy gagal di tahap `composer`/`npm` | Jaringan server / memori kurang | Redeploy; pastikan RAM ≥ 2 GB saat build |
+| `pull access denied for osis-digital` | Service tanpa `build` dicoba di-*pull* dari Docker Hub | Pastikan `app`, `worker`, `scheduler` sama-sama memakai `build: *osis-build` (sudah di repo terbaru) |
 | Log `APP_KEY belum diisi` | Variabel kosong | Isi `APP_KEY`, redeploy |
 | Log `Menunggu basis data...` terus | Kata sandi DB berubah setelah volume dibuat | Samakan `DB_PASSWORD` dengan saat pertama deploy, atau reset volume `osis-pgdata` (data hilang!) |
 | Halaman 419 "Sesi kedaluwarsa" | Domain diakses lewat `http://` atau `APP_URL` beda dengan domain | Pakai `https://` dan samakan `APP_URL` |
