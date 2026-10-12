@@ -128,6 +128,15 @@ class CandidateResource extends Resource
             ]);
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\MateriRelationManager::class,
+            RelationManagers\JadwalRelationManager::class,
+            RelationManagers\PertanyaanRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [

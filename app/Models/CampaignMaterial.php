@@ -19,6 +19,16 @@ class CampaignMaterial extends Model
         return ['tipe' => TipeMateri::class, 'urutan' => 'integer'];
     }
 
+    /** Poster unggahan panel disimpan relatif di disk public; tautan lengkap dipakai apa adanya. */
+    public function urlPublik(): ?string
+    {
+        if (blank($this->url_konten) || str_starts_with($this->url_konten, 'http') || str_starts_with($this->url_konten, '/')) {
+            return $this->url_konten ?: null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->url_konten);
+    }
+
     public function candidate(): BelongsTo
     {
         return $this->belongsTo(Candidate::class);

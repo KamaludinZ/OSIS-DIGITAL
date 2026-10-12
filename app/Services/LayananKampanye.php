@@ -30,7 +30,7 @@ class LayananKampanye
             ->map(fn (CampaignMaterial $m) => [
                 'id' => $m->id,
                 'tipe' => $m->tipe->value,
-                'url_konten' => $m->url_konten,
+                'url_konten' => $m->urlPublik(),
                 'deskripsi' => $m->deskripsi,
             ])
             ->all();
