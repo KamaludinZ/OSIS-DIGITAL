@@ -86,6 +86,8 @@ class NotifikasiTest extends TestCase
             ->assertSeeInOrder(['Pengumuman baru', 'Pengingat pemilihan', 'Agenda kegiatan'])
             ->assertSee("\$store.notif.ubahPref('pemilihan'", false)
             ->assertSee("location.hash === '#atur'", false)
-            ->assertSee('Tampilkan juga di layar perangkat');
+            ->assertSee('Tampilkan juga di layar perangkat')
+            ->assertSee('Tersimpan di perangkat ini')
+            ->assertSee('beriTahuTersimpan()', false);
     }
 }

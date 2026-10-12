@@ -16,7 +16,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Pemberitahuan')] class extend
     Pusat pemberitahuan. Daftar dan status "dibaca" dikelola Alpine store
     `notif` (resources/js/app.js) yang diisi umpan publik dari layout.
 --}}
-<div x-data="{ tab: 'semua', atur: location.hash === '#atur' }" x-init="$watch('atur', (buka) => history.replaceState(null, '', buka ? '#atur' : location.pathname))">
+<div x-data="{ tab: 'semua', atur: location.hash === '#atur', tersimpan: false, jeda: null, beriTahuTersimpan() { this.tersimpan = true; clearTimeout(this.jeda); this.jeda = setTimeout(() => this.tersimpan = false, 2500) } }" x-init="$watch('atur', (buka) => history.replaceState(null, '', buka ? '#atur' : location.pathname))">
     <section class="osim-guilloche bg-hijau-700 text-white">
         <x-osim.wadah class="pb-8 pt-8">
             <div class="flex flex-wrap items-end justify-between gap-4">
@@ -36,13 +36,18 @@ new #[Layout('components.layouts.siswa')] #[Title('Pemberitahuan')] class extend
         {{-- Preferensi --}}
         <section id="atur-pemberitahuan" x-cloak x-show="atur" x-transition.opacity aria-labelledby="judul-atur"
                  class="rounded-[14px] bg-white p-5 ring-1 ring-garis">
-            <h2 id="judul-atur" class="font-display text-xl font-black text-tinta">Jenis yang ingin kamu terima</h2>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h2 id="judul-atur" class="font-display text-xl font-black text-tinta">Jenis yang ingin kamu terima</h2>
+                <p x-show="tersimpan" x-transition.opacity role="status" class="flex items-center gap-1.5 rounded-lg bg-hijau-100 px-3 py-1 text-sm font-bold text-hijau-800">
+                    <flux:icon.check-circle variant="micro" /> Tersimpan di perangkat ini
+                </p>
+            </div>
             <div class="mt-3 grid gap-2 sm:grid-cols-3">
                 @foreach ($jenis as $kunci => [$label, $ikon])
                     <label class="flex cursor-pointer items-center gap-3 rounded-xl bg-hijau-50 px-4 py-3 ring-1 ring-garis has-[:checked]:ring-2 has-[:checked]:ring-hijau-600">
                         <input type="checkbox" class="size-5 accent-hijau-600"
                                x-bind:checked="$store.notif.pref['{{ $kunci }}'] !== false"
-                               x-on:change="$store.notif.ubahPref('{{ $kunci }}', $event.target.checked)" />
+                               x-on:change="$store.notif.ubahPref('{{ $kunci }}', $event.target.checked); beriTahuTersimpan()" />
                         <flux:icon :name="$ikon" variant="mini" class="text-hijau-700" />
                         <span class="text-sm font-bold text-tinta">{{ $label }}</span>
                     </label>
@@ -74,7 +79,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Pemberitahuan')] class extend
                     <span x-show="$store.notif.belumDibaca" x-text="$store.notif.belumDibaca" class="angka rounded-full bg-emas-400 px-1.5 text-xs font-black text-hijau-950"></span>
                 </button>
             </div>
-            <button type="button" x-on:click="$store.notif.tandaiSemua()" x-bind:disabled="! $store.notif.belumDibaca"
+            <button type="button" x-on:click="$store.notif.tandaiSemua(); tersimpan = false" x-bind:disabled="! $store.notif.belumDibaca"
                     class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-hijau-700 hover:bg-hijau-100 disabled:opacity-40">
                 <flux:icon.check variant="micro" /> Tandai semua dibaca
             </button>
