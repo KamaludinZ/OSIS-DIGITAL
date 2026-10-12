@@ -32,6 +32,19 @@ fi
 mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
 
+# DB_HOST salah isi di panel (mis. "db" atau UUID resource lain) tetapi service "postgres" bawaan ada:
+# pakai yang bawaan dan beri tahu di log, daripada kontainer gagal terus.
+DB_HOST=${DB_HOST:-postgres}
+if ! getent hosts "$DB_HOST" > /dev/null 2>&1; then
+    if [ "$DB_HOST" != "postgres" ] && getent hosts postgres > /dev/null 2>&1; then
+        echo "[osis] PERINGATAN: host basis data '$DB_HOST' tidak dikenal; memakai service 'postgres' bawaan. Hapus variabel DB_HOST di Coolify (atau isi 'postgres')." >&2
+        DB_HOST=postgres
+    else
+        echo "[osis] host basis data '$DB_HOST' tidak dikenal di jaringan stack ini. Hapus DB_HOST di Coolify agar memakai 'postgres' bawaan, atau lihat panduan bagian 3a." >&2
+    fi
+fi
+export DB_HOST
+
 # Tunggu PostgreSQL siap menerima koneksi (maks. ~90 detik).
 i=0
 until php -r 'try { new PDO("pgsql:host=".getenv("DB_HOST").";port=".(getenv("DB_PORT") ?: 5432).";dbname=".getenv("DB_DATABASE"), getenv("DB_USERNAME"), getenv("DB_PASSWORD")); exit(0); } catch (Throwable $e) { exit(1); }'; do
