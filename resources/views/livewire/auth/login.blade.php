@@ -24,6 +24,7 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
      */
     public function login(): void
     {
+        $this->email = Str::lower(trim($this->email));
         $this->validate();
 
         $this->ensureIsNotRateLimited();
@@ -40,9 +41,19 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
         // memilih dengan kode pilih dan bertanya lewat verifikasi NISN/NIK.
         $pengguna = Auth::user();
 
+        if (! $pengguna->aktif) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun ini sudah dinonaktifkan. Hubungi admin madrasah bila perlu diaktifkan lagi.',
+            ]);
+        }
+
         if ($pengguna->role === \App\Enums\Peran::Kandidat && $pengguna->candidate_id) {
             RateLimiter::clear($this->throttleKey());
             Session::regenerate();
+            $pengguna->forceFill(['terakhir_masuk_pada' => now()])->saveQuietly();
 
             // Kandidat langsung ke tanya jawab miliknya untuk menanggapi pertanyaan.
             $this->redirect($pengguna->halamanAwal(), navigate: false);
@@ -60,6 +71,7 @@ new #[Layout('components.layouts.auth')] #[\Livewire\Attributes\Title('Masuk')] 
 
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
+        $pengguna->forceFill(['terakhir_masuk_pada' => now()])->saveQuietly();
 
         $this->redirectIntended(default: $pengguna->halamanAwal(), navigate: false);
     }

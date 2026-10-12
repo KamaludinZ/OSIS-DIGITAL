@@ -55,6 +55,7 @@ class AdminPanelProvider extends PanelProvider
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
                 AuthenticateSession::class,
+                \App\Http\Middleware\PastikanAkunAktif::class,
                 \App\Http\Middleware\AlihkanKandidatDariPanel::class,
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,

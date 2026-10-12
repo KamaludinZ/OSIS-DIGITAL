@@ -79,6 +79,9 @@ class UserResource extends Resource
                 ->visible(fn (Get $get) => $get('role') === Peran::Kandidat->value || $get('role') === Peran::Kandidat)
                 ->required(fn (Get $get) => $get('role') === Peran::Kandidat->value || $get('role') === Peran::Kandidat)
                 ->helperText('Akun ini hanya bisa menanggapi pertanyaan untuk kandidat tersebut.'),
+            \Filament\Forms\Components\Toggle::make('aktif')->label('Akun aktif')->default(true)->inline(false)
+                ->helperText('Akun nonaktif tidak bisa masuk dan langsung keluar dari sesi yang berjalan.')
+                ->disabled(fn (?User $record) => $record?->is(auth()->user()) ?? false),
             TextInput::make('password')->label(fn (string $operation) => $operation === 'create' ? 'Kata sandi' : 'Kata sandi baru')
                 ->password()->revealable()
                 ->rule(Password::min(8))
@@ -99,10 +102,12 @@ class UserResource extends Resource
                     ->formatStateUsing(fn (Peran $state) => $state->label())
                     ->color(fn (Peran $state) => match ($state) { Peran::Admin => 'danger', Peran::Panitia => 'warning', Peran::Kandidat => 'info', default => 'primary' }),
                 TextColumn::make('kandidat.nomor_urut')->label('Kandidat')->formatStateUsing(fn ($state, User $r) => 'No. '.$state.' · '.$r->kandidat?->nama_ketua)->placeholder('—'),
-                TextColumn::make('updated_at')->label('Diubah')->since()->sortable(),
+                \Filament\Tables\Columns\IconColumn::make('aktif')->label('Aktif')->boolean(),
+                TextColumn::make('terakhir_masuk_pada')->label('Terakhir masuk')->since()->sortable()->placeholder('Belum pernah'),
             ])
             ->filters([
                 SelectFilter::make('role')->label('Peran')->options(self::peranAkun()),
+                \Filament\Tables\Filters\TernaryFilter::make('aktif')->label('Status akun')->trueLabel('Aktif')->falseLabel('Nonaktif'),
             ])
             ->recordActions([
                 EditAction::make(),
