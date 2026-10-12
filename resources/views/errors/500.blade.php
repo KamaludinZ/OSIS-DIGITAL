@@ -1,0 +1,1 @@
+@include('errors.kartu', ['kode' => '500', 'judul' => 'Terjadi kesalahan di server', 'pesan' => 'Maaf, ada yang tidak beres di sistem kami. Suaramu yang sudah tercatat tetap aman. Coba lagi beberapa saat lagi.', 'aksi' => null])

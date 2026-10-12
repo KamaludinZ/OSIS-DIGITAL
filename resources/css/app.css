@@ -1,0 +1,191 @@
+/* Font di-host sendiri (hemat kuota, tanpa CDN). Hanya subset yang dipakai yang diunduh browser. */
+@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource-variable/figtree/wght.css';
+@import '@fontsource-variable/figtree/wght-italic.css';
+@import '@fontsource/reem-kufi/arabic-500.css';
+@import '@fontsource/reem-kufi/arabic-700.css';
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+@source "../views";
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
+@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-zinc-50: #fafafa;
+    --color-zinc-100: #f5f5f5;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a3a3a3;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
+    --color-zinc-700: #404040;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
+
+    --color-accent: var(--color-neutral-800);
+    --color-accent-content: var(--color-neutral-800);
+    --color-accent-foreground: var(--color-white);
+
+    /* Grafik: satu seri (perolehan suara), divalidasi vs permukaan terang/gelap. */
+    --color-grafik: #13894a;
+    --color-grafik-grid: #dbe9de;
+
+    /* Dunia "Kartu Peserta Madrasah" — OSIM MTsN 2 Kota Malang */
+    --font-display: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-teks: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-arab: 'Reem Kufi', 'Archivo Variable', sans-serif;
+
+    --color-hijau-50: #f2f8f3;
+    --color-hijau-100: #e3f1e6;
+    --color-hijau-200: #c9e8d2;
+    --color-hijau-300: #9fd3ae;
+    --color-hijau-500: #13894a;
+    --color-hijau-600: #0f7a3d;
+    --color-hijau-700: #0c6633;
+    --color-hijau-800: #0a5a2d;
+    --color-hijau-900: #063d22;
+    --color-hijau-950: #04291a;
+
+    --color-emas-200: #fff0a8;
+    --color-emas-300: #ffe066;
+    --color-emas-400: #f2c200;
+    --color-emas-500: #d9a800;
+
+    --color-cap: #d7261e;
+    --color-tinta: #14261b;
+    --color-tinta-2: #3d5c48;
+    --color-garis: #d3e4d7;
+}
+
+@layer theme {
+    .dark {
+        --color-accent: var(--color-white);
+        --color-accent-content: var(--color-white);
+        --color-accent-foreground: var(--color-neutral-800);
+        --color-grafik: #13894a;
+        --color-grafik-grid: #404040;
+    }
+}
+
+@layer base {
+
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
+
+[data-flux-field] {
+    @apply grid gap-2;
+}
+
+[data-flux-label] {
+    @apply  !mb-0 !leading-tight;
+}
+
+input:focus[data-flux-control],
+textarea:focus[data-flux-control],
+select:focus[data-flux-control] {
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+/* \[:where(&)\]:size-4 {
+    @apply size-4;
+} */
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* ---------- Halaman publik siswa (OSIM) ---------- */
+.osim {
+    font-family: var(--font-teks);
+    color: var(--color-tinta);
+    background-color: var(--color-hijau-50);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.osim ::selection {
+    background: var(--color-emas-300);
+    color: var(--color-hijau-950);
+}
+
+.osim :focus-visible {
+    outline: 3px solid var(--color-emas-400);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.osim {
+    scrollbar-color: var(--color-hijau-300) var(--color-hijau-50);
+    caret-color: var(--color-hijau-600);
+}
+
+.osim a {
+    text-underline-offset: 3px;
+}
+
+.osim .font-display {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 112;
+    letter-spacing: -0.02em;
+}
+
+.osim .font-sempit {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 75;
+}
+
+.osim .angka {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Cetakan pengaman kartu pelajar: garis gelombang halus */
+.osim-guilloche {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='48' viewBox='0 0 160 48'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.09' stroke-width='1'%3E%3Cpath d='M0 12c20-10 40-10 60 0s40 10 60 0 40-10 60 0'/%3E%3Cpath d='M0 24c20-10 40-10 60 0s40 10 60 0 40-10 60 0'/%3E%3Cpath d='M0 36c20-10 40-10 60 0s40 10 60 0 40-10 60 0'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Garis sobek kartu: perforasi titik + takik setengah lingkaran */
+.osim-perforasi {
+    position: relative;
+    height: 0;
+    border-top: 2px dashed var(--color-garis);
+    margin-inline: 18px;
+}
+.osim-perforasi::before,
+.osim-perforasi::after {
+    content: '';
+    position: absolute;
+    top: -12px;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: var(--osim-takik, var(--color-hijau-50));
+}
+.osim-perforasi::before { left: -30px; }
+.osim-perforasi::after { right: -30px; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .osim-cap-masuk {
+        animation: osim-cap 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+}
+@keyframes osim-cap {
+    from { transform: scale(1.6) rotate(-4deg); opacity: 0; filter: blur(2px); }
+    to { transform: scale(1) rotate(-12deg); opacity: 1; filter: blur(0); }
+}
+
+@media print {
+    .osim { background: #fff; }
+    .osim-guilloche { background-image: none; }
+}

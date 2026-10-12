@@ -1,0 +1,549 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T03:50:28+00:00",
+  "title": "Design System: OSIS Digital · OSIM MTsN 2 Kota Malang",
+  "extensions": {
+    "colorMeta": {
+      "hijau-50": {
+        "role": "primary",
+        "displayName": "Card Ground",
+        "canonical": "#f2f8f3",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "hijau-100": {
+        "role": "primary",
+        "displayName": "Pale Leaf",
+        "canonical": "#e3f1e6",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "hijau-200": {
+        "role": "primary",
+        "displayName": "Pale Leaf Mid",
+        "canonical": "#c9e8d2",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "hijau-300": {
+        "role": "primary",
+        "displayName": "Pale Leaf Deep",
+        "canonical": "#9fd3ae",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "hijau-500": {
+        "role": "primary",
+        "displayName": "Signal Green",
+        "canonical": "#13894a",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "hijau-600": {
+        "role": "primary",
+        "displayName": "Madrasah Green",
+        "canonical": "#0f7a3d",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "hijau-700": {
+        "role": "primary",
+        "displayName": "Deep Shield Green",
+        "canonical": "#0c6633",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "hijau-800": {
+        "role": "primary",
+        "displayName": "Deep Shield Green Dark",
+        "canonical": "#0a5a2d",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "hijau-900": {
+        "role": "primary",
+        "displayName": "Night Green",
+        "canonical": "#063d22",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "hijau-950": {
+        "role": "primary",
+        "displayName": "Night Green Deepest",
+        "canonical": "#04291a",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "emas-200": {
+        "role": "secondary",
+        "displayName": "Pale Gold",
+        "canonical": "#fff0a8",
+        "tonalRamp": [
+          "#5c4700",
+          "#8a6c00",
+          "#b38c00",
+          "#d9a800",
+          "#f2c200",
+          "#ffe066",
+          "#fff0a8",
+          "#fffbe6"
+        ]
+      },
+      "emas-300": {
+        "role": "secondary",
+        "displayName": "Bright Gold",
+        "canonical": "#ffe066",
+        "tonalRamp": [
+          "#5c4700",
+          "#8a6c00",
+          "#b38c00",
+          "#d9a800",
+          "#f2c200",
+          "#ffe066",
+          "#fff0a8",
+          "#fffbe6"
+        ]
+      },
+      "emas-400": {
+        "role": "secondary",
+        "displayName": "Wing Gold",
+        "canonical": "#f2c200",
+        "tonalRamp": [
+          "#5c4700",
+          "#8a6c00",
+          "#b38c00",
+          "#d9a800",
+          "#f2c200",
+          "#ffe066",
+          "#fff0a8",
+          "#fffbe6"
+        ]
+      },
+      "emas-500": {
+        "role": "secondary",
+        "displayName": "Deep Gold",
+        "canonical": "#d9a800",
+        "tonalRamp": [
+          "#5c4700",
+          "#8a6c00",
+          "#b38c00",
+          "#d9a800",
+          "#f2c200",
+          "#ffe066",
+          "#fff0a8",
+          "#fffbe6"
+        ]
+      },
+      "cap": {
+        "role": "tertiary",
+        "displayName": "Frame Red",
+        "canonical": "#d7261e",
+        "tonalRamp": [
+          "#3d0907",
+          "#651310",
+          "#8f1b15",
+          "#b8201a",
+          "#d7261e",
+          "#e8645e",
+          "#f3a8a4",
+          "#fce8e7"
+        ]
+      },
+      "tinta": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#14261b",
+        "tonalRamp": [
+          "#0a140e",
+          "#14261b",
+          "#24402e",
+          "#3d5c48",
+          "#5f7d69",
+          "#8fa898",
+          "#c3d3c8",
+          "#eef4f0"
+        ]
+      },
+      "tinta-2": {
+        "role": "neutral",
+        "displayName": "Ink Soft",
+        "canonical": "#3d5c48",
+        "tonalRamp": [
+          "#0a140e",
+          "#14261b",
+          "#24402e",
+          "#3d5c48",
+          "#5f7d69",
+          "#8fa898",
+          "#c3d3c8",
+          "#eef4f0"
+        ]
+      },
+      "garis": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d3e4d7",
+        "tonalRamp": [
+          "#2b4233",
+          "#4a6553",
+          "#6e8a77",
+          "#97b0a0",
+          "#b9cfc0",
+          "#d3e4d7",
+          "#e6f0e8",
+          "#f5f9f6"
+        ]
+      },
+      "grafik": {
+        "role": "primary",
+        "displayName": "Chart Series",
+        "canonical": "#13894a",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "grafik-grid": {
+        "role": "neutral",
+        "displayName": "Chart Track",
+        "canonical": "#dbe9de",
+        "tonalRamp": [
+          "#04291a",
+          "#063d22",
+          "#0a5a2d",
+          "#0c6633",
+          "#0f7a3d",
+          "#13894a",
+          "#9fd3ae",
+          "#e3f1e6"
+        ]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#1a1a1a",
+          "#404040",
+          "#737373",
+          "#a3a3a3",
+          "#d4d4d4",
+          "#ebebeb",
+          "#f7f7f7",
+          "#ffffff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Ribbon greeting; second line in Bright Gold."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page h1 on the ribbon, card h1, section heads on the ground."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, program names, election title."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Ballot numbers, winner number, error code; always tabular."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Reading text; 1.125rem relaxed in article bodies, max 70ch."
+      },
+      "body-sm": {
+        "displayName": "Body-sm",
+        "purpose": "Summaries and meta lines."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Card field labels (dt) and card header strip names; chips. Never an eyebrow."
+      },
+      "arab": {
+        "displayName": "Arab",
+        "purpose": "Arabic salutation on the ribbon and Iqra in the footer."
+      }
+    },
+    "shadows": [
+      {
+        "name": "kartu-lift",
+        "value": "0 18px 40px -18px rgb(4 41 26 / 0.5)",
+        "purpose": "Every primary card."
+      },
+      {
+        "name": "kartu-kandidat-rest",
+        "value": "0 2px 10px -3px var(--color-garis), 0 10px 24px -14px rgb(4 41 26 / 0.35)",
+        "purpose": "Unselected candidate card."
+      },
+      {
+        "name": "kartu-kandidat-terpilih",
+        "value": "0 14px 30px -12px rgb(15 122 61 / 0.55)",
+        "purpose": "Selected candidate card, with 3px hijau-600 ring."
+      },
+      {
+        "name": "ledge-emas",
+        "value": "0 4px 10px -3px var(--color-emas-500)",
+        "purpose": "Gold buttons."
+      },
+      {
+        "name": "ledge-emas-utama",
+        "value": "0 4px 10px -3px var(--color-emas-500), 0 8px 18px -6px rgb(4 41 26 / 0.45)",
+        "purpose": "Mulai Memilih."
+      },
+      {
+        "name": "ledge-hijau",
+        "value": "0 4px 10px -3px var(--color-hijau-900)",
+        "purpose": "Green action buttons."
+      },
+      {
+        "name": "lift-on-ribbon",
+        "value": "0 3px 10px -3px rgb(0 0 0 / 0.15)",
+        "purpose": "Active nav pill and Masuk pill on the green header."
+      }
+    ],
+    "motion": [
+      {
+        "name": "osim-cap",
+        "value": "520ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Stamp lands: scale 1.6 to 1, rotate -4deg to -12deg, blur clears. Only without reduced motion."
+      },
+      {
+        "name": "tombol-angkat",
+        "value": "translateY(-2px) on hover, translateY(2px) on active",
+        "purpose": "Gold primary button press."
+      },
+      {
+        "name": "grafik-isi",
+        "value": "width 700ms ease-out",
+        "purpose": "Vote-share bar fill."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one gold action per view (Mulai Memilih, Kembali ke Beranda).",
+      "html": "<button class=\"ds-btn-emas\">Mulai Memilih <svg viewBox=\"0 0 16 16\" width=\"16\" height=\"16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M2 8a.75.75 0 0 1 .75-.75h8.69L8.22 4.03a.75.75 0 0 1 1.06-1.06l4.5 4.5a.75.75 0 0 1 0 1.06l-4.5 4.5a.75.75 0 0 1-1.06-1.06l3.22-3.22H2.75A.75.75 0 0 1 2 8Z\"/></svg></button>",
+      "css": ".ds-btn-emas{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:12px 20px;background:var(--color-emas-400,#f2c200);color:var(--color-hijau-950,#04291a);font:700 1rem/1.5 'Figtree Variable',sans-serif;box-shadow:0 4px 10px -3px #d9a800,0 8px 18px -6px rgb(4 41 26/.45);transition:background .15s,transform .15s;cursor:pointer}.ds-btn-emas:hover{background:#ffe066;transform:translateY(-2px)}.ds-btn-emas:active{transform:translateY(2px);box-shadow:0 2px 10px -3px #d9a800}.ds-btn-emas:focus-visible{outline:3px solid #f2c200;outline-offset:2px}"
+    },
+    {
+      "name": "Green Button",
+      "kind": "button",
+      "refersTo": "button-hijau",
+      "description": "Secondary action (Kenali kandidat, Lihat hasil, Pilih).",
+      "html": "<button class=\"ds-btn-hijau\">Kenali kandidat</button>",
+      "css": ".ds-btn-hijau{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:12px 20px;background:#0f7a3d;color:#fff;font:700 1rem/1.5 'Figtree Variable',sans-serif;box-shadow:0 4px 10px -3px #063d22;transition:background .15s;cursor:pointer}.ds-btn-hijau:hover{background:#0c6633}.ds-btn-hijau:active{transform:translateY(2px)}.ds-btn-hijau:focus-visible{outline:3px solid #f2c200;outline-offset:2px}"
+    },
+    {
+      "name": "Paper Button",
+      "kind": "button",
+      "refersTo": "button-kertas",
+      "description": "Quiet alternative beside a gold or green action.",
+      "html": "<button class=\"ds-btn-kertas\">Halaman sebelumnya</button>",
+      "css": ".ds-btn-kertas{border:0;border-radius:12px;padding:12px 20px;background:#fff;color:#0a5a2d;font:700 1rem/1.5 'Figtree Variable',sans-serif;box-shadow:inset 0 0 0 1px #d3e4d7;cursor:pointer}.ds-btn-kertas:hover{background:#f2f8f3}.ds-btn-kertas:focus-visible{outline:3px solid #f2c200;outline-offset:2px}"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Login and form fields.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Email</span><input class=\"ds-input\" placeholder=\"nama@mtsn2malang.sch.id\"></label>",
+      "css": ".ds-field{display:block;font-family:'Figtree Variable',sans-serif}.ds-field-label{display:block;font:700 11px/1.4 'Archivo Variable',sans-serif;font-variation-settings:'wdth' 75;letter-spacing:.14em;text-transform:uppercase;color:#3d5c48}.ds-input{margin-top:6px;height:48px;width:100%;border-radius:12px;border:2px solid #d3e4d7;background:rgb(242 248 243/.5);padding:0 16px;color:#14261b;font:400 1rem 'Figtree Variable',sans-serif}.ds-input::placeholder{color:rgb(61 92 72/.6)}.ds-input:focus{outline:none;border-color:#0f7a3d;background:#fff}"
+    },
+    {
+      "name": "Navigation Pills",
+      "kind": "nav",
+      "refersTo": "nav-aktif",
+      "description": "Desktop nav on the green header; active item is a gold pill.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item is-active\" href=\"#\">Beranda</a><a class=\"ds-nav-item\" href=\"#\">Bilik Suara</a><a class=\"ds-nav-item\" href=\"#\">Kandidat</a><a class=\"ds-nav-item\" href=\"#\">Hasil</a></nav>",
+      "css": ".ds-nav{display:flex;gap:4px;padding:12px 16px;background:#0f7a3d}.ds-nav-item{border-radius:9999px;padding:8px 16px;font:600 .875rem 'Figtree Variable',sans-serif;color:#f2f8f3;text-decoration:none;transition:background .15s}.ds-nav-item:hover{background:rgb(255 255 255/.1)}.ds-nav-item.is-active{background:#f2c200;color:#04291a;box-shadow:0 3px 10px -3px rgb(0 0 0/.15)}.ds-nav-item:focus-visible{outline:3px solid #f2c200;outline-offset:2px}"
+    },
+    {
+      "name": "Chips",
+      "kind": "chip",
+      "refersTo": "chip-kategori",
+      "description": "Category chip and gold highlight chip in narrow label type.",
+      "html": "<span class=\"ds-chip\">Pemilihan</span> <span class=\"ds-chip ds-chip-sorot\">Baru</span>",
+      "css": ".ds-chip{display:inline-block;border-radius:6px;padding:2px 8px;background:#e3f1e6;color:#0a5a2d;font:700 11px/1.4 'Archivo Variable',sans-serif;font-variation-settings:'wdth' 75;letter-spacing:.05em;text-transform:uppercase}.ds-chip-sorot{background:#f2c200;color:#04291a}"
+    },
+    {
+      "name": "Kartu with Perforation",
+      "kind": "card",
+      "refersTo": "kartu",
+      "description": "Primary card: header strip, field labels, perforated stub.",
+      "html": "<div class=\"ds-ground\"><article class=\"ds-kartu\"><div class=\"ds-kartu-kepala\"><span>Kartu Bukti Memilih</span></div><div class=\"ds-kartu-isi\"><span class=\"ds-lbl\">Pemilihan</span><b>Pemilihan Ketua OSIM 2026/2027</b></div><div class=\"ds-perf\"></div><div class=\"ds-kartu-isi\"><span class=\"ds-lbl\">Kode bukti</span><b class=\"ds-kode\">OSIM-UJI1-COBA</b></div></article></div>",
+      "css": ".ds-ground{background:#f2f8f3;padding:24px}.ds-kartu{overflow:hidden;border-radius:14px;background:#fff;box-shadow:0 18px 40px -18px rgb(4 41 26/.5),0 0 0 1px #d3e4d7;color:#14261b;font-family:'Figtree Variable',sans-serif}.ds-kartu-kepala{background:#e3f1e6;padding:10px 20px;color:#0a5a2d;font:700 11px 'Archivo Variable',sans-serif;font-variation-settings:'wdth' 75;letter-spacing:.14em;text-transform:uppercase}.ds-kartu-isi{padding:20px}.ds-lbl{display:block;font:700 11px 'Archivo Variable',sans-serif;font-variation-settings:'wdth' 75;letter-spacing:.14em;text-transform:uppercase;color:#3d5c48}.ds-kode{font:900 1.5rem 'Archivo Variable',sans-serif;color:#0c6633;letter-spacing:.05em}.ds-perf{position:relative;border-top:2px dashed #d3e4d7;margin:0 18px}.ds-perf::before,.ds-perf::after{content:'';position:absolute;top:-12px;width:22px;height:22px;border-radius:9999px;background:#f2f8f3}.ds-perf::before{left:-30px}.ds-perf::after{right:-30px}"
+    },
+    {
+      "name": "Mading Tab Module",
+      "kind": "custom",
+      "refersTo": "tab-mading",
+      "description": "Gold tab hung on a white module of ruled rows with date blocks.",
+      "html": "<section class=\"ds-mading\"><h3 class=\"ds-tab\">Pengumuman Terbaru</h3><ul class=\"ds-modul\"><li><span class=\"ds-tgl\"><b>08</b>OKT</span><span><span class=\"ds-chip-k\">Pemilihan</span><br><b>Jadwal Pemilihan Ketua OSIM</b></span></li><li><span class=\"ds-tgl\"><b>06</b>OKT</span><span><span class=\"ds-chip-k\">Kegiatan</span><br><b>Lomba Kebersihan Kelas</b></span></li></ul></section>",
+      "css": ".ds-mading{font-family:'Figtree Variable',sans-serif;color:#14261b;background:#f2f8f3;padding:16px}.ds-tab{display:inline-flex;margin:0;border-radius:8px 8px 0 0;padding:8px 14px 6px;background:#f2c200;color:#04291a;font-size:.875rem;font-weight:700;letter-spacing:.025em}.ds-modul{list-style:none;margin:0;padding:0;background:#fff;border-radius:0 14px 14px 14px;box-shadow:0 0 0 1px #d3e4d7}.ds-modul li{display:flex;gap:16px;padding:16px 20px;border-top:1px dashed #d3e4d7}.ds-modul li:first-child{border-top:0}.ds-modul li:hover{background:#f2f8f3}.ds-tgl{display:flex;flex-direction:column;align-items:center;width:44px;font:700 11px 'Archivo Variable',sans-serif;color:#3d5c48}.ds-tgl b{font:900 1.5rem/1 'Archivo Variable',sans-serif;color:#0c6633;font-variant-numeric:tabular-nums}.ds-chip-k{border-radius:6px;padding:2px 8px;background:#e3f1e6;color:#0a5a2d;font:700 11px 'Archivo Variable',sans-serif;text-transform:uppercase;letter-spacing:.05em}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Kartu Peserta Madrasah",
+    "overview": "**Creative North Star: \"Kartu Peserta Madrasah\"**\n\nEvery screen is a card the student holds: a white card stamped out of a deep madrasah-green band, with a printed header strip, small spaced capitals naming each field the way a student ID does (\"NO. URUT\", \"DIBUKA\", \"KODE BUKTI\"), a giant tabular number, a dashed tear line with half-moon notches, and a red round stamp once the vote is cast. The system answers to the madrasah's own logo: green shield, yellow wings, red-and-yellow frame, the *Iqra'* calligraphy.\n\nPages follow one structure. A full-width green ribbon (the header continues into a page band with a faint guilloche wave print) carries the page's display headline, and the first card pushes up into it from below with a negative overlap. Under it sits the \"mading\" (wall board): dense white modules hung from small coloured tabs. The layout stays light and phone-first: no photo banners, no hero imagery, no sidebars. Density comes from ruled lists with date blocks, not from cards nested in cards.\n\nThe build rejects the stock school portal (photo banner, grey-white cards, sidebar) and the stock SaaS look of the starter kit; neutral zinc/grey is not part of the student-facing world.",
+    "keyCharacteristics": [
+      "A green ribbon owns the head of every page, and a card overlaps it from below.",
+      "White cards with a 14px radius, a 1px green-grey hairline, and a deep green-tinted drop.",
+      "Field labels in narrow, spaced capitals; values set bold in ink green.",
+      "Giant tabular numerals for ballot numbers, dates and percentages.",
+      "Yellow is for the one primary action, the active nav state, and the main mading tab.",
+      "Red appears only as the stamp and as error text."
+    ],
+    "rules": [
+      {
+        "name": "The Stamp Red Rule",
+        "body": "Frame red is the stamp's ink. Outside the stamp it only marks an error or a destructive action. It never decorates, never fills a button, never appears on a chip.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Gold Action Rule",
+        "body": "A view has at most one gold button. Other actions are green, white-with-hairline, or the dashed locked state.",
+        "section": "colors"
+      },
+      {
+        "name": "The Green-Tinted Neutral Rule",
+        "body": "Text, lines and shadows use the green-tinted ink, hairline and rgb(4 41 26) shadow tint. Zinc, grey and black do not appear in student-facing screens.",
+        "section": "colors"
+      },
+      {
+        "name": "The Field Label Rule",
+        "body": "Spaced narrow capitals name a field and sit directly above its value (a `dt`), or they name the card in its header strip. They never float above a section heading as an eyebrow.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Number Rule",
+        "body": "Every number a student compares (ballot number, time, date, vote count, percentage) is tabular.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paper Over Green Rule",
+        "body": "Only the primary card and buttons cast shadows. Modules in the mading stay flat with a hairline ring.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do open every student-facing page with the hijau-600 guilloche ribbon and overlap the first card into it (-64 to -80px).",
+      "Do give primary cards a hijau-100 header strip naming the card in label type, with the madrasah logo on the right.",
+      "Do set field labels in narrow 11px capitals (tracking 0.14em) directly above a bold ink value.",
+      "Do separate a card's action stub with the perforation, and set its notch colour to the ground behind the card.",
+      "Do use tabular Archivo 900 for every compared number.",
+      "Do keep text, lines and shadows in the green-tinted ink, hairline and rgb(4 41 26) tint.",
+      "Do keep the 3px gold focus outline on every interactive element."
+    ],
+    "donts": [
+      "Don't use Frame Red for anything except the stamp, errors and destructive actions.",
+      "Don't place more than one gold button in a view.",
+      "Don't float a spaced-capital label above a section heading as an eyebrow; labels name fields or card strips only.",
+      "Don't introduce zinc, grey or black neutrals, or hard offset shadows, into the student world.",
+      "Don't add photo banners, hero imagery or sidebars; the ribbon and the card carry the page.",
+      "Don't recreate the OSIM logo; use only the official madrasah logo file."
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+@include('errors.kartu', ['kode' => '429', 'judul' => 'Terlalu banyak permintaan', 'pesan' => 'Kamu menekan tombol terlalu sering dalam waktu singkat. Tunggu sekitar satu menit, lalu coba lagi.', 'aksi' => null])

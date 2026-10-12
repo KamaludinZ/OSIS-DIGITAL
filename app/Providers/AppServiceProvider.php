@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Providers;
+
+use App\Models\Election;
+use App\Models\User;
+use App\Services\LayananPemilihan;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        Gate::define('kelola-publikasi', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Pengurus, \App\Enums\Peran::Admin], true));
+
+        Gate::define('memilih', fn (User $pengguna, Election $pemilihan) => app(LayananPemilihan::class)->kelayakan($pengguna, $pemilihan)['boleh']);
+    }
+}

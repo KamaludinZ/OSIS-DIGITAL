@@ -1,0 +1,1 @@
+@include('errors.kartu', ['kode' => '403', 'judul' => 'Akses tidak diizinkan', 'pesan' => 'Akunmu tidak punya izin untuk membuka halaman ini. Bila merasa ini keliru, tanyakan ke pengurus OSIM.', 'aksi' => null])
