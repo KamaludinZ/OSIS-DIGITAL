@@ -27,6 +27,12 @@ class Election extends Model
         // Status / publikasi berubah -> rekap di halaman Hasil harus ikut berubah.
         static::saved(fn (Election $pemilihan) => \App\Services\LayananHasil::lupakanCache($pemilihan->id));
         static::saved(fn () => \App\Services\LayananNotifikasi::lupakan());
+        // Jadwal/status diubah -> pengingat akun dari jadwal lama ditarik dari lonceng.
+        static::saved(function (Election $pemilihan) {
+            if ($pemilihan->wasChanged(['mulai', 'selesai', 'status'])) {
+                app(\App\Services\LayananNotifikasi::class)->tarikPengingatBasi($pemilihan);
+            }
+        });
     }
 
     protected function casts(): array

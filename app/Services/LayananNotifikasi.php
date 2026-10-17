@@ -96,6 +96,48 @@ class LayananNotifikasi
     }
 
     /**
+     * Berapa menit sebelum ditutup pengingat "segera ditutup" muncul: 3 jam, tetapi
+     * tidak lebih dari seperempat lama bilik suara dibuka (min. 30 menit). Bilik
+     * 08:00–12:00 diingatkan pukul 11:00, bukan 09:00 (baru sejam dibuka).
+     */
+    public static function jedaTutup(Election $e): int
+    {
+        return (int) max(30, min(180, intdiv((int) $e->mulai->diffInMinutes($e->selesai), 4)));
+    }
+
+    /** "3 jam", "1 jam 15 menit", "45 menit". */
+    public static function labelJeda(int $menit): string
+    {
+        return trim((intdiv($menit, 60) ? intdiv($menit, 60).' jam ' : '').($menit % 60 ? ($menit % 60).' menit' : ''));
+    }
+
+    /** Kunci pengingat yang berlaku untuk jadwal pemilihan saat ini. */
+    public static function kunciPengingat(Election $e): array
+    {
+        return ['segera@'.$e->mulai->toDateTimeString(), 'buka@'.$e->mulai->toDateTimeString(), 'tutup@'.$e->selesai->toDateTimeString()];
+    }
+
+    /**
+     * Jadwal atau status pemilihan berubah: tarik pengingat akun yang tidak sesuai lagi
+     * (mis. "ditutup 3 jam lagi" dari jadwal lama) agar lonceng tidak menampilkan kabar basi.
+     */
+    public function tarikPengingatBasi(Election $e): int
+    {
+        $berlaku = $e->status === StatusPemilihan::Berjalan ? self::kunciPengingat($e) : [];
+
+        $basi = \Illuminate\Notifications\DatabaseNotification::query()
+            ->where('data->viewData->pemilihan', (string) $e->id)
+            ->get()
+            ->reject(fn ($n) => in_array($n->data['viewData']['pengingat'] ?? null, $berlaku, true));
+
+        \Illuminate\Notifications\DatabaseNotification::whereKey($basi->modelKeys())->delete();
+
+        $e->forceFill(['pengingat_terkirim' => array_values(array_intersect($e->pengingat_terkirim ?? [], $berlaku))])->saveQuietly();
+
+        return $basi->count();
+    }
+
+    /**
      * Pengingat pemilihan untuk akun (dipanggil penjadwal). Tiap pengingat
      * dikirim sekali per jadwal; bila jam buka/tutup diubah, kuncinya ikut berubah.
      *
@@ -107,14 +149,16 @@ class LayananNotifikasi
 
         foreach (Election::query()->where('status', StatusPemilihan::Berjalan)->where('selesai', '>', now())->get() as $e) {
             $jam = fn (Carbon $t) => $t->translatedFormat('l, j F Y \p\u\k\u\l H:i').' WIB';
+            $jeda = self::jedaTutup($e);
+            [$kunciSegera, $kunciBuka, $kunciTutup] = self::kunciPengingat($e);
             $jadwal = [
                 // [kunci, mulai berlaku, berakhir, judul, isi]
-                ['segera@'.$e->mulai->toDateTimeString(), $e->mulai->copy()->subDay(), $e->mulai,
+                [$kunciSegera, $e->mulai->copy()->subDay(), $e->mulai,
                     'Besok bilik suara dibuka', $e->judul.' dibuka '.$jam($e->mulai).'. Pastikan kartu pemilih sudah dibagikan.'],
-                ['buka@'.$e->mulai->toDateTimeString(), $e->mulai, $e->selesai->copy()->subHours(3),
+                [$kunciBuka, $e->mulai, $e->selesai->copy()->subMinutes($jeda),
                     'Bilik suara sudah dibuka', 'Pemungutan suara berlangsung sampai '.$jam($e->selesai).'.'],
-                ['tutup@'.$e->selesai->toDateTimeString(), $e->selesai->copy()->subHours(3), $e->selesai,
-                    'Bilik suara ditutup 3 jam lagi', 'Pemungutan suara berakhir '.$jam($e->selesai).'. Ingatkan yang belum memilih.'],
+                [$kunciTutup, $e->selesai->copy()->subMinutes($jeda), $e->selesai,
+                    'Bilik suara ditutup '.self::labelJeda($jeda).' lagi', 'Pemungutan suara berakhir '.$jam($e->selesai).'. Ingatkan yang belum memilih.'],
             ];
 
             $sudah = $e->pengingat_terkirim ?? [];
@@ -129,6 +173,8 @@ class LayananNotifikasi
 
                 \Filament\Notifications\Notification::make()->title($judul)->body($isi)
                     ->icon('heroicon-o-check-badge')
+                    // Penanda agar pengingat bisa ditarik bila jadwal berubah (tarikPengingatBasi).
+                    ->viewData(['pemilihan' => (string) $e->id, 'pengingat' => $kunci])
                     ->actions([\Filament\Actions\Action::make('buka')->label('Lihat')->url(route('bilik-suara'))])
                     ->sendToDatabase($this->penerima('pemilihan'));
 
@@ -154,8 +200,10 @@ class LayananNotifikasi
 
         $hasil = [];
         $tanggal = fn (Carbon $t) => $t->translatedFormat('l, j F Y \p\u\k\u\l H:i').' WIB';
+        // Id memuat jam jadwal: bila jadwal diubah, perangkat menganggapnya pemberitahuan baru
+        // (tanda "dibaca" & notifikasi layar dari jadwal lama tidak menahan yang baru).
         $buatItem = fn (string $kunci, string $judul, string $isi, Carbon $waktu, string $tautan, bool $penting = false) => [
-            'id' => "pemilihan-{$e->id}-{$kunci}",
+            'id' => "pemilihan-{$e->id}-{$kunci}-".($kunci === 'tutup' ? $e->selesai : $e->mulai)->format('YmdHi'),
             'jenis' => 'pemilihan',
             'judul' => $judul,
             'isi' => $isi,
@@ -171,13 +219,12 @@ class LayananNotifikasi
                     'Bilik suara dibuka '.$tanggal($e->mulai).'. Siapkan kartu pemilih berisi kode 6 angka.', $e->mulai->copy()->subDays(3), route('kandidat.index'));
             }
 
-            $hasil[] = $buatItem('buka', 'Bilik suara sudah dibuka',
-                'Gunakan hak pilihmu sebelum '.$tanggal($e->selesai).'. Cukup masukkan kode pilih di Bilik Suara.', $e->mulai, route('bilik-suara'), true);
-
-            // Tiga jam sebelum ditutup.
+            // Menjelang ditutup (lihat jedaTutup); keduanya hanya selama bilik masih dibuka.
             if (now()->lt($e->selesai)) {
-                $hasil[] = $buatItem('tutup', 'Bilik suara segera ditutup',
-                    'Pemungutan suara berakhir '.$tanggal($e->selesai).'. Belum memilih? Masih ada waktu.', $e->selesai->copy()->subHours(3), route('bilik-suara'), true);
+                $hasil[] = $buatItem('buka', 'Bilik suara sudah dibuka',
+                    'Gunakan hak pilihmu sebelum '.$tanggal($e->selesai).'. Cukup masukkan kode pilih di Bilik Suara.', $e->mulai, route('bilik-suara'), true);
+                $hasil[] = $buatItem('tutup', 'Bilik suara ditutup '.self::labelJeda(self::jedaTutup($e)).' lagi',
+                    'Pemungutan suara berakhir '.$tanggal($e->selesai).'. Belum memilih? Masih ada waktu.', $e->selesai->copy()->subMinutes(self::jedaTutup($e)), route('bilik-suara'), true);
             }
         }
 

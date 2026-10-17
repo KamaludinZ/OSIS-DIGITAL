@@ -87,6 +87,7 @@ class LayananHasil
             'judul' => $pemilihan->judul,
             'status' => $this->pemilihan->statusEfektif($pemilihan)->value,
             'hasil_publik' => $pemilihan->hasil_publik,
+            'mulai' => $pemilihan->mulai->toDateTimeString(),
             'total_pemilih' => $this->jumlahPemilih(),
             'suara_masuk' => array_sum(array_column($kandidat, 'suara')),
             'diperbarui' => now()->toDateTimeString(),

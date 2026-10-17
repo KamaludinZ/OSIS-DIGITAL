@@ -82,6 +82,9 @@ new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class exte
     @else
         @php
             $berjalan = $rekap['status'] === 'berjalan';
+            // Belum dibuka (draf, atau berjalan tetapi jam buka belum tiba) bukan "ditutup".
+            $belumDibuka = $rekap['status'] === 'draft';
+            $ditutup = ! $berjalan && ! $belumDibuka;
             $partisipasi = $this->persen($rekap['suara_masuk'], $rekap['total_pemilih']);
         @endphp
 
@@ -91,13 +94,13 @@ new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class exte
                 <div>
                     <h1 class="font-display text-4xl font-black leading-[1.02] sm:text-5xl">{{ $rekap['judul'] }}</h1>
                     <p class="mt-2 flex items-center gap-2 font-bold {{ $berjalan ? 'text-emas-300' : 'text-hijau-100' }}">
-                        <flux:icon :name="$berjalan ? 'signal' : 'lock-closed'" variant="micro" />
-                        {{ $berjalan ? 'Pemilihan berlangsung' : 'Pemilihan ditutup' }}
+                        <flux:icon :name="$berjalan ? 'signal' : ($belumDibuka ? 'clock' : 'lock-closed')" variant="micro" />
+                        {{ $berjalan ? 'Pemilihan berlangsung' : ($belumDibuka ? 'Pemilihan belum dibuka' : 'Pemilihan ditutup') }}
                     </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                 @can('publikasikan-hasil')
-                    @if (! $berjalan)
+                    @if ($ditutup)
                         <button type="button" wire:click="aturPublikasi({{ $rekap['hasil_publik'] ? 'false' : 'true' }})"
                                 wire:confirm="{{ $rekap['hasil_publik'] ? 'Tarik publikasi hasil? Siswa tidak akan bisa melihat perolehan.' : 'Publikasikan hasil? Siswa akan langsung melihat perolehan dan pemenang.' }}"
                                 class="print:hidden inline-flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 font-bold {{ $rekap['hasil_publik'] ? 'bg-hijau-900/40 text-white ring-1 ring-white/20 hover:bg-hijau-900/60' : 'bg-emas-400 text-hijau-950 hover:bg-emas-300' }}">
@@ -132,18 +135,20 @@ new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class exte
             </p>
         @endif
 
-        @if (! $berjalan && $rekap['hasil_publik'])
+        @if ($ditutup && $rekap['hasil_publik'])
             <x-pengumuman-pemenang :kandidat="$rekap['kandidat']" :suara-masuk="$rekap['suara_masuk']" />
         @elseif (! $publik)
             <section class="flex flex-col items-center gap-2 rounded-[14px] border border-2 border-dashed border-garis bg-white px-6 py-10 text-center" role="status">
                 <span class="flex size-12 items-center justify-center rounded-full bg-hijau-50 text-tinta-2">
-                    <flux:icon :name="$berjalan ? 'clock' : 'shield-check'" class="size-6" />
+                    <flux:icon :name="$ditutup ? 'shield-check' : 'clock'" class="size-6" />
                 </span>
                 <h2 class="font-display text-2xl font-black text-tinta">
-                    {{ $berjalan ? 'Hasil belum bisa dilihat' : 'Menunggu pengumuman resmi' }}
+                    {{ $ditutup ? 'Menunggu pengumuman resmi' : 'Hasil belum bisa dilihat' }}
                 </h2>
                 <p class="text-tinta-2 max-w-md">
-                    @if ($berjalan)
+                    @if ($belumDibuka)
+                        Bilik suara belum dibuka{{ ! empty($rekap['mulai']) ? ' — dibuka '.\Illuminate\Support\Carbon::parse($rekap['mulai'])->translatedFormat('l, j F Y \p\u\k\u\l H:i').' WIB' : '' }}. Hasil tampil di sini setelah pemungutan suara selesai.
+                    @elseif ($berjalan)
                         Perolehan suara tiap {{ \App\Support\Istilah::calon() }} dirahasiakan sampai pemilihan ditutup, agar tidak memengaruhi pemilih yang belum memilih.
                     @else
                         Pemilihan sudah ditutup. Panitia sedang memverifikasi hasil dan akan mempublikasikannya segera.
@@ -200,7 +205,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class exte
             <h2 id="judul-perolehan" class="font-display text-2xl font-black text-tinta">Perolehan Suara</h2>
 
             <x-grafik-perolehan class="mt-6" :kandidat="$rekap['kandidat']" :suara-masuk="$rekap['suara_masuk']"
-                :terpilih="! $berjalan && $rekap['hasil_publik'] ? $this->idPemenang() : null" />
+                :terpilih="$ditutup && $rekap['hasil_publik'] ? $this->idPemenang() : null" />
         </section>
         @endif
 

@@ -104,6 +104,22 @@ class HasilTest extends TestCase
         $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 12);
     }
 
+    public function test_hasil_sebelum_bilik_dibuka_tidak_ditulis_ditutup(): void
+    {
+        $this->seed(PemilihanSeeder::class);
+        Election::firstOrFail()->update(['mulai' => now()->addDays(4)->setTime(8, 0), 'selesai' => now()->addDays(4)->setTime(12, 0)]);
+
+        $this->get('/hasil')->assertOk()
+            ->assertSee('Pemilihan belum dibuka')
+            ->assertSee('Bilik suara belum dibuka')
+            ->assertDontSee('Pemilihan ditutup')
+            ->assertDontSee('Pemilihan sudah ditutup');
+
+        // Status draf juga "belum dibuka".
+        Election::firstOrFail()->update(['status' => 'draft']);
+        $this->get('/hasil')->assertSee('Pemilihan belum dibuka')->assertDontSee('Pemilihan ditutup');
+    }
+
     public function test_laporan_csv_menetralkan_isi_berbentuk_rumus(): void
     {
         $this->siapkanSuara()->update(['status' => 'selesai', 'hasil_publik' => true]);

@@ -202,9 +202,10 @@ new #[Layout('components.layouts.siswa')] class extends Component {
         <div class="mt-4 grid items-center gap-6 pb-8 md:grid-cols-[minmax(0,22rem)_1fr] md:gap-10 lg:grid-cols-[minmax(0,26rem)_1fr]">
             <div class="relative mx-auto w-full max-w-md md:max-w-none">
                 <x-osim.pasfoto gelap class="aspect-[4/3] w-full ring-4 ring-white/15 shadow-[0_18px_40px_-18px_rgb(4_41_26/0.7)]" :foto="$calon['foto_url']" alt="Foto {{ $calon['berpasangan'] ? $calon['nama_ketua'].' dan '.$calon['nama_wakil'] : $calon['nama_ketua'] }}" />
-                <span class="absolute -left-2 -top-3 flex items-baseline gap-1 rounded-xl bg-hijau-950 px-3 py-1.5 shadow-[0_6px_14px_-4px_rgb(4_41_26/0.7)] ring-2 ring-emas-400 sm:-left-3" aria-hidden="true">
-                    <span class="font-sempit text-xs font-bold uppercase tracking-wider text-hijau-200">No.</span>
-                    <span class="font-display angka text-5xl font-black leading-none text-emas-300 sm:text-6xl">{{ $calon['nomor_urut'] }}</span>
+                {{-- Lencana nomor urut: proporsional dengan foto, tetap di dalam bingkai. --}}
+                <span class="absolute left-3 top-3 z-[3] flex items-baseline gap-1 rounded-lg bg-hijau-950/90 px-2.5 py-1 shadow-[0_4px_10px_-3px_rgb(4_41_26/0.6)] ring-1 ring-emas-400/70" aria-hidden="true">
+                    <span class="font-sempit text-[10px] font-bold uppercase tracking-wider text-hijau-200">No.</span>
+                    <span class="font-display angka text-2xl font-black leading-none text-emas-300 sm:text-3xl">{{ $calon['nomor_urut'] }}</span>
                 </span>
             </div>
             <div class="min-w-0">
