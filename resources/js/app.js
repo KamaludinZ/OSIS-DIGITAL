@@ -5,6 +5,66 @@
  */
 const KUNCI = { dibaca: 'osim-notif-dibaca', pref: 'osim-notif-pref', tampil: 'osim-notif-tampil' };
 
+/*
+ * Perlindungan foto calon & poster (.osim-lindung).
+ * Peramban tidak bisa benar-benar mencegah tangkapan layar; yang dilakukan di sini:
+ * tolak menu klik kanan/seret/simpan halaman, dan samarkan gambar saat tombol
+ * tangkapan layar ditekan atau jendela kehilangan fokus (alat potong layar).
+ */
+const dilindungi = (el) => el instanceof Element && el.closest('.osim-lindung');
+const adaGambarTerlindung = () => document.querySelector('.osim-lindung img') !== null;
+let waktuSamar;
+
+const samarkan = (lama = 0) => {
+    if (!adaGambarTerlindung()) return;
+    clearTimeout(waktuSamar);
+    document.documentElement.classList.add('osim-tersamar');
+    if (lama) waktuSamar = setTimeout(pulihkan, lama);
+};
+
+const pulihkan = () => {
+    clearTimeout(waktuSamar);
+    document.documentElement.classList.remove('osim-tersamar');
+};
+
+['contextmenu', 'dragstart', 'selectstart'].forEach((jenis) =>
+    document.addEventListener(jenis, (e) => dilindungi(e.target) && e.preventDefault()),
+);
+
+document.addEventListener('keydown', (e) => {
+    const tombol = e.key?.toLowerCase();
+    const mod = e.ctrlKey || e.metaKey;
+
+    // Simpan halaman / cetak / alat tangkapan layar Firefox.
+    if (mod && (tombol === 's' || tombol === 'p') && adaGambarTerlindung()) {
+        e.preventDefault();
+        return;
+    }
+
+    // PrintScreen, Win+Shift+S (Windows), Cmd+Shift+3/4/5 (macOS).
+    if (tombol === 'printscreen' || (e.shiftKey && (e.metaKey || tombol === 'meta'))) {
+        samarkan(3000);
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.key?.toLowerCase() !== 'printscreen' || !adaGambarTerlindung()) return;
+    samarkan(3000);
+    // Timpa papan klip agar hasil PrintScreen tidak memuat gambar (bila diizinkan peramban).
+    navigator.clipboard?.writeText('').catch(() => {});
+});
+
+// Jendela kehilangan fokus (Snipping Tool, berpindah aplikasi). Fokus ke iframe video bukan alasan.
+window.addEventListener('blur', () => {
+    setTimeout(() => {
+        if (document.activeElement?.tagName !== 'IFRAME') samarkan();
+    }, 0);
+});
+window.addEventListener('focus', () => setTimeout(pulihkan, 150));
+document.addEventListener('visibilitychange', () => (document.hidden ? samarkan() : pulihkan()));
+window.addEventListener('beforeprint', () => samarkan());
+window.addEventListener('afterprint', () => pulihkan());
+
 const baca = (kunci, awal) => {
     try {
         const nilai = JSON.parse(localStorage.getItem(kunci));

@@ -85,7 +85,7 @@ class CandidateResource extends Resource
                 TextInput::make('kelas_wakil')->label('Kelas calon wakil')->placeholder('Contoh: VIII-C')->maxLength(20)
                     ->visible(fn (Get $get) => self::berpasangan($get)),
                 FileUpload::make('foto_url')->label(fn (Get $get) => self::berpasangan($get) ? 'Foto berdua (ketua & wakil)' : 'Foto calon ketua')
-                    ->helperText('Foto mendatar (4:3) agar tampil penuh di kartu dan bilik suara. Maks. 2 MB.')
+                    ->helperText('Foto mendatar (4:3), disarankan minimal 1200×900 piksel agar tajam di halaman profil. Maks. 2 MB.')
                     ->image()->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->imageEditor()->imageAspectRatio('4:3')
                     ->disk('public')->directory('kandidat')->visibility('public')
                     ->maxSize(2048)->columnSpanFull(),

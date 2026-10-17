@@ -198,21 +198,30 @@ new #[Layout('components.layouts.siswa')] class extends Component {
             </a>
         @endif
 
-        <div class="mt-4 grid items-end gap-6 pb-8 md:grid-cols-[auto_1fr]">
-            <div class="flex items-end gap-4">
-                <span class="font-display angka text-[7.5rem] font-black leading-[0.8] text-emas-300 sm:text-[9rem]" aria-hidden="true">{{ $calon['nomor_urut'] }}</span>
-                <x-osim.pasfoto gelap class="aspect-[4/3] w-44 ring-4 ring-white/15 sm:w-60" :foto="$calon['foto_url']" alt="Foto {{ $calon['berpasangan'] ? $calon['nama_ketua'].' dan '.$calon['nama_wakil'] : $calon['nama_ketua'] }}" />
+        {{-- Foto lebar (4:3) dengan nomor urut menempel di sudut; nama ketua & wakil per baris agar tidak menjadi blok raksasa. --}}
+        <div class="mt-4 grid items-center gap-6 pb-8 md:grid-cols-[minmax(0,22rem)_1fr] md:gap-10 lg:grid-cols-[minmax(0,26rem)_1fr]">
+            <div class="relative mx-auto w-full max-w-md md:max-w-none">
+                <x-osim.pasfoto gelap class="aspect-[4/3] w-full ring-4 ring-white/15 shadow-[0_18px_40px_-18px_rgb(4_41_26/0.7)]" :foto="$calon['foto_url']" alt="Foto {{ $calon['berpasangan'] ? $calon['nama_ketua'].' dan '.$calon['nama_wakil'] : $calon['nama_ketua'] }}" />
+                <span class="absolute -left-2 -top-3 flex items-baseline gap-1 rounded-xl bg-hijau-950 px-3 py-1.5 shadow-[0_6px_14px_-4px_rgb(4_41_26/0.7)] ring-2 ring-emas-400 sm:-left-3" aria-hidden="true">
+                    <span class="font-sempit text-xs font-bold uppercase tracking-wider text-hijau-200">No.</span>
+                    <span class="font-display angka text-5xl font-black leading-none text-emas-300 sm:text-6xl">{{ $calon['nomor_urut'] }}</span>
+                </span>
             </div>
             <div class="min-w-0">
-                <h1 class="font-display text-3xl font-black leading-[1.02] sm:text-5xl"><span class="sr-only">{{ $calon['berpasangan'] ? 'Pasangan Calon' : 'Calon Ketua' }} {{ $calon['nomor_urut'] }}: </span>{{ $calon['nama_tampil'] }}</h1>
-                <dl class="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-                    <div><dt class="sr-only">Calon Ketua</dt><dd><span class="text-hijau-200">{{ $calon['berpasangan'] ? 'Ketua ·' : 'Calon ketua ·' }}</span> {{ $calon['nama_ketua'] }}, {{ $calon['kelas_ketua'] }}</dd></div>
-                    @if ($calon['berpasangan'])
-                        <div><dt class="sr-only">Calon Wakil</dt><dd><span class="text-hijau-200">Wakil ·</span> {{ $calon['nama_wakil'] }}, {{ $calon['kelas_wakil'] }}</dd></div>
-                    @endif
-                </dl>
+                <h1 class="font-display flex flex-col gap-3 font-black">
+                    <span class="sr-only">{{ $calon['berpasangan'] ? 'Pasangan Calon' : 'Calon Ketua' }} {{ $calon['nomor_urut'] }}: {{ $calon['nama_tampil'] }}</span>
+                    @foreach (array_filter([
+                        [$calon['berpasangan'] ? 'Calon Ketua' : 'Calon Ketua OSIM', $calon['nama_ketua'], $calon['kelas_ketua']],
+                        $calon['berpasangan'] ? ['Calon Wakil', $calon['nama_wakil'], $calon['kelas_wakil']] : null,
+                    ]) as [$peran, $nama, $kelas])
+                        <span class="block" aria-hidden="true">
+                            <span class="font-sempit block text-xs font-bold uppercase tracking-[0.16em] text-emas-300">{{ $peran }}@if ($kelas) <span class="text-hijau-200">· {{ $kelas }}</span>@endif</span>
+                            <span class="mt-1 block text-balance text-[1.6rem] leading-[1.05] sm:text-3xl lg:text-[2.5rem]">{{ $nama }}</span>
+                        </span>
+                    @endforeach
+                </h1>
                 @if (! empty($calon['slogan']))
-                    <p class="mt-3 inline-block rounded-lg bg-emas-400 px-3 py-1.5 font-bold italic text-hijau-950">“{{ $calon['slogan'] }}”</p>
+                    <p class="mt-5 inline-block rounded-lg bg-emas-400 px-3 py-1.5 font-bold italic text-hijau-950">“{{ $calon['slogan'] }}”</p>
                 @endif
             </div>
         </div>

@@ -60,7 +60,8 @@ class MateriRelationManager extends RelationManager
                     ->color(fn (TipeMateri $state) => ['poster' => 'info', 'video' => 'warning', 'janji' => 'success'][$state->value]),
                 TextColumn::make('deskripsi')->label('Isi')->wrap()->limit(120)->placeholder('—'),
                 TextColumn::make('url_konten')->label('Berkas / tautan')->limit(40)->placeholder('—')
-                    ->url(fn (CampaignMaterial $r) => $r->urlPublik(), shouldOpenInNewTab: true),
+                    // Berkas poster tidak dibuka di tab baru (ditolak server agar tidak mudah diunduh); pratinjau ada di form.
+                    ->url(fn (CampaignMaterial $r) => $r->tipe === TipeMateri::Poster ? null : $r->urlPublik(), shouldOpenInNewTab: true),
             ])
             ->headerActions([CreateAction::make()->label('Tambah materi')])
             ->recordActions([EditAction::make(), DeleteAction::make()]);

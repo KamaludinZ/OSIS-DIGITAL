@@ -74,6 +74,22 @@ class KandidatTest extends TestCase
         $this->blade('<x-materi-kampanye :materi="[]" />')->assertSee('Belum ada materi kampanye');
     }
 
+    public function test_poster_dibuka_di_popup_dan_gambar_dilindungi(): void
+    {
+        $this->blade('<x-materi-kampanye :materi="$m" />', ['m' => [
+            ['id' => 1, 'tipe' => 'poster', 'url_konten' => '/storage/kandidat/materi/a.png', 'deskripsi' => 'Poster utama'],
+        ]])
+            ->assertSee('aria-haspopup="dialog"', false)
+            ->assertSee('<dialog', false)
+            ->assertDontSee('target="_blank"', false)
+            ->assertSee('osim-lindung', false)
+            ->assertSee('draggable="false"', false);
+
+        $this->blade('<x-osim.pasfoto foto="/storage/kandidat/a.png" alt="Foto" />')
+            ->assertSee('osim-lindung', false)
+            ->assertSee('draggable="false"', false);
+    }
+
     public function test_jadwal_kampanye_terurut_dan_menandai_yang_lewat(): void
     {
         $this->travelTo(now()->setTime(11, 0));
