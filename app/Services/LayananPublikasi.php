@@ -84,7 +84,8 @@ class LayananPublikasi
      */
     public function cari(string $kataKunci, int $batas = 20): array
     {
-        $kataKunci = Str::squish($kataKunci);
+        // Kata kunci dibatasi agar pola LIKE tidak dipakai untuk membebani basis data.
+        $kataKunci = mb_substr(Str::squish($kataKunci), 0, 100);
 
         if (mb_strlen($kataKunci) < 2) {
             return ['pengumuman' => [], 'kegiatan' => []];

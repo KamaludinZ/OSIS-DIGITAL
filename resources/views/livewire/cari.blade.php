@@ -30,7 +30,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Cari Kabar OSIM')] class exte
             <label for="kata-kunci" class="sr-only">Kata kunci pencarian</label>
             <div class="flex items-center gap-2 rounded-xl bg-white px-4 shadow-[0_4px_10px_-3px_rgb(0_0_0/0.12)]">
                 <flux:icon.magnifying-glass class="size-5 text-hijau-600" />
-                <input id="kata-kunci" type="search" wire:model.live.debounce.300ms="kataKunci" autofocus
+                <input id="kata-kunci" type="search" wire:model.live.debounce.300ms="kataKunci" autofocus maxlength="100"
                        placeholder="Contoh: pemilihan, lomba, pentas seni"
                        class="h-14 w-full bg-transparent text-lg text-tinta placeholder:text-tinta-2/70 focus:outline-none" />
                 <flux:icon.arrow-path class="size-5 animate-spin text-hijau-500" wire:loading wire:target="kataKunci" />

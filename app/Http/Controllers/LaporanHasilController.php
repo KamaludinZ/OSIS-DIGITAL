@@ -49,24 +49,27 @@ class LaporanHasilController extends Controller
         return response()->streamDownload(function () use ($d, $koma) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // BOM agar Excel membaca UTF-8
-            fputcsv($out, ['Laporan Hasil', $d['rekap']['judul']], ';');
-            fputcsv($out, ['Dibuat', $d['dibuat']->translatedFormat('j F Y H:i').' WIB'], ';');
-            fputcsv($out, ['Periode', $d['pemilihan']->mulai->translatedFormat('j F Y H:i').' – '.$d['pemilihan']->selesai->translatedFormat('j F Y H:i')], ';');
-            fputcsv($out, ['Status', $d['rekap']['status'].($d['rekap']['hasil_publik'] ? ' (dipublikasikan)' : ' (belum dipublikasikan)')], ';');
-            fputcsv($out, ['Total pemilih', $d['rekap']['total_pemilih']], ';');
-            fputcsv($out, ['Suara masuk', $d['rekap']['suara_masuk']], ';');
-            fputcsv($out, ['Partisipasi (%)', $koma($d['partisipasi'])], ';');
-            fputcsv($out, [], ';');
-            fputcsv($out, ['No. urut', 'Calon ketua', 'Calon wakil', 'Suara', 'Persentase (%)'], ';');
+            // Sel teks yang diawali = + - @ dianggap rumus oleh Excel; beri awalan ' agar tetap teks.
+            $aman = fn ($sel) => is_string($sel) && preg_match('/^[=+\-@\t\r]/', $sel) ? "'".$sel : $sel;
+            $tulis = fn (array $baris) => fputcsv($out, array_map($aman, $baris), ';');
+            $tulis(['Laporan Hasil', $d['rekap']['judul']]);
+            $tulis(['Dibuat', $d['dibuat']->translatedFormat('j F Y H:i').' WIB']);
+            $tulis(['Periode', $d['pemilihan']->mulai->translatedFormat('j F Y H:i').' – '.$d['pemilihan']->selesai->translatedFormat('j F Y H:i')]);
+            $tulis(['Status', $d['rekap']['status'].($d['rekap']['hasil_publik'] ? ' (dipublikasikan)' : ' (belum dipublikasikan)')]);
+            $tulis(['Total pemilih', $d['rekap']['total_pemilih']]);
+            $tulis(['Suara masuk', $d['rekap']['suara_masuk']]);
+            $tulis(['Partisipasi (%)', $koma($d['partisipasi'])]);
+            $tulis([]);
+            $tulis(['No. urut', 'Calon ketua', 'Calon wakil', 'Suara', 'Persentase (%)']);
             foreach ($d['baris'] as $c) {
-                fputcsv($out, [$c['nomor_urut'], $c['nama_ketua'], $c['nama_wakil'] ?? '', $c['suara'], $koma($c['persen'])], ';');
+                $tulis([$c['nomor_urut'], $c['nama_ketua'], $c['nama_wakil'] ?? '', $c['suara'], $koma($c['persen'])]);
             }
-            fputcsv($out, [], ';');
-            fputcsv($out, ['Hasil', match ($d['pemenang']['status']) {
+            $tulis([]);
+            $tulis(['Hasil', match ($d['pemenang']['status']) {
                 'menang' => 'Terpilih: No. '.$d['pemenang']['kandidat']['nomor_urut'].' '.$d['pemenang']['kandidat']['nama_tampil'],
                 'seri' => 'Seri — ditetapkan panitia sesuai tata tertib',
                 default => 'Belum ada suara',
-            }], ';');
+            }]);
             fclose($out);
         }, $nama, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }

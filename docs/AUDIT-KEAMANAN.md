@@ -64,6 +64,64 @@ Pemberitahuan), Ruang OSIM (Filament), autentikasi, antrean/penjadwal, dan konfi
   Dampaknya terbatas: hanya bisa bertanya atas nama orang lain, dan panitia bisa menyembunyikan pertanyaan.
 - **Pemberitahuan sistem peramban** hanya muncul selama situs terbuka (belum ada *web push*).
 
+## Audit lanjutan — 18 Oktober 2026
+
+Cakupan: kode terbaru (termasuk perubahan deploy Coolify, popup poster, dan perlindungan gambar)
+dan situs produksi `osim.mtsn2kotamalang.sch.id`.
+
+### Metode
+
+1. **Uji otomatis:** 180 uji lulus di SQLite dan PostgreSQL (`pgsql_uji`).
+2. **Pemeriksaan produksi** (hanya permintaan GET/HEAD, tanpa mengubah data):
+   - `.env`, `.git` → 403;
+   - log, `vendor`, `composer.json`, `phpinfo.php` → 404;
+   - galat 405/404 tidak membocorkan *stack trace* (`APP_DEBUG` mati);
+   - HTTP dialihkan ke HTTPS dan HSTS aktif;
+   - cookie sesi `Secure`, `HttpOnly`, `SameSite=Lax`;
+   - `/admin`, `/kelola/sosmed`, `/admin-cetak/kartu-pemilih` meminta login;
+   - laporan hasil 403 sebelum hasil dipublikasikan.
+3. **Telaah kode:**
+   - alur kirim suara (kelayakan di server, kandidat milik pemilihan aktif, indeks unik);
+   - batas percobaan kode pilih & verifikasi penanya;
+   - gate & policy Ruang OSIM;
+   - komponen Livewire tanpa `#[Locked]`;
+   - SQL mentah;
+   - ekspor CSV;
+   - `.dockerignore`, Dockerfile, entrypoint, nginx.
+4. **Uji peramban** (lokal):
+   - profil kandidat di desktop & 390 px;
+   - popup poster (buka lewat ganti tab Livewire, panah kiri/kanan, Esc);
+   - klik kanan diblokir, gambar disamarkan saat PrintScreen;
+   - tidak ada galat konsol maupun pelanggaran CSP di halaman publik dan login.
+5. **Dependensi:** `composer audit` dan `npm audit` → 0 kerentanan.
+
+### Temuan & perbaikan
+
+| # | Tingkat | Temuan | Perbaikan |
+|---|---|---|---|
+| 12 | Sedang | Foto calon & poster bisa dibuka langsung di tab baru, disimpan lewat klik kanan, diseret, atau disematkan situs lain. | Poster dibuka di popup. Gambar dilindungi `.osim-lindung`: menu klik kanan/tekan lama ditolak, ada tanda air, dan gambar disamarkan saat PrintScreen, Win+Shift+S, Cmd+Shift, jendela kehilangan fokus, atau dicetak. Nginx menolak `/storage/kandidat/` bila dibuka sebagai dokumen/iframe atau diminta dari situs lain. |
+| 13 | Rendah | Belum ada Content-Security-Policy pada halaman HTML. | CSP dasar yang aman untuk Livewire/Alpine: `object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'`. |
+| 14 | Rendah | Ekspor CSV hasil rentan *formula injection*: nama berawalan `=`, `+`, `-`, atau `@` dijalankan sebagai rumus oleh Excel. | Sel seperti itu diberi awalan `'`. Ada uji regresi. |
+| 15 | Rendah | Kata kunci pencarian tidak dibatasi panjangnya; pola `LIKE` yang sangat panjang membebani basis data. | Dipotong menjadi 100 karakter, juga `maxlength` di kolom. |
+| 16 | Info | Header `X-Frame-Options`, `X-Content-Type-Options`, dan `Referrer-Policy` terkirim dua kali (dari nginx dan Laravel). | `fastcgi_hide_header` untuk salinan dari Laravel. |
+
+### Batasan perlindungan gambar (penting dipahami panitia)
+
+Situs web **tidak bisa benar-benar mencegah tangkapan layar atau pengunduhan**. Gambar yang
+tampil di layar sudah berada di perangkat pengunjung. Yang dilakukan adalah mempersulit dan
+menandai asal gambar:
+
+- **Tidak tercegah:**
+  - tangkapan layar HP (tombol daya + volume);
+  - aplikasi perekam layar;
+  - memotret layar dengan kamera lain;
+  - mengambil berkas lewat DevTools.
+- **Tanda air** "OSIM MTsN 2 Kota Malang" tetap ikut dalam tangkapan layar sebagai penanda asal.
+- **Pemblokiran berkas langsung** mengandalkan header `Sec-Fetch-*`. Peramban yang sangat lama
+  tanpa header ini tetap dilayani.
+- **Foto calon di produksi hanya 400×300 piksel.** Unggah ulang minimal 1200×900 agar tajam
+  di halaman profil yang kini lebih besar.
+
 ## Cara mengulang audit
 
 ```bash

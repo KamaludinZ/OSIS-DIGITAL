@@ -104,6 +104,17 @@ class HasilTest extends TestCase
         $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 12);
     }
 
+    public function test_laporan_csv_menetralkan_isi_berbentuk_rumus(): void
+    {
+        $this->siapkanSuara()->update(['status' => 'selesai', 'hasil_publik' => true]);
+        Candidate::where('nomor_urut', 1)->update(['nama_ketua' => '=HYPERLINK("http://contoh.test")']);
+
+        $isi = $this->get('/hasil/laporan.csv')->streamedContent();
+
+        $this->assertStringContainsString("'=HYPERLINK", $isi);
+        $this->assertStringNotContainsString(';"=HYPERLINK', $isi);
+    }
+
     public function test_laporan_csv_dan_berita_acara_bila_perolehan_terlihat(): void
     {
         $this->siapkanSuara()->update(['status' => 'selesai', 'hasil_publik' => true]);

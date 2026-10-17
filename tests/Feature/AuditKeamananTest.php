@@ -121,7 +121,16 @@ class AuditKeamananTest extends TestCase
     public function test_header_keamanan(): void
     {
         $this->get('/')->assertHeader('X-Content-Type-Options', 'nosniff')->assertHeader('X-Frame-Options', 'SAMEORIGIN')
-            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+            ->assertHeader('Content-Security-Policy', "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'");
+    }
+
+    public function test_kata_kunci_pencarian_dipotong(): void
+    {
+        \App\Models\Announcement::factory()->create(['judul' => str_repeat('a', 100), 'dipublikasikan' => true, 'dipublikasikan_pada' => now()->subDay()]);
+
+        // Kata kunci 101+ karakter dipotong menjadi 100 sebelum menjadi pola LIKE.
+        $this->assertCount(1, app(\App\Services\LayananPublikasi::class)->cari(str_repeat('a', 100).str_repeat('b', 5000))['pengumuman']);
     }
 
     public function test_policy_data_pemilihan(): void
