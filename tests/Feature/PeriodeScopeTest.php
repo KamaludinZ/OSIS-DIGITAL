@@ -67,6 +67,33 @@ class PeriodeScopeTest extends TestCase
         $this->assertSame(0, DataUjiPeriode::count());
         $this->assertSame(1, DataUjiPeriode::semuaPeriode()->count());
     }
+
+    public function test_data_periode_arsip_tidak_bisa_diubah_atau_dihapus(): void
+    {
+        $lama = OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        $data = DataUjiPeriode::create(['isi' => 'saran lama']);
+        $lama->update(['status' => 'arsip']);
+        $baru = OsisPeriod::factory()->tahun(2026)->aktif()->create();
+
+        $data = DataUjiPeriode::diPeriode($lama)->first();
+        foreach ([
+            fn () => $data->update(['isi' => 'diubah']),
+            fn () => $data->update(['periode_id' => $baru->id]),
+            fn () => $data->delete(),
+            fn () => DataUjiPeriode::create(['isi' => 'baru', 'periode_id' => $lama->id]),
+        ] as $i => $aksi) {
+            try {
+                $aksi();
+                $this->fail('Aksi ke-'.$i.' seharusnya ditolak.');
+            } catch (\App\Exceptions\PeriodeDitolak) {
+            }
+        }
+
+        $this->assertSame('saran lama', DataUjiPeriode::diPeriode($lama)->value('isi'));
+        // Data periode aktif tetap bisa dikelola.
+        DataUjiPeriode::create(['isi' => 'baru'])->update(['isi' => 'baru diubah']);
+        $this->assertSame(['baru diubah'], DataUjiPeriode::pluck('isi')->all());
+    }
 }
 
 class DataUjiPeriode extends Model

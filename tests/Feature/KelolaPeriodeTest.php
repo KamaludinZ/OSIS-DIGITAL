@@ -262,4 +262,19 @@ class KelolaPeriodeTest extends TestCase
         $this->assertNull(app(\App\Services\LayananPeriode::class)->aktifkan($baru));
         $this->assertTrue(OsisPeriod::aktif()->is($baru));
     }
+
+    public function test_arsip_ditolak_saat_pemilihan_masih_berjalan(): void
+    {
+        $this->masukSebagai();
+        \App\Models\Election::factory()->create(['judul' => 'Pemilihan Ketua OSIM', 'status' => 'berjalan', 'periode_id' => $this->aktif->id]);
+
+        Livewire::test(KelolaPeriode::class)
+            ->callTableAction('arsipkan', $this->aktif)
+            ->assertNotified('Pemilihan "Pemilihan Ketua OSIM" masih berjalan. Tutup pemilihan dulu sebelum mengarsipkan periode.');
+
+        $this->assertTrue($this->aktif->fresh()->adalahAktif());
+
+        $this->expectException(\App\Exceptions\PeriodeDitolak::class);
+        app(\App\Services\LayananPeriode::class)->arsipkan($this->lama);
+    }
 }

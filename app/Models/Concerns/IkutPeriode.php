@@ -2,6 +2,8 @@
 
 namespace App\Models\Concerns;
 
+use App\Enums\StatusPeriode;
+use App\Exceptions\PeriodeDitolak;
 use App\Models\OsisPeriod;
 use App\Models\Scopes\PeriodeAktifScope;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,6 +24,20 @@ trait IkutPeriode
         static::creating(function ($model) {
             $model->periode_id ??= OsisPeriod::aktif()?->id;
         });
+
+        // Arsip hanya-lihat: data periode arsip tidak bisa ditambah, diubah, dipindah, atau dihapus.
+        static::saving(fn ($model) => static::tolakBilaArsip($model->periode_id, $model->getOriginal('periode_id')));
+        static::deleting(fn ($model) => static::tolakBilaArsip($model->getOriginal('periode_id')));
+    }
+
+    /** @throws PeriodeDitolak */
+    protected static function tolakBilaArsip(?int ...$idPeriode): void
+    {
+        $idPeriode = array_filter($idPeriode);
+
+        if ($idPeriode && OsisPeriod::query()->whereKey($idPeriode)->where('status', StatusPeriode::Arsip)->exists()) {
+            throw new PeriodeDitolak('Data periode arsip hanya bisa dilihat.');
+        }
     }
 
     public function periode(): BelongsTo

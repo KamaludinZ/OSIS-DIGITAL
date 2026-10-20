@@ -72,14 +72,29 @@ class LayananPeriode
         });
     }
 
-    /** @throws PeriodeDitolak */
+    /**
+     * Pindahkan periode ke arsip (hanya-lihat). Ditolak bila sudah arsip atau
+     * masih ada pemilihan yang sedang berjalan di periode itu.
+     *
+     * @throws PeriodeDitolak
+     */
     public function arsipkan(OsisPeriod $periode): void
     {
-        if ($periode->adalahArsip()) {
-            throw new PeriodeDitolak('Periode ini sudah diarsipkan.');
-        }
+        DB::transaction(function () use ($periode) {
+            $periode = OsisPeriod::query()->lockForUpdate()->findOrFail($periode->id);
 
-        $periode->update(['status' => StatusPeriode::Arsip]);
+            if ($periode->adalahArsip()) {
+                throw new PeriodeDitolak('Periode ini sudah diarsipkan.');
+            }
+
+            $berjalan = DB::table('elections')->where('periode_id', $periode->id)
+                ->where('status', \App\Enums\StatusPemilihan::Berjalan->value)->value('judul');
+            if ($berjalan) {
+                throw new PeriodeDitolak('Pemilihan "'.$berjalan.'" masih berjalan. Tutup pemilihan dulu sebelum mengarsipkan periode.');
+            }
+
+            $periode->update(['status' => StatusPeriode::Arsip]);
+        });
     }
 
     /**
