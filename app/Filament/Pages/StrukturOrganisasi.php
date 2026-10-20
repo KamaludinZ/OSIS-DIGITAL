@@ -15,8 +15,10 @@ use Filament\Support\Icons\Heroicon;
 use UnitEnum;
 
 /** Satu gambar bagan struktur organisasi untuk periode aktif. */
-class StrukturOrganisasi extends Page
+class StrukturOrganisasi extends Page implements \Filament\Tables\Contracts\HasTable
 {
+    use \Filament\Tables\Concerns\InteractsWithTable;
+
     protected string $view = 'filament.pages.struktur-organisasi';
 
     protected static ?string $slug = 'struktur-organisasi';
@@ -105,6 +107,32 @@ class StrukturOrganisasi extends Page
                     'Rasio tampilan diubah ke '.$data['rasio'],
                 )),
         ];
+    }
+
+    /** Bagan semua periode: periode aktif bisa dikelola di atas, arsip hanya-lihat. */
+    public function table(\Filament\Tables\Table $table): \Filament\Tables\Table
+    {
+        return $table
+            ->query(OrganizationStructure::query()->semuaPeriode()->with(['periode', 'pengunggah'])
+                ->join('osis_periods', 'osis_periods.id', '=', 'organization_structures.periode_id')
+                ->orderByDesc('osis_periods.nama')->select('organization_structures.*'))
+            ->heading('Bagan per periode')
+            ->description('Bagan periode lama tersimpan sebagai arsip dan tidak bisa diubah.')
+            ->columns([
+                \Filament\Tables\Columns\ImageColumn::make('gambar')->label('Bagan')->disk('public')->imageHeight(56),
+                \Filament\Tables\Columns\TextColumn::make('periode.nama')->label('Periode')->weight('bold')
+                    ->description(fn (OrganizationStructure $r) => $r->periode->status->label()),
+                \Filament\Tables\Columns\TextColumn::make('rasio')->label('Rasio')->badge()
+                    ->formatStateUsing(fn (string $state) => OrganizationStructure::RASIO[$state] ?? $state),
+                \Filament\Tables\Columns\TextColumn::make('pengunggah.name')->label('Diunggah oleh')->placeholder('—'),
+                \Filament\Tables\Columns\TextColumn::make('updated_at')->label('Diperbarui')->since(),
+            ])
+            ->recordActions([
+                Action::make('buka')->label('Buka gambar')->icon(Heroicon::OutlinedArrowTopRightOnSquare)->color('gray')
+                    ->url(fn (OrganizationStructure $r) => $r->urlGambar(), shouldOpenInNewTab: true),
+            ])
+            ->emptyStateHeading('Belum ada bagan')
+            ->emptyStateDescription('Bagan yang diunggah tiap periode akan tersimpan di sini.');
     }
 
     private static function struktur(): ?OrganizationStructure

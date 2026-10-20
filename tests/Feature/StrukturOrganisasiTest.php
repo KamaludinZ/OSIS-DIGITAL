@@ -165,4 +165,19 @@ class StrukturOrganisasiTest extends TestCase
             ->tap(fn ($uji) => $this->assertStringContainsString('Ukuran gambar maksimal 5 MB',
                 collect($uji->errors()->getMessages())->flatten()->implode(' ')));
     }
+
+    public function test_daftar_bagan_per_periode_termasuk_arsip(): void
+    {
+        $this->masukPengurus();
+        $lama = $this->bagan('3:4');
+        app(\App\Services\LayananPeriode::class)->aktifkan(OsisPeriod::factory()->tahun(2027)->create());
+        Storage::disk('public')->put('struktur/baru.png', 'x');
+        $baru = OrganizationStructure::create(['gambar' => 'struktur/baru.png']);
+
+        Livewire::test(StrukturOrganisasi::class)
+            ->assertCanSeeTableRecords([$baru, $lama], inOrder: true)
+            ->assertTableColumnStateSet('periode.nama', '2026/2027', $lama)
+            ->assertTableColumnFormattedStateSet('rasio', 'Tinggi (3:4)', $lama)
+            ->assertTableActionHasUrl('buka', $lama->urlGambar(), $lama);
+    }
 }
