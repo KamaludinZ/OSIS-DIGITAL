@@ -88,4 +88,38 @@ class MenuPublikTest extends TestCase
         $this->getJson('/mode-publik')->assertExactJson(['pemilihan' => false]);
         $this->get('/')->assertSee("\$store.mode.pantau(false, ", false);
     }
+
+    /** Jumlah tautan per label di satu bilah menu. */
+    private function hitungMenu(string $html, string $kelas): array
+    {
+        preg_match('/<nav aria-label="Menu utama" class="'.$kelas.'.*?<\/nav>/s', $html, $nav);
+        preg_match_all('/<a href="([^"]+)"/', $nav[0], $tautan);
+
+        return array_count_values($tautan[1]);
+    }
+
+    public function test_tiap_menu_muncul_sekali_di_desktop_dan_ponsel(): void
+    {
+        foreach ([true, false] as $mode) {
+            app(LayananModePemilihan::class)->ubah($mode, User::factory()->create());
+            $html = $this->get('/')->getContent();
+
+            foreach (['osim-menu-desktop', 'osim-menu-ponsel'] as $kelas) {
+                $hitung = $this->hitungMenu($html, $kelas);
+                $this->assertCount($mode ? 4 : 3, $hitung, $kelas);
+                $this->assertSame([1], array_values(array_unique($hitung)), $kelas);
+            }
+        }
+    }
+
+    public function test_menu_kandidat_tanggapi_pertanyaan_tersembunyi_saat_mode_nonaktif(): void
+    {
+        $calon = \App\Models\Candidate::factory()->create();
+        $this->actingAs(User::factory()->create(['role' => \App\Enums\Peran::Kandidat, 'candidate_id' => $calon->id]));
+
+        $this->get('/')->assertSee('Tanggapi pertanyaan');
+
+        app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
+        $this->get('/')->assertDontSee('Tanggapi pertanyaan');
+    }
 }

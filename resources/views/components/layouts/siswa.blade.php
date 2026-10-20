@@ -38,7 +38,7 @@
                     </span>
                 </a>
 
-                <nav aria-label="Menu utama" class="ml-6 hidden items-center gap-1 lg:flex">
+                <nav aria-label="Menu utama" class="osim-menu-desktop ml-6 hidden items-center gap-1 lg:flex">
                     @foreach ($menu as $item)
                         @php($aktif = request()->routeIs($item['pola']))
                         <a href="{{ \App\Support\MenuPublik::url($item) }}" wire:navigate @if ($aktif) aria-current="page" @endif
@@ -87,7 +87,8 @@
                                     <div class="text-xs font-semibold text-hijau-700">{{ auth()->user()->role->label() }}</div>
                                 </div>
                                 <flux:menu.separator />
-                                @if (auth()->user()->role === \App\Enums\Peran::Kandidat && auth()->user()->candidate_id)
+                                {{-- Tanya jawab kandidat hanya terbuka di masa pemilihan --}}
+                                @if ($modePemilihan && auth()->user()->role === \App\Enums\Peran::Kandidat && auth()->user()->candidate_id)
                                     <flux:menu.item href="{{ route('kandidat.profil', ['id' => auth()->user()->candidate_id, 'tab' => 'tanya-jawab']) }}" icon="chat-bubble-left-right" wire:navigate>Tanggapi pertanyaan</flux:menu.item>
                                 @endif
                                 @if (auth()->user()->canAccessPanel(\Filament\Facades\Filament::getPanel('admin')))
@@ -135,13 +136,13 @@
         </footer>
 
         {{-- Tab bar bawah untuk HP --}}
-        <nav aria-label="Menu utama" class="fixed inset-x-0 bottom-0 z-40 border-t border-garis bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden">
+        <nav aria-label="Menu utama" class="osim-menu-ponsel fixed inset-x-0 bottom-0 z-40 border-t border-garis bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden">
             <ul @class(['mx-auto grid max-w-md', 'grid-cols-3' => count($menu) === 3, 'grid-cols-4' => count($menu) === 4])>
                 @foreach ($menu as $item)
                     @php($aktif = request()->routeIs($item['pola']))
                     <li>
                         <a href="{{ \App\Support\MenuPublik::url($item) }}" wire:navigate @if ($aktif) aria-current="page" @endif
-                           class="flex flex-col items-center gap-1 px-1 pb-2 pt-2.5 text-[11px] font-semibold {{ $aktif ? 'text-hijau-800' : 'text-tinta-2' }}">
+                           class="flex min-w-0 flex-col items-center gap-1 px-1 pb-2 pt-2.5 text-[11px] font-semibold {{ $aktif ? 'text-hijau-800' : 'text-tinta-2' }}">
                             <span @class(['relative flex h-7 w-12 items-center justify-center rounded-full transition', 'bg-emas-400 text-hijau-950' => $aktif])>
                                 <flux:icon :name="$item['ikon']" variant="{{ $aktif ? 'solid' : 'outline' }}" class="size-5" />
                                 @if ($bilikDibuka && $item['rute'] === 'bilik-suara')
@@ -149,7 +150,7 @@
                                     <span class="sr-only">(sedang dibuka)</span>
                                 @endif
                             </span>
-                            {{ $item['label_pendek'] }}
+                            <span class="max-w-full truncate">{{ $item['label_pendek'] }}</span>
                         </a>
                     </li>
                 @endforeach
