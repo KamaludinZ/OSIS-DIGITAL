@@ -1,6 +1,6 @@
 {{-- Kartu status sakelar mode pemilihan di halaman Periode Pemilihan. --}}
 @php
-    $status = \App\Support\DataTiruanModePemilihan::status();
+    $status = app(\App\Services\LayananModePemilihan::class)->status();
     $aktif = $status['aktif'];
 @endphp
 <section @class([
@@ -30,8 +30,15 @@
     </div>
     <div @class(['text-xs sm:text-right', 'text-hijau-200' => $aktif, 'text-tinta-2' => ! $aktif])>
         <p>
-            Terakhir diubah {{ \Illuminate\Support\Carbon::parse($status['diubah_pada'])->translatedFormat('j M Y, H:i') }}<br>
-            oleh {{ $status['diubah_oleh'] }}
+            @if ($status['periode'])
+                Periode {{ $status['periode'] }}
+            @else
+                Belum ada periode aktif
+            @endif
+            @if ($status['diubah_pada'])
+                <br>Terakhir diubah {{ $status['diubah_pada']->translatedFormat('j M Y, H:i') }}
+                @if ($status['diubah_oleh']) oleh {{ $status['diubah_oleh'] }} @endif
+            @endif
         </p>
         @cannot('ubah-mode-pemilihan')
             <p class="mt-2 inline-flex items-center gap-1 font-semibold">

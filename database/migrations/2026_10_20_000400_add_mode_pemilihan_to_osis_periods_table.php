@@ -20,7 +20,18 @@ return new class extends Migration
             $table->foreignId('mode_diubah_oleh')->nullable()->after('mode_diubah_pada')->constrained('users')->nullOnDelete();
         });
 
+        $this->pulihkanIndeksSatuAktif();
+
         DB::table('osis_periods')->update(['mode_pemilihan' => true]);
+    }
+
+    /** SQLite membangun ulang tabel saat ALTER dan kehilangan klausa WHERE indeks parsial. */
+    private function pulihkanIndeksSatuAktif(): void
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('DROP INDEX IF EXISTS osis_periods_satu_aktif');
+            DB::statement("CREATE UNIQUE INDEX osis_periods_satu_aktif ON osis_periods (status) WHERE status = 'aktif'");
+        }
     }
 
     public function down(): void
@@ -29,5 +40,7 @@ return new class extends Migration
             $table->dropConstrainedForeignId('mode_diubah_oleh');
             $table->dropColumn(['mode_pemilihan', 'mode_diubah_pada']);
         });
+
+        $this->pulihkanIndeksSatuAktif();
     }
 };

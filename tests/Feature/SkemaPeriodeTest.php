@@ -21,7 +21,7 @@ class SkemaPeriodeTest extends TestCase
     {
         $baris = fn (string $nama, string $status) => ['nama' => $nama, 'mulai' => '2026-07-13', 'selesai' => '2027-06-25', 'status' => $status];
 
-        DB::table('osis_periods')->insert([$baris('2025/2026', 'arsip'), $baris('2026/2027', 'aktif'), $baris('2027/2028', 'disiapkan')]);
+        DB::table('osis_periods')->insert([$baris('2024/2025', 'arsip'), $baris('2025/2026', 'arsip'), $baris('2026/2027', 'aktif'), $baris('2027/2028', 'disiapkan'), $baris('2028/2029', 'disiapkan')]);
 
         $this->expectException(QueryException::class);
         DB::table('osis_periods')->where('nama', '2027/2028')->update(['status' => 'aktif']);

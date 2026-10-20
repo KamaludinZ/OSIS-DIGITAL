@@ -3,7 +3,8 @@
 namespace App\Filament\Resources\Elections\Pages;
 
 use App\Filament\Resources\Elections\ElectionResource;
-use App\Support\DataTiruanModePemilihan;
+use App\Exceptions\PeriodeDitolak;
+use App\Services\LayananModePemilihan;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Notifications\Notification;
@@ -26,21 +27,32 @@ class ListElections extends ListRecords
     {
         return Action::make('ubahMode')
             ->visible(fn () => auth()->user()?->can('ubah-mode-pemilihan') ?? false)
-            ->label(fn () => DataTiruanModePemilihan::aktif() ? 'Matikan mode pemilihan' : 'Nyalakan mode pemilihan')
-            ->icon(fn () => DataTiruanModePemilihan::aktif() ? Heroicon::OutlinedPauseCircle : Heroicon::OutlinedPlayCircle)
-            ->color(fn () => DataTiruanModePemilihan::aktif() ? 'danger' : 'success')
+            ->label(fn () => self::modeAktif() ? 'Matikan mode pemilihan' : 'Nyalakan mode pemilihan')
+            ->icon(fn () => self::modeAktif() ? Heroicon::OutlinedPauseCircle : Heroicon::OutlinedPlayCircle)
+            ->color(fn () => self::modeAktif() ? 'danger' : 'success')
             // Konfirmasi berisi dampak agar tidak salah tekan.
             ->requiresConfirmation()
-            ->modalIcon(fn () => DataTiruanModePemilihan::aktif() ? Heroicon::OutlinedPauseCircle : Heroicon::OutlinedPlayCircle)
-            ->modalHeading(fn () => DataTiruanModePemilihan::aktif() ? 'Matikan mode pemilihan?' : 'Nyalakan mode pemilihan?')
+            ->modalIcon(fn () => self::modeAktif() ? Heroicon::OutlinedPauseCircle : Heroicon::OutlinedPlayCircle)
+            ->modalHeading(fn () => self::modeAktif() ? 'Matikan mode pemilihan?' : 'Nyalakan mode pemilihan?')
             ->modalDescription(null)
-            ->modalContent(fn () => view('filament.dampak-mode-pemilihan', ['menyalakan' => ! DataTiruanModePemilihan::aktif()]))
-            ->modalSubmitActionLabel(fn () => DataTiruanModePemilihan::aktif() ? 'Ya, matikan' : 'Ya, nyalakan')
+            ->modalContent(fn () => view('filament.dampak-mode-pemilihan', ['menyalakan' => ! self::modeAktif()]))
+            ->modalSubmitActionLabel(fn () => self::modeAktif() ? 'Ya, matikan' : 'Ya, nyalakan')
+            ->authorize('ubah-mode-pemilihan')
+            ->disabled(fn () => \App\Models\OsisPeriod::aktif() === null)
+            ->tooltip(fn () => \App\Models\OsisPeriod::aktif() === null ? 'Aktifkan periode OSIM dulu.' : null)
             ->action(function () {
-                $aktif = ! DataTiruanModePemilihan::aktif();
-                DataTiruanModePemilihan::setel($aktif, auth()->user()->name);
-                Notification::make()->title($aktif ? 'Mode pemilihan dinyalakan' : 'Mode pemilihan dimatikan')->success()->send();
+                try {
+                    $aktif = app(LayananModePemilihan::class)->balik(auth()->user());
+                    Notification::make()->title($aktif ? 'Mode pemilihan dinyalakan' : 'Mode pemilihan dimatikan')->success()->send();
+                } catch (PeriodeDitolak $e) {
+                    Notification::make()->title($e->getMessage())->danger()->send();
+                }
             });
+    }
+
+    private static function modeAktif(): bool
+    {
+        return app(LayananModePemilihan::class)->aktif();
     }
 
     /** Kartu sakelar mode pemilihan di atas daftar periode pemilihan. */
