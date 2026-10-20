@@ -57,6 +57,8 @@ class AdminPanelProvider extends PanelProvider
                 AuthenticateSession::class,
                 \App\Http\Middleware\PastikanAkunAktif::class,
                 \App\Http\Middleware\AlihkanKandidatDariPanel::class,
+                // Alamat {record} milik periode lain tidak bisa dibuka/diubah dari Ruang OSIM.
+                \App\Http\Middleware\BatasiDataPeriode::class,
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,
                 SubstituteBindings::class,

@@ -7,7 +7,7 @@ Volt::route('/', 'beranda')->name('home');
 
 Volt::route('cari', 'cari')->name('cari');
 Volt::route('kelola/sosmed', 'kelola.sosmed')->middleware(['auth', 'can:kelola-publikasi'])->name('kelola.sosmed');
-Route::get('sosmed/{post}/buka', App\Http\Controllers\BukaSosmedController::class)->whereNumber('post')->middleware('throttle:60,1')->name('sosmed.buka');
+Route::get('sosmed/{post}/buka', App\Http\Controllers\BukaSosmedController::class)->whereNumber('post')->middleware(['throttle:60,1', 'periode:'.App\Models\SocialPost::class.',post,arsip'])->name('sosmed.buka');
 Volt::route('hasil', 'hasil')->name('hasil');
 Volt::route('notifikasi', 'notifikasi')->name('notifikasi');
 Route::get('notifikasi/umpan', fn (App\Services\LayananNotifikasi $layanan) => response()->json($layanan->umpan())->header('Cache-Control', 'public, max-age=60'))
@@ -16,11 +16,11 @@ Route::get('admin-cetak/kartu-pemilih', App\Http\Controllers\KartuPemilihControl
 Route::get('hasil/laporan', [App\Http\Controllers\LaporanHasilController::class, 'cetak'])->name('hasil.laporan');
 Route::get('hasil/laporan.csv', [App\Http\Controllers\LaporanHasilController::class, 'csv'])->name('hasil.laporan.csv');
 Volt::route('pengumuman/{id}', 'pengumuman.detail')->whereNumber('id')->name('pengumuman.detail');
-Volt::route('kegiatan/{id}', 'kegiatan.detail')->whereNumber('id')->name('kegiatan.detail');
+Volt::route('kegiatan/{id}', 'kegiatan.detail')->whereNumber('id')->middleware('periode:'.App\Models\Event::class.',id,arsip')->name('kegiatan.detail');
 Volt::route('bilik-suara', 'bilik-suara')->name('bilik-suara');
 Volt::route('bilik-suara/bukti', 'bilik-suara.bukti')->name('bilik-suara.bukti');
 Volt::route('kandidat', 'kandidat.index')->name('kandidat.index');
-Volt::route('kandidat/{id}', 'kandidat.profil')->whereNumber('id')->name('kandidat.profil');
+Volt::route('kandidat/{id}', 'kandidat.profil')->whereNumber('id')->middleware('periode:'.App\Models\Candidate::class)->name('kandidat.profil');
 
 // Alamat lama "dashboard": arahkan ke halaman awal sesuai peran.
 Route::get('dashboard', fn () => redirect(auth()->user()->halamanAwal()))
