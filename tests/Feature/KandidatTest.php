@@ -144,7 +144,10 @@ class KandidatTest extends TestCase
             ->call('kirimPertanyaan')
             ->assertHasNoErrors()
             ->assertSet('pertanyaanBaru', '')
-            ->assertSeeInOrder(['Budi Penanya', 'VII-C', 'Kapan forum ketua kelas pertama diadakan?', 'Bagaimana memastikan aspirasi']);
+            ->assertSeeInOrder(['Budi Penanya', 'VII-C', 'Kapan forum ketua kelas pertama diadakan?', 'Bagaimana memastikan aspirasi'])
+            // Status pertanyaan sendiri: menunggu jawaban & dimoderasi panitia.
+            ->assertSeeInOrder(['dimoderasi panitia', 'Menunggu jawaban', 'Kapan forum ketua kelas pertama diadakan?'])
+            ->assertSee('Panitia memoderasi');
 
         $this->assertDatabaseHas('candidate_questions', ['candidate_id' => $id, 'voter_id' => $siswa->id, 'pertanyaan' => 'Kapan forum ketua kelas pertama diadakan?', 'jawaban' => null]);
         $this->assertNotNull($siswa->fresh()->penanya_terverifikasi_pada);

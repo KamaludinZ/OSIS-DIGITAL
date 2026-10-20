@@ -137,6 +137,10 @@ new #[Layout('components.layouts.siswa')] class extends Component {
         $this->reset('nomorInduk', 'tanggalLahir');
     }
 
+    /** id pertanyaan yang dikirim penanya ini di halaman ini (diberi penanda status). */
+    #[\Livewire\Attributes\Locked]
+    public array $pertanyaanSaya = [];
+
     public function kirimPertanyaan(): void
     {
         $penanya = $this->penanya();
@@ -164,6 +168,7 @@ new #[Layout('components.layouts.siswa')] class extends Component {
         if (! collect($this->tanyaJawab)->contains('id', $baru['id'])) {
             array_unshift($this->tanyaJawab, $baru);
         }
+        $this->pertanyaanSaya[] = $baru['id'];
 
         $this->reset('pertanyaanBaru');
         $this->pertanyaanTerkirim = true;
@@ -306,7 +311,7 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                                 <p class="flex items-center gap-1.5 text-sm font-bold text-cap" role="alert"><flux:icon.exclamation-circle variant="micro" /> {{ $message }}</p>
                             @enderror
                             <div class="flex flex-wrap items-center justify-between gap-3">
-                                <p class="text-sm text-tinta-2">Pertanyaan tampil dengan namamu setelah dikirim.</p>
+                                <p class="text-sm text-tinta-2">Pertanyaan tampil dengan namamu. Panitia memoderasi dan bisa menyembunyikan pertanyaan yang tidak sopan atau di luar topik.</p>
                                 <button type="submit" wire:loading.attr="disabled" wire:target="kirimPertanyaan"
                                         class="inline-flex items-center gap-2 rounded-xl bg-hijau-600 px-5 py-2.5 font-bold text-white shadow-[0_4px_10px_-3px_var(--color-hijau-900)] hover:bg-hijau-700 disabled:opacity-60">
                                     <flux:icon.paper-airplane variant="micro" /> Kirim
@@ -356,9 +361,14 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                     <article wire:key="tanya-{{ $item['id'] }}" class="rounded-[14px] bg-white p-5 ring-1 ring-garis">
                         <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-tinta-2">
                             <span>{{ $item['penanya'] }} · {{ \Illuminate\Support\Carbon::parse($item['created_at'])->diffForHumans() }}</span>
-                            @unless ($item['jawaban'])
-                                <span class="font-sempit rounded-md bg-emas-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-hijau-950">Menunggu jawaban</span>
-                            @endunless
+                            <span class="flex flex-wrap items-center gap-1.5">
+                                @if (in_array($item['id'], $pertanyaanSaya, true))
+                                    <span class="font-sempit rounded-md bg-hijau-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-hijau-800" title="Panitia dapat menyembunyikan pertanyaan yang melanggar aturan">Pertanyaanmu · dimoderasi panitia</span>
+                                @endif
+                                @unless ($item['jawaban'])
+                                    <span class="font-sempit rounded-md bg-emas-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-hijau-950">Menunggu jawaban</span>
+                                @endunless
+                            </span>
                         </div>
                         <p class="mt-2 text-lg font-bold leading-snug text-tinta">{{ $item['pertanyaan'] }}</p>
 
