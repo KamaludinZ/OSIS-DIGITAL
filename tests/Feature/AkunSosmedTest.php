@@ -44,4 +44,38 @@ class AkunSosmedTest extends TestCase
             ->set('periode', '2025/2026')
             ->assertSee('grayscale', false);
     }
+
+    public function test_tambah_ubah_hapus_akun_dengan_validasi_ramah(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+
+        Volt::test('kelola.akun-sosmed')
+            // Satu akun per platform per periode.
+            ->set('platform', 'instagram')->set('namaAkun', '@baru')->set('tautan', 'https://www.instagram.com/baru')
+            ->call('simpan')->assertHasErrors(['platform'])->assertSee('Akun Instagram periode ini sudah ada')
+            // Domain harus sesuai platform.
+            ->call('ubah', 2)->assertSet('platform', 'youtube')
+            ->set('tautan', 'http://youtube.com/x')->call('simpan')->assertHasErrors(['tautan'])
+            ->assertSee('Tautan harus diawali https:// dan berasal dari youtube.com atau youtu.be.')
+            ->set('tautan', 'https://www.youtube.com/@osimbaru')->call('simpan')->assertHasNoErrors()
+            ->assertSee('Akun diperbarui.')->assertSet('diubah', null)
+            ->call('hapus', 3)->assertSee('Akun dihapus.')
+            ->set('platform', 'tiktok')->set('namaAkun', '@osim.baru')->set('tautan', 'https://www.tiktok.com/@osim.baru')
+            ->call('simpan')->assertHasNoErrors()->assertSee('Akun ditambahkan.');
+
+        $akun = collect(\App\Support\DataTiruanAkunSosmed::semua())->where('periode', '2026/2027');
+        $this->assertSame('https://www.youtube.com/@osimbaru', $akun->firstWhere('id', 2)['tautan']);
+        $this->assertSame('@osim.baru', $akun->firstWhere('platform', 'tiktok')['nama_akun']);
+        $this->assertCount(3, $akun);
+    }
+
+    public function test_akun_arsip_tidak_bisa_diubah(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+
+        Volt::test('kelola.akun-sosmed')
+            ->set('periode', '2025/2026')
+            ->assertDontSee('Tambah akun')
+            ->call('hapus', 4)->assertForbidden();
+    }
 }
