@@ -83,10 +83,14 @@ new #[Layout('components.layouts.siswa')] #[Title('Kelola Media Sosial')] class 
 <div>
     <x-osim.pita class="pt-6 pb-20 sm:pt-10">
         <h1 class="font-display text-4xl font-black sm:text-5xl">Kelola Media Sosial</h1>
-        <p class="mt-2 max-w-xl text-hijau-50">Tambahkan konten YouTube (video atau Shorts), Instagram, atau TikTok OSIM agar tampil di Beranda.</p>
+        <p class="mt-2 max-w-xl text-hijau-50">Atur akun resmi OSIM tiap periode, lalu tambahkan konten YouTube (video atau Shorts), Instagram, atau TikTok agar tampil di Beranda.</p>
     </x-osim.pita>
 
-    <x-osim.wadah class="-mt-12 grid gap-6 lg:grid-cols-[24rem_1fr] lg:items-start">
+    <x-osim.wadah class="-mt-12 mb-6">
+        <livewire:kelola.akun-sosmed />
+    </x-osim.wadah>
+
+    <x-osim.wadah class="grid gap-6 lg:grid-cols-[24rem_1fr] lg:items-start">
         {{-- Formulir --}}
         <form wire:submit="simpan" class="flex flex-col gap-4 rounded-[14px] bg-white p-5 shadow-[0_18px_40px_-18px_rgb(4_41_26/0.5)] ring-1 ring-garis sm:p-6">
             <h2 class="font-display text-xl font-black text-tinta">Konten baru</h2>
