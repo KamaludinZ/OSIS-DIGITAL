@@ -53,6 +53,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('jawab-pertanyaan', fn (User $pengguna, \App\Models\CandidateQuestion $tanya) => $pengguna->role === \App\Enums\Peran::Kandidat
             && $pengguna->candidate_id !== null && $pengguna->candidate_id === $tanya->candidate_id);
 
+        // Saran hanya ditanggapi pengurus yang masih menjabat (users.is_aktif, akun aktif),
+        // dan hanya saran milik periode aktif; saran periode arsip hanya bisa dibaca.
+        Gate::define('tanggapi-saran', fn (User $pengguna, ?\Illuminate\Database\Eloquent\Model $saran = null) => $pengguna->menjabat()
+            && ($aktif = \App\Models\OsisPeriod::aktif()) !== null
+            && ($saran === null || (int) $saran->periode_id === $aktif->id));
+
         Gate::define('publikasikan-hasil', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Panitia, \App\Enums\Peran::Admin], true));
 
     }
