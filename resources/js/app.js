@@ -83,6 +83,45 @@ const simpan = (kunci, nilai) => {
 };
 
 document.addEventListener('alpine:init', () => {
+    /*
+     * Sakelar mode pemilihan: menu publik ikut berganti tanpa perlu dimuat ulang manual.
+     * Mode dibaca tiap halaman (dari server) lalu dicek berkala; bila berubah, halaman
+     * dinavigasi ulang sehingga menu & akses halaman mengikuti mode terbaru.
+     */
+    window.Alpine.store('mode', {
+        pemilihan: null,
+        berubah: false,
+        alamat: null,
+        pemantau: null,
+
+        pantau(pemilihan, alamat, jeda = 60000) {
+            this.pemilihan = pemilihan;
+            this.berubah = false;
+            this.alamat = alamat;
+            if (this.pemantau) return;
+            this.pemantau = setInterval(() => this.cek(), jeda);
+            document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && this.cek());
+        },
+
+        async cek() {
+            if (!this.alamat || document.visibilityState === 'hidden') return;
+            try {
+                const res = await fetch(this.alamat, { headers: { Accept: 'application/json' } });
+                if (!res.ok) return;
+                const { pemilihan } = await res.json();
+                if (pemilihan !== this.pemilihan) this.ganti(pemilihan);
+            } catch {
+                // Jaringan putus: coba lagi di putaran berikutnya.
+            }
+        },
+
+        ganti(pemilihan) {
+            this.pemilihan = pemilihan;
+            this.berubah = true;
+            setTimeout(() => window.Livewire?.navigate(window.location.href), 2500);
+        },
+    });
+
     window.Alpine.store('notif', {
         umpan: [],
         dibaca: baca(KUNCI.dibaca, []),

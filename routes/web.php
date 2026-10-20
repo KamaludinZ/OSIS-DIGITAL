@@ -15,6 +15,9 @@ Volt::route('hasil', 'hasil')->middleware('mode-pemilihan')->name('hasil');
 Volt::route('notifikasi', 'notifikasi')->name('notifikasi');
 Route::get('notifikasi/umpan', fn (App\Services\LayananNotifikasi $layanan) => response()->json($layanan->umpan())->header('Cache-Control', 'public, max-age=60'))
     ->middleware('throttle:60,1')->name('notifikasi.umpan');
+// Dipantau halaman publik agar menu ikut berganti saat mode diubah (ringan, boleh di-cache sebentar).
+Route::get('mode-publik', fn (App\Services\LayananModePemilihan $layanan) => response()->json(['pemilihan' => $layanan->aktif()])->header('Cache-Control', 'public, max-age=30'))
+    ->middleware('throttle:60,1')->name('mode-publik');
 Route::get('mode-pemilihan', [App\Http\Controllers\ModePemilihanController::class, 'tampil'])
     ->middleware(['auth', 'throttle:60,1'])->name('mode-pemilihan');
 Route::patch('mode-pemilihan', [App\Http\Controllers\ModePemilihanController::class, 'ubah'])

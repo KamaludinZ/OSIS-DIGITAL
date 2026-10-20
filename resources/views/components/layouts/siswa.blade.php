@@ -1,6 +1,7 @@
 @php
     // Menu publik mengikuti sakelar mode pemilihan (sama dengan pratinjau di Ruang OSIM).
-    $menu = app(\App\Services\LayananModePemilihan::class)->menu();
+    $modePemilihan = app(\App\Services\LayananModePemilihan::class)->aktif();
+    $menu = app(\App\Services\LayananModePemilihan::class)->menu($modePemilihan);
     // Mode aktif: item Bilik Suara diberi penanda selama bilik suara dibuka.
     $bilikDibuka = collect($menu)->contains('rute', 'bilik-suara')
         && (app(\App\Services\LayananPemilihan::class)->pemilihanAktif()?->sedangDibuka() ?? false);
@@ -17,7 +18,13 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="osim flex min-h-screen flex-col antialiased"
-          x-data x-init="$store.notif.akunBelum = {{ auth()->user()?->unreadNotifications()->count() ?? 0 }}; $store.notif.ambil('{{ route('notifikasi.umpan') }}')">
+          x-data x-init="$store.notif.akunBelum = {{ auth()->user()?->unreadNotifications()->count() ?? 0 }}; $store.notif.ambil('{{ route('notifikasi.umpan') }}'); $store.mode.pantau({{ $modePemilihan ? 'true' : 'false' }}, '{{ route('mode-publik') }}')">
+        {{-- Pemberitahuan menu berganti karena mode pemilihan diubah panitia --}}
+        <div x-cloak x-show="$store.mode.berubah" x-transition.opacity role="status"
+             class="fixed inset-x-4 top-20 z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl bg-hijau-900 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_-12px_rgb(4_41_26/0.6)] print:hidden">
+            <flux:icon.arrow-path variant="mini" class="shrink-0 animate-spin text-emas-300 motion-reduce:animate-none" />
+            <span x-text="$store.mode.pemilihan ? 'Masa pemilihan dimulai. Menu diperbarui…' : 'Masa pemilihan selesai. Menu diperbarui…'">Menu diperbarui…</span>
+        </div>
         <a href="#isi" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-emas-400 focus:px-4 focus:py-2 focus:font-semibold focus:text-hijau-950">Langsung ke isi</a>
 
         {{-- Kepala: pita hijau madrasah --}}

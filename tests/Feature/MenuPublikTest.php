@@ -76,4 +76,16 @@ class MenuPublikTest extends TestCase
         $this->get('/terkunci?halaman=hasil')->assertOk()->assertSee('Hasil Pemilihan sedang ditutup');
         $this->get('/terkunci')->assertOk()->assertSee('Halaman pemilihan sedang ditutup');
     }
+
+    public function test_halaman_publik_memantau_pergantian_mode(): void
+    {
+        $this->get('/')->assertOk()->assertSee("\$store.mode.pantau(true, '".route('mode-publik')."')", false);
+        $this->getJson('/mode-publik')->assertOk()->assertExactJson(['pemilihan' => true])
+            ->assertHeader('Cache-Control', 'max-age=30, public');
+
+        app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
+
+        $this->getJson('/mode-publik')->assertExactJson(['pemilihan' => false]);
+        $this->get('/')->assertSee("\$store.mode.pantau(false, ", false);
+    }
 }
