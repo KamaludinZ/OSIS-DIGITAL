@@ -69,4 +69,21 @@ class AgregasiSuaraTest extends TestCase
     {
         $this->assertNull(app(LayananHasil::class)->rekap());
     }
+
+    public function test_tabel_rekap_agregat_terisi_dari_surat_suara_lama(): void
+    {
+        $this->assertSame(['candidate_id', 'election_id', 'jumlah'], collect(\Illuminate\Support\Facades\Schema::getColumnListing('vote_tallies'))->sort()->values()->all());
+
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $calon = \App\Models\Candidate::first();
+        \App\Models\Ballot::create(['election_id' => $calon->election_id, 'candidate_id' => $calon->id]);
+        \App\Models\Ballot::create(['election_id' => $calon->election_id, 'candidate_id' => $calon->id]);
+        \Illuminate\Support\Facades\DB::table('vote_tallies')->delete();
+
+        $migrasi = require database_path('migrations/2026_10_20_001200_create_vote_tallies_table.php');
+        $migrasi->down();
+        $migrasi->up();
+
+        $this->assertSame(2, \App\Models\VoteTally::where('candidate_id', $calon->id)->value('jumlah'));
+    }
 }
