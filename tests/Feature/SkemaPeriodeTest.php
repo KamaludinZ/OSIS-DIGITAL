@@ -90,4 +90,17 @@ class SkemaPeriodeTest extends TestCase
         $this->expectException(QueryException::class);
         DB::table('organization_structures')->insert(['periode_id' => $periode->id, 'gambar' => 'struktur/b.png']);
     }
+
+    public function test_tabel_suggestions(): void
+    {
+        $this->assertTrue(Schema::hasColumns('suggestions', ['id', 'periode_id', 'isi', 'nama', 'kelas', 'tanggapan', 'ditanggapi_oleh', 'ditanggapi_pada', 'created_at', 'updated_at']));
+
+        $periode = \App\Models\OsisPeriod::factory()->create();
+        DB::table('suggestions')->insert(['periode_id' => $periode->id, 'isi' => 'Saran anonim']);
+        $this->assertNull(DB::table('suggestions')->value('nama'));
+
+        // Periode yang masih menyimpan saran tidak bisa dihapus.
+        $this->expectException(QueryException::class);
+        DB::table('osis_periods')->where('id', $periode->id)->delete();
+    }
 }
