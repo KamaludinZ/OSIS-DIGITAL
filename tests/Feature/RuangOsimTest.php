@@ -513,7 +513,7 @@ class RuangOsimTest extends TestCase
 
         $p = $impor->pratinjau($csv, \App\Enums\JenisPemilih::Siswa);
         $this->assertSame([2, 2], [$p['valid'], $p['baru']]);
-        $this->assertSame(['Baris 3: NISN 0091234567 ganda dengan baris 2'], $p['gagal']);
+        $this->assertSame(['Baris 3: NISN 0091234567 ganda dengan baris 2. Hapus salah satu.'], $p['gagal']);
 
         $hasil = $impor->impor($csv, \App\Enums\JenisPemilih::Siswa);
         $this->assertSame([2, 0, 0], [$hasil['tambah'], $hasil['perbarui'], $hasil['sama']]);
@@ -522,5 +522,21 @@ class RuangOsimTest extends TestCase
         $hasil = $impor->impor($csv, \App\Enums\JenisPemilih::Siswa);
         $this->assertSame([0, 0, 2], [$hasil['tambah'], $hasil['perbarui'], $hasil['sama']]);
         $this->assertSame(2, \App\Models\Voter::count());
+    }
+
+    public function test_pesan_galat_impor_berbahasa_awam(): void
+    {
+        $impor = app(\App\Services\ImporPemilih::class);
+        $csv = tempnam(sys_get_temp_dir(), 'awam').'.csv';
+        file_put_contents($csv, "nisn,nama,kelas,tanggal_lahir\nabc,Anak A,VII-A,2013-05-21\n0091111111,,VII-A,2013-05-21\n0092222222,Anak C,VII-A,kemarin\n");
+
+        $gagal = $impor->pratinjau($csv, \App\Enums\JenisPemilih::Siswa)['gagal'];
+        $this->assertStringContainsString('ubah format sel NISN menjadi Teks', $gagal[0]);
+        $this->assertSame('Baris 3: Nama belum diisi.', $gagal[1]);
+        $this->assertStringContainsString('Tulis seperti 2013-05-21', $gagal[2]);
+
+        $rusak = tempnam(sys_get_temp_dir(), 'rusak').'.xlsx';
+        file_put_contents($rusak, 'bukan excel');
+        $this->assertStringContainsString('Berkas tidak bisa dibaca', $impor->pratinjau($rusak, \App\Enums\JenisPemilih::Siswa, 'data.xlsx')['gagal'][0]);
     }
 }

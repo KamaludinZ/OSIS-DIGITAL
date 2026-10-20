@@ -28,7 +28,12 @@ class ImporPemilih
     {
         $ekstensi = Str::lower(pathinfo($namaAsli ?? $path, PATHINFO_EXTENSION));
         $reader = $ekstensi === 'xlsx' ? new XlsxReader : new CsvReader;
-        $reader->open($path);
+
+        try {
+            $reader->open($path);
+        } catch (\Throwable) {
+            return ['kolom_hilang' => [], 'baris' => [], 'tak_terbaca' => true];
+        }
 
         $kolomInduk = $jenis === JenisPemilih::Siswa ? 'nisn' : 'nik';
         $kolomKet = $jenis === JenisPemilih::Siswa ? 'kelas' : 'jabatan';
@@ -68,11 +73,14 @@ class ImporPemilih
                     'nama' => $nama,
                     'keterangan' => Str::squish((string) ($data[$kolomKet] ?? '')) ?: null,
                     'tanggal_lahir' => $tanggal,
+                    // Pesan berbahasa awam + cara memperbaikinya.
                     'galat' => match (true) {
-                        ! $induk => strtoupper($kolomInduk).($jenis === JenisPemilih::Siswa ? ' kosong/lebih dari 10 angka' : ' harus 16 angka'),
-                        ! $nama => 'nama kosong',
-                        ! $tanggal => 'tanggal lahir tidak valid',
-                        isset($dilihat[$induk]) => strtoupper($kolomInduk)." {$induk} ganda dengan baris {$dilihat[$induk]}",
+                        ! $induk => $jenis === JenisPemilih::Siswa
+                            ? 'NISN kosong atau bukan angka (paling banyak 10 angka). Di Excel, ubah format sel NISN menjadi Teks agar angka 0 di depan tidak hilang.'
+                            : 'NIK harus tepat 16 angka. Di Excel, ubah format sel NIK menjadi Teks agar angkanya tidak berubah menjadi 3,57E+15.',
+                        ! $nama => 'Nama belum diisi.',
+                        ! $tanggal => 'Tanggal lahir tidak terbaca. Tulis seperti 2013-05-21 atau 21/05/2013.',
+                        isset($dilihat[$induk]) => strtoupper($kolomInduk)." {$induk} ganda dengan baris {$dilihat[$induk]}. Hapus salah satu.",
                         default => null,
                     },
                 ];
@@ -90,6 +98,20 @@ class ImporPemilih
         return $hasil;
     }
 
+    /** Masalah pada berkas secara keseluruhan (bukan per baris), dalam bahasa awam. */
+    private static function galatBerkas(array $isi): ?string
+    {
+        if ($isi['tak_terbaca'] ?? false) {
+            return 'Berkas tidak bisa dibaca. Simpan ulang sebagai CSV atau Excel (.xlsx) dari templat, lalu unggah lagi.';
+        }
+
+        if ($isi['kolom_hilang']) {
+            return 'Kolom wajib tidak ada: '.implode(', ', $isi['kolom_hilang']).'. Judul kolom harus di baris pertama, sama persis dengan templat. Unduh templat lalu salin datamu ke dalamnya.';
+        }
+
+        return null;
+    }
+
     /**
      * @return array{total: int, valid: int, baru: int, perbarui: int, gagal: list<string>, contoh: list<array>}
      */
@@ -97,8 +119,8 @@ class ImporPemilih
     {
         $isi = $this->baca($path, $jenis, $namaAsli);
 
-        if ($isi['kolom_hilang']) {
-            return ['total' => 0, 'valid' => 0, 'baru' => 0, 'perbarui' => 0, 'gagal' => ['Kolom wajib tidak ada: '.implode(', ', $isi['kolom_hilang']).'. Gunakan templat yang disediakan.'], 'contoh' => []];
+        if ($galatBerkas = self::galatBerkas($isi)) {
+            return ['total' => 0, 'valid' => 0, 'baru' => 0, 'perbarui' => 0, 'gagal' => [$galatBerkas], 'contoh' => []];
         }
 
         $valid = collect($isi['baris'])->whereNull('galat');
@@ -122,8 +144,8 @@ class ImporPemilih
         $isi = $this->baca($path, $jenis, $namaAsli);
         $hasil = ['tambah' => 0, 'perbarui' => 0, 'sama' => 0, 'gagal' => []];
 
-        if ($isi['kolom_hilang']) {
-            $hasil['gagal'][] = 'Kolom wajib tidak ada: '.implode(', ', $isi['kolom_hilang']).'. Gunakan templat yang disediakan.';
+        if ($galatBerkas = self::galatBerkas($isi)) {
+            $hasil['gagal'][] = $galatBerkas;
 
             return $hasil;
         }
