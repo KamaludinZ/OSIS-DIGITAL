@@ -82,4 +82,23 @@ class KotakSaranTest extends TestCase
         $this->assertSame('Ahmad Fauzan', $saran['penanggap']);
         $this->assertStringStartsWith('Siap', $saran['tanggapan']);
     }
+
+    public function test_riwayat_saran_per_periode(): void
+    {
+        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]));
+
+        $this->get('/admin/kotak-saran')->assertOk()
+            ->assertSeeInOrder(['Periode aktif', '2026/2027', '4', 'saran', '2 ditanggapi', 'Arsip', '2025/2026', '1', 'saran', '1 ditanggapi']);
+
+        \Livewire\Livewire::test(\App\Filament\Pages\KotakSaran::class)
+            ->call('lihatPeriode', '2025/2026')
+            ->assertCanSeeTableRecords([1])
+            ->assertCanNotSeeTableRecords([5])
+            ->mountTableAction('lihat', 1)
+            ->assertMountedActionModalSee(['Jadwal piket kelas', 'Tanggapan Pengurus 2025/2026', 'Periode 2025/2026']);
+
+        \Livewire\Livewire::test(\App\Filament\Pages\KotakSaran::class)
+            ->mountTableAction('lihat', 5)
+            ->assertMountedActionModalSee(['Anonim', 'Belum ditanggapi.']);
+    }
 }

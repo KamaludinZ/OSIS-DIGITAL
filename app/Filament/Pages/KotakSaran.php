@@ -64,6 +64,29 @@ class KotakSaran extends Page implements HasTable
         return \App\Models\OsisPeriod::aktif()?->nama ?? '2026/2027';
     }
 
+    protected function getViewData(): array
+    {
+        $dipilih = $this->getTableFilterState('periode')['value'] ?? null;
+
+        return [
+            'riwayat' => collect(DataTiruanSaran::semua())->groupBy('periode')->sortKeysDesc()
+                ->map(fn ($saran, $periode) => [
+                    'periode' => $periode,
+                    'aktif' => $periode === self::periodeAktif(),
+                    'dipilih' => $periode === $dipilih,
+                    'total' => $saran->count(),
+                    'ditanggapi' => $saran->whereNotNull('tanggapan')->count(),
+                ])->values()->all(),
+        ];
+    }
+
+    /** Pilih periode dari kartu riwayat = setel filter tabel. */
+    public function lihatPeriode(string $periode): void
+    {
+        $this->tableFilters['periode']['value'] = $periode;
+        $this->resetPage();
+    }
+
     /** Data tiruan: gate tanggapi-saran memeriksa periode_id; di sini dicocokkan lewat nama periode. */
     private static function bolehMenanggapi(array $saran): bool
     {
@@ -99,6 +122,15 @@ class KotakSaran extends Page implements HasTable
                     ->options(['belum' => 'Belum ditanggapi', 'sudah' => 'Ditanggapi']),
             ])
             ->recordActions([
+                Action::make('lihat')
+                    ->label('Riwayat')
+                    ->icon(Heroicon::OutlinedClock)
+                    ->color('gray')
+                    ->modalHeading('Riwayat saran')
+                    ->modalContent(fn (array $record) => view('filament.saran-detail', ['saran' => $record]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->modalWidth('lg'),
                 Action::make('tanggapi')
                     ->label(fn (array $record) => $record['tanggapan'] ? 'Ubah tanggapan' : 'Tanggapi')
                     ->icon(Heroicon::OutlinedChatBubbleLeftRight)
