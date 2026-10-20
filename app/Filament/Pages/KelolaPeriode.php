@@ -121,15 +121,28 @@ class KelolaPeriode extends Page implements HasTable
             ])
             ->recordClasses(fn (array $record) => $record['status'] === 'aktif' ? 'bg-hijau-50' : null)
             ->recordActions([
+                // Arsip hanya-lihat: tidak ada ubah/arsipkan, cukup ringkasan isinya.
+                Action::make('lihat')
+                    ->label('Lihat')
+                    ->icon(Heroicon::OutlinedEye)
+                    ->color('gray')
+                    ->visible(fn (array $record) => $record['status'] === 'arsip')
+                    ->modalHeading(fn (array $record) => 'Arsip periode '.$record['nama'])
+                    ->modalContent(fn (array $record) => view('filament.pages.periode-arsip', ['periode' => $record]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->modalWidth('md'),
                 Action::make('ubah')
                     ->label('Ubah')
                     ->icon(Heroicon::OutlinedPencilSquare)
+                    ->visible(fn (array $record) => $record['status'] !== 'arsip')
                     ->modalHeading(fn (array $record) => 'Ubah periode '.$record['nama'])
                     ->modalSubmitActionLabel('Simpan perubahan')
                     ->fillForm(fn (array $record) => $record)
                     ->schema(fn (array $record) => self::formPeriode($record['id']))
                     ->action(function (array $record, array $data) {
                         $semua = DataTiruanPeriode::semua();
+                        abort_if($semua[$record['id']]['status'] === 'arsip', 403);
                         $semua[$record['id']] = [...$semua[$record['id']], ...self::isian($data)];
                         DataTiruanPeriode::simpan($semua);
                         Notification::make()->title('Periode '.$data['nama'].' diperbarui')->success()->send();

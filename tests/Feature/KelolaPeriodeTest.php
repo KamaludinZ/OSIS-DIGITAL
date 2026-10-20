@@ -71,12 +71,12 @@ class KelolaPeriodeTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
 
         Livewire::test(KelolaPeriode::class)
-            ->callTableAction('ubah', 2, data: ['nama' => '2025/2026', 'mulai' => '2025-07-21', 'selesai' => '2026-06-30'])
+            ->callTableAction('ubah', 3, data: ['nama' => '2026/2027', 'mulai' => '2026-07-20', 'selesai' => '2027-06-30'])
             ->assertHasNoTableActionErrors()
-            ->assertNotified('Periode 2025/2026 diperbarui');
+            ->assertNotified('Periode 2026/2027 diperbarui');
 
-        $this->assertSame('2025-07-21', DataTiruanPeriode::semua()[2]['mulai']);
-        $this->assertSame('arsip', DataTiruanPeriode::semua()[2]['status']);
+        $this->assertSame('2026-07-20', DataTiruanPeriode::semua()[3]['mulai']);
+        $this->assertSame('aktif', DataTiruanPeriode::semua()[3]['status']);
     }
 
     public function test_daftar_menampilkan_label_status_dengan_periode_aktif_di_atas(): void
@@ -120,5 +120,18 @@ class KelolaPeriodeTest extends TestCase
         $this->assertSame('arsip', DataTiruanPeriode::semua()[3]['status']);
         $this->assertNull(DataTiruanPeriode::aktif());
         $this->get('/admin/periode-osim')->assertSee('Belum ada periode aktif');
+    }
+
+    public function test_periode_arsip_hanya_bisa_dilihat(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+
+        Livewire::test(KelolaPeriode::class)
+            ->assertTableActionHidden('ubah', 2)
+            ->assertTableActionHidden('arsipkan', 2)
+            ->assertTableActionVisible('lihat', 2)
+            ->assertTableActionHidden('lihat', 3)
+            ->mountTableAction('lihat', 2)
+            ->assertMountedActionModalSee(['Arsip periode 2025/2026', 'hanya bisa dilihat', '41']);
     }
 }
