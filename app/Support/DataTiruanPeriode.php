@@ -32,6 +32,19 @@ class DataTiruanPeriode
         return collect(self::semua())->firstWhere('status', 'aktif');
     }
 
+    /** Akun pengurus beserta penanda masih menjabat (users.is_aktif) di periode aktif. */
+    public static function pengurus(): array
+    {
+        return [
+            ['nama' => 'Ahmad Fauzan', 'email' => 'ahmad.fauzan@osim.test', 'is_aktif' => true],
+            ['nama' => 'Siti Nurhaliza', 'email' => 'siti.nurhaliza@osim.test', 'is_aktif' => true],
+            ['nama' => 'Rania Putri', 'email' => 'rania.putri@osim.test', 'is_aktif' => true],
+            ['nama' => 'Yusuf Maulana', 'email' => 'yusuf.maulana@osim.test', 'is_aktif' => true],
+            ['nama' => 'Dimas Arya', 'email' => 'dimas.arya@osim.test', 'is_aktif' => false],
+            ['nama' => 'Farah Nabila', 'email' => 'farah.nabila@osim.test', 'is_aktif' => false],
+        ];
+    }
+
     /** @param  array<int, array<string, mixed>>  $data */
     public static function simpan(array $data): void
     {

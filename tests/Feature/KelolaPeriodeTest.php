@@ -134,4 +134,14 @@ class KelolaPeriodeTest extends TestCase
             ->mountTableAction('lihat', 2)
             ->assertMountedActionModalSee(['Arsip periode 2025/2026', 'hanya bisa dilihat', '41']);
     }
+
+    public function test_penanda_status_aktif_pengurus_tampil(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+
+        $this->get('/admin/periode-osim')->assertOk()
+            ->assertSee('Status pengurus')
+            ->assertSee('4 dari 6 akun pengurus masih menjabat')
+            ->assertSeeInOrder(['Ahmad Fauzan', 'Menjabat', 'Dimas Arya', 'Tidak menjabat']);
+    }
 }

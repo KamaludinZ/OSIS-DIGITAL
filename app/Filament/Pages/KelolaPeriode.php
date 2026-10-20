@@ -98,7 +98,10 @@ class KelolaPeriode extends Page implements HasTable
 
     protected function getViewData(): array
     {
-        return ['aktif' => DataTiruanPeriode::aktif()];
+        return [
+            'aktif' => DataTiruanPeriode::aktif(),
+            'pengurus' => collect(DataTiruanPeriode::pengurus())->sortByDesc('is_aktif')->values()->all(),
+        ];
     }
 
     public function table(Table $table): Table

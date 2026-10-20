@@ -24,4 +24,22 @@
     @endif
 
     {{ $this->table }}
+
+    {{-- Penanda pengurus yang masih menjabat di periode aktif --}}
+    @php($menjabat = collect($pengurus)->where('is_aktif', true)->count())
+    <x-filament::section heading="Status pengurus" :description="$menjabat.' dari '.count($pengurus).' akun pengurus masih menjabat. Hanya pengurus menjabat yang bisa menanggapi saran periode berjalan.'">
+        <ul class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            @foreach ($pengurus as $p)
+                <li class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 ring-1 ring-garis {{ $p['is_aktif'] ? 'bg-hijau-50' : '' }}">
+                    <div class="min-w-0">
+                        <p class="truncate font-bold text-tinta">{{ $p['nama'] }}</p>
+                        <p class="truncate text-sm text-tinta-2">{{ $p['email'] }}</p>
+                    </div>
+                    <x-filament::badge :color="$p['is_aktif'] ? 'success' : 'gray'" :icon="$p['is_aktif'] ? 'heroicon-m-check-badge' : 'heroicon-m-minus-circle'" class="shrink-0">
+                        {{ $p['is_aktif'] ? 'Menjabat' : 'Tidak menjabat' }}
+                    </x-filament::badge>
+                </li>
+            @endforeach
+        </ul>
+    </x-filament::section>
 </x-filament-panels::page>
