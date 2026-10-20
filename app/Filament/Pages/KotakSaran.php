@@ -4,6 +4,9 @@ namespace App\Filament\Pages;
 
 use App\Support\DataTiruanSaran;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -61,6 +64,12 @@ class KotakSaran extends Page implements HasTable
         return \App\Models\OsisPeriod::aktif()?->nama ?? '2026/2027';
     }
 
+    /** Data tiruan: gate tanggapi-saran memeriksa periode_id; di sini dicocokkan lewat nama periode. */
+    private static function bolehMenanggapi(array $saran): bool
+    {
+        return (auth()->user()?->can('tanggapi-saran') ?? false) && $saran['periode'] === self::periodeAktif();
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -88,6 +97,31 @@ class KotakSaran extends Page implements HasTable
                     ->default(self::periodeAktif()),
                 SelectFilter::make('status')->label('Status')
                     ->options(['belum' => 'Belum ditanggapi', 'sudah' => 'Ditanggapi']),
+            ])
+            ->recordActions([
+                Action::make('tanggapi')
+                    ->label(fn (array $record) => $record['tanggapan'] ? 'Ubah tanggapan' : 'Tanggapi')
+                    ->icon(Heroicon::OutlinedChatBubbleLeftRight)
+                    ->color(fn (array $record) => $record['tanggapan'] ? 'gray' : 'primary')
+                    // Hanya pengurus menjabat & saran periode aktif (gate tanggapi-saran).
+                    ->visible(fn (array $record) => self::bolehMenanggapi($record))
+                    ->modalHeading('Tanggapi saran')
+                    ->modalDescription(fn (array $record) => '"'.str($record['isi'])->limit(160).'" — '.($record['nama'] ? $record['nama'].' · '.$record['kelas'] : 'Anonim'))
+                    ->modalSubmitActionLabel('Kirim tanggapan')
+                    ->fillForm(fn (array $record) => ['tanggapan' => $record['tanggapan']])
+                    ->schema([
+                        Textarea::make('tanggapan')->label('Tanggapan pengurus')->rows(4)
+                            ->required()->minLength(5)->maxLength(1000)
+                            ->placeholder('Contoh: Terima kasih, usulan ini kami bahas di rapat pleno Jumat ini.')
+                            ->helperText('Tanggapan tercatat atas namamu dan tersimpan di riwayat periode ini.'),
+                    ])
+                    ->action(function (array $record, array $data) {
+                        $semua = collect(DataTiruanSaran::semua())->map(fn ($s) => $s['id'] === $record['id']
+                            ? [...$s, 'tanggapan' => trim($data['tanggapan']), 'penanggap' => auth()->user()->name, 'ditanggapi' => now()->toDateTimeString()]
+                            : $s);
+                        DataTiruanSaran::simpan($semua->all());
+                        Notification::make()->title('Tanggapan terkirim')->success()->send();
+                    }),
             ])
             ->emptyStateHeading('Belum ada saran')
             ->emptyStateDescription('Saran dari halaman publik Kotak Saran akan muncul di sini.');
