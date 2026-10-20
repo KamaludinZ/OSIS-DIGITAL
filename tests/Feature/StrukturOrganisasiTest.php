@@ -49,11 +49,12 @@ class StrukturOrganisasiTest extends TestCase
 
         \Livewire\Livewire::test(\App\Filament\Pages\StrukturOrganisasi::class)
             ->assertActionHasLabel('unggah', 'Ganti gambar')
-            ->callAction('unggah', data: ['gambar' => \Illuminate\Http\UploadedFile::fake()->image('bagan.png', 1200, 900)])
+            ->callAction('unggah', data: ['gambar' => \Illuminate\Http\UploadedFile::fake()->image('bagan.png', 1200, 900), 'rasio' => '3:4'])
             ->assertHasNoFormErrors()
             ->assertNotified('Bagan struktur disimpan');
 
         $this->assertStringContainsString('/storage/struktur/', DataTiruanStruktur::aktif()['gambar']);
+        $this->assertSame('3:4', DataTiruanStruktur::aktif()['rasio']);
         $this->assertCount(1, \Illuminate\Support\Facades\Storage::disk('public')->files('struktur'));
     }
 
@@ -65,5 +66,24 @@ class StrukturOrganisasiTest extends TestCase
         \Livewire\Livewire::test(\App\Filament\Pages\StrukturOrganisasi::class)
             ->callAction('unggah', data: ['gambar' => \Illuminate\Http\UploadedFile::fake()->create('bagan.svg', 10, 'image/svg+xml')])
             ->assertHasFormErrors(['gambar']);
+    }
+
+    public function test_pemilih_rasio_mengubah_bingkai_tanpa_unggah_ulang(): void
+    {
+        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]));
+
+        \Livewire\Livewire::test(\App\Filament\Pages\StrukturOrganisasi::class)
+            ->mountAction('ubahRasio')
+            ->assertMountedActionModalSee(['Lebar (4:3)', 'Tinggi (3:4)'])
+            ->setActionData(['rasio' => '3:4'])
+            ->callMountedAction()
+            ->assertNotified('Rasio tampilan diubah ke 3:4');
+
+        $this->assertSame('3:4', DataTiruanStruktur::aktif()['rasio']);
+        $this->assertSame('/images/struktur/contoh-lebar.svg', DataTiruanStruktur::aktif()['gambar']);
+        $this->get('/struktur')->assertSee('data-rasio="3:4"', false);
+
+        \Livewire\Livewire::test(\App\Filament\Pages\StrukturOrganisasi::class)
+            ->callAction('ubahRasio', data: ['rasio' => '16:9'])->assertHasFormErrors(['rasio']);
     }
 }

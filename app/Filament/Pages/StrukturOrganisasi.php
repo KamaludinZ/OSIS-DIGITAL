@@ -6,6 +6,7 @@ use App\Support\DataTiruanStruktur;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -59,14 +60,40 @@ class StrukturOrganisasi extends Page
                         ->image()->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                         ->disk('public')->directory('struktur')->visibility('public')
                         ->maxSize(5120)->required(),
+                    self::pemilihRasio(),
                 ])
+                ->fillForm(fn () => ['rasio' => DataTiruanStruktur::aktif()['rasio'] ?? '4:3'])
                 ->action(function (array $data) {
                     DataTiruanStruktur::simpan([
                         'gambar' => Storage::disk('public')->url($data['gambar']),
-                        'rasio' => DataTiruanStruktur::aktif()['rasio'] ?? '4:3',
+                        'rasio' => $data['rasio'],
                     ]);
                     Notification::make()->title('Bagan struktur disimpan')->success()->send();
                 }),
+            Action::make('ubahRasio')
+                ->label('Ubah rasio')
+                ->icon(Heroicon::OutlinedArrowsRightLeft)
+                ->color('gray')
+                ->visible(fn () => DataTiruanStruktur::aktif() !== null)
+                ->modalHeading('Ubah rasio tampilan')
+                ->modalDescription('Gambar tidak diunggah ulang; hanya bentuk bingkainya di halaman publik.')
+                ->modalSubmitActionLabel('Simpan')
+                ->fillForm(fn () => ['rasio' => DataTiruanStruktur::aktif()['rasio']])
+                ->schema([self::pemilihRasio()])
+                ->action(function (array $data) {
+                    DataTiruanStruktur::simpan(['gambar' => DataTiruanStruktur::aktif()['gambar'], 'rasio' => $data['rasio']]);
+                    Notification::make()->title('Rasio tampilan diubah ke '.$data['rasio'])->success()->send();
+                }),
         ];
+    }
+
+    /** Pilihan bentuk bingkai bagan: 4:3 untuk bagan melebar, 3:4 untuk bagan memanjang ke bawah. */
+    public static function pemilihRasio(): ToggleButtons
+    {
+        return ToggleButtons::make('rasio')->label('Rasio tampilan')
+            ->options(DataTiruanStruktur::RASIO)
+            ->icons(['4:3' => Heroicon::OutlinedComputerDesktop, '3:4' => Heroicon::OutlinedDevicePhoneMobile])
+            ->inline()->required()->default('4:3')
+            ->helperText('Lebar (4:3) cocok untuk bagan yang melebar ke samping; Tinggi (3:4) untuk bagan yang memanjang ke bawah dan enak dibaca di ponsel.');
     }
 }
