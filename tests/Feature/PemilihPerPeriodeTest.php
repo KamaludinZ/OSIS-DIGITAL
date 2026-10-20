@@ -43,4 +43,17 @@ class PemilihPerPeriodeTest extends TestCase
 
         $this->assertSame(2, Voter::count());
     }
+
+    public function test_tabel_log_impor_dan_indeks_unik_per_periode(): void
+    {
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumns('voter_imports', ['periode_id', 'user_id', 'jenis', 'nama_berkas', 'tambah', 'perbarui', 'sama', 'dilewati', 'galat', 'created_at']));
+
+        $log = \App\Models\VoterImport::create(['jenis' => 'siswa', 'nama_berkas' => 'siswa.csv', 'tambah' => 3, 'dilewati' => 1, 'galat' => ['Baris 4: Nama belum diisi.']]);
+        $this->assertSame(['Baris 4: Nama belum diisi.'], $log->fresh()->galat);
+
+        $p = OsisPeriod::factory()->tahun(2026)->aktif()->create();
+        Voter::factory()->create(['nomor_induk' => '0090000001', 'jenis' => 'siswa']);
+        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        Voter::factory()->create(['nomor_induk' => '0090000001', 'jenis' => 'siswa', 'periode_id' => $p->id]);
+    }
 }
