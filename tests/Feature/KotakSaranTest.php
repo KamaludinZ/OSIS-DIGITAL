@@ -29,4 +29,30 @@ class KotakSaranTest extends TestCase
         $this->assertSame('Tolong tambah rak sepeda di dekat gerbang belakang.', DataTiruanSaran::semua()[0]['isi']);
         $this->assertNull(DataTiruanSaran::semua()[0]['nama']);
     }
+
+    public function test_daftar_saran_di_panel_admin(): void
+    {
+        $this->get('/admin/kotak-saran')->assertRedirect('/login');
+        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Panitia]));
+        $this->get('/admin/kotak-saran')->assertForbidden();
+
+        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]));
+        $this->get('/admin/kotak-saran')->assertOk()->assertSee('Kotak Saran');
+
+        \Livewire\Livewire::test(\App\Filament\Pages\KotakSaran::class)
+            // Bawaan: periode aktif saja (saran 2025/2026 tidak tampil).
+            ->assertCanSeeTableRecords([5, 4, 3, 2])
+            ->assertCanNotSeeTableRecords([1])
+            ->assertTableColumnStateSet('nama', 'Anonim', 5)
+            ->assertTableColumnStateSet('nama', 'Nayla Safitri · VIII-B', 4)
+            ->assertTableColumnStateSet('status', 'Ditanggapi', 3)
+            ->filterTable('status', 'belum')
+            ->assertCanSeeTableRecords([5, 4])
+            ->assertCanNotSeeTableRecords([3, 2])
+            ->filterTable('periode', '2025/2026')
+            ->filterTable('status', null)
+            ->assertCanSeeTableRecords([1]);
+
+        $this->assertSame('2', \App\Filament\Pages\KotakSaran::getNavigationBadge());
+    }
 }
