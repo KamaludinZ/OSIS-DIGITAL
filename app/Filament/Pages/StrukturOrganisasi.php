@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Filament\Pages;
+
+use App\Support\DataTiruanStruktur;
+use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Forms\Components\FileUpload;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Storage;
+use UnitEnum;
+
+/** Satu gambar bagan struktur organisasi untuk periode aktif. */
+class StrukturOrganisasi extends Page
+{
+    protected string $view = 'filament.pages.struktur-organisasi';
+
+    protected static ?string $slug = 'struktur-organisasi';
+
+    protected static ?string $title = 'Struktur Organisasi';
+
+    protected static ?string $navigationLabel = 'Struktur Organisasi';
+
+    protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedRectangleGroup;
+
+    protected static string | UnitEnum | null $navigationGroup = 'Organisasi';
+
+    protected static ?int $navigationSort = 0;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('kelola-organisasi') ?? false;
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Bagan yang tampil di halaman publik Struktur Organisasi untuk periode '.(\App\Models\OsisPeriod::aktif()?->nama ?? 'aktif').'.';
+    }
+
+    protected function getViewData(): array
+    {
+        return ['struktur' => DataTiruanStruktur::aktif()];
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('unggah')
+                ->label(fn () => DataTiruanStruktur::aktif() ? 'Ganti gambar' : 'Unggah gambar')
+                ->icon(Heroicon::OutlinedArrowUpTray)
+                ->modalHeading('Unggah bagan struktur')
+                ->modalDescription('Satu gambar untuk periode aktif. Gambar lama akan diganti.')
+                ->modalSubmitActionLabel('Simpan')
+                ->schema([
+                    FileUpload::make('gambar')->label('Gambar bagan')
+                        ->helperText('JPG, PNG, atau WebP. Maks. 5 MB. Pastikan tulisan masih terbaca saat diperkecil.')
+                        ->image()->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                        ->disk('public')->directory('struktur')->visibility('public')
+                        ->maxSize(5120)->required(),
+                ])
+                ->action(function (array $data) {
+                    DataTiruanStruktur::simpan([
+                        'gambar' => Storage::disk('public')->url($data['gambar']),
+                        'rasio' => DataTiruanStruktur::aktif()['rasio'] ?? '4:3',
+                    ]);
+                    Notification::make()->title('Bagan struktur disimpan')->success()->send();
+                }),
+        ];
+    }
+}
