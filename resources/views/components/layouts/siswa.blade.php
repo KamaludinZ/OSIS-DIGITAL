@@ -1,11 +1,4 @@
-@php
-    // Menu publik mengikuti sakelar mode pemilihan (sama dengan pratinjau di Ruang OSIM).
-    $modePemilihan = app(\App\Services\LayananModePemilihan::class)->aktif();
-    $menu = app(\App\Services\LayananModePemilihan::class)->menu($modePemilihan);
-    // Mode aktif: item Bilik Suara diberi penanda selama bilik suara dibuka.
-    $bilikDibuka = collect($menu)->contains('rute', 'bilik-suara')
-        && (app(\App\Services\LayananPemilihan::class)->pemilihanAktif()?->sedangDibuka() ?? false);
-@endphp
+{{-- $modePemilihan, $menu, $bilikDibuka disediakan App\View\Composers\NavigasiPublik. --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
@@ -40,8 +33,8 @@
 
                 <nav aria-label="Menu utama" class="osim-menu-desktop ml-6 hidden items-center gap-1 lg:flex">
                     @foreach ($menu as $item)
-                        @php($aktif = request()->routeIs($item['pola']))
-                        <a href="{{ \App\Support\MenuPublik::url($item) }}" wire:navigate @if ($aktif) aria-current="page" @endif
+                        @php($aktif = $item['aktif'])
+                        <a href="{{ $item['url'] }}" wire:navigate @if ($aktif) aria-current="page" @endif
                            @class([
                                'flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition',
                                'bg-emas-400 text-hijau-950 shadow-[0_3px_10px_-3px_rgb(0_0_0/0.15)]' => $aktif,
@@ -139,9 +132,9 @@
         <nav aria-label="Menu utama" class="osim-menu-ponsel fixed inset-x-0 bottom-0 z-40 border-t border-garis bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden">
             <ul @class(['mx-auto grid max-w-md', 'grid-cols-3' => count($menu) === 3, 'grid-cols-4' => count($menu) === 4])>
                 @foreach ($menu as $item)
-                    @php($aktif = request()->routeIs($item['pola']))
+                    @php($aktif = $item['aktif'])
                     <li>
-                        <a href="{{ \App\Support\MenuPublik::url($item) }}" wire:navigate @if ($aktif) aria-current="page" @endif
+                        <a href="{{ $item['url'] }}" wire:navigate @if ($aktif) aria-current="page" @endif
                            class="flex min-w-0 flex-col items-center gap-1 px-1 pb-2 pt-2.5 text-[11px] font-semibold {{ $aktif ? 'text-hijau-800' : 'text-tinta-2' }}">
                             <span @class(['relative flex h-7 w-12 items-center justify-center rounded-full transition', 'bg-emas-400 text-hijau-950' => $aktif])>
                                 <flux:icon :name="$item['ikon']" variant="{{ $aktif ? 'solid' : 'outline' }}" class="size-5" />

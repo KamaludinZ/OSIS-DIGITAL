@@ -129,4 +129,13 @@ class MenuPublikTest extends TestCase
         app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
         $this->get('/')->assertDontSee('Tanggapi pertanyaan');
     }
+
+    public function test_navigasi_dirender_dari_status_mode_dengan_penanda_halaman_aktif(): void
+    {
+        app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
+
+        $this->get('/struktur')->assertOk()
+            ->assertSee('href="'.route('struktur').'" wire:navigate aria-current="page"', false)
+            ->assertDontSee('href="'.route('saran').'" wire:navigate aria-current="page"', false);
+    }
 }

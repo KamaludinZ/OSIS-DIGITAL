@@ -25,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Aksi Livewire di halaman pemilihan ikut diperiksa ulang terhadap sakelar mode.
+        \Illuminate\Support\Facades\View::composer('components.layouts.siswa', \App\View\Composers\NavigasiPublik::class);
+
         \Livewire\Livewire::addPersistentMiddleware([\App\Http\Middleware\WajibModePemilihan::class]);
 
         Gate::policy(User::class, \App\Policies\UserPolicy::class);
