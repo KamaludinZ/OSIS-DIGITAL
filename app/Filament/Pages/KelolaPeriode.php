@@ -4,6 +4,10 @@ namespace App\Filament\Pages;
 
 use App\Support\DataTiruanPeriode;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -42,6 +46,56 @@ class KelolaPeriode extends Page implements HasTable
         return 'Hanya satu periode yang aktif. Data kandidat, saran, struktur, dan media sosial mengikuti periode aktif.';
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('tambah')
+                ->label('Tambah periode')
+                ->icon(Heroicon::OutlinedPlus)
+                ->modalHeading('Tambah periode')
+                ->modalDescription('Periode baru disiapkan dengan data kosong. Aktifkan setelah kepengurusan baru siap.')
+                ->modalSubmitActionLabel('Simpan')
+                ->schema(self::formPeriode())
+                ->action(function (array $data) {
+                    $semua = DataTiruanPeriode::semua();
+                    $id = (max(array_keys($semua) ?: [0])) + 1;
+                    $semua = [$id => ['id' => $id, ...self::isian($data), 'status' => 'disiapkan', 'pengurus' => 0, 'kandidat' => 0, 'saran' => 0]] + $semua;
+                    DataTiruanPeriode::simpan($semua);
+                    Notification::make()->title('Periode '.$data['nama'].' disiapkan')->success()->send();
+                }),
+        ];
+    }
+
+    /** Isian nama + rentang tanggal, dipakai form tambah & ubah. */
+    public static function formPeriode(?int $kecuali = null): array
+    {
+        return [
+            TextInput::make('nama')->label('Nama periode')->placeholder('Contoh: 2027/2028')->required()
+                ->regex('/^\\d{4}\\/\\d{4}$/')
+                ->rule(fn () => function (string $attribute, $value, \Closure $fail) use ($kecuali) {
+                    $kembar = collect(DataTiruanPeriode::semua())->except($kecuali)->contains('nama', $value);
+                    if ($kembar) {
+                        $fail('Periode '.$value.' sudah ada.');
+                    }
+                })
+                ->validationMessages(['regex' => 'Format periode: 2027/2028.'])
+                ->columnSpanFull(),
+            DatePicker::make('mulai')->label('Mulai menjabat')->required(),
+            DatePicker::make('selesai')->label('Selesai menjabat')->required()->after('mulai')
+                ->validationMessages(['after' => 'Tanggal selesai harus sesudah tanggal mulai.']),
+        ];
+    }
+
+    /** @return array{nama: string, mulai: string, selesai: string} */
+    private static function isian(array $data): array
+    {
+        return [
+            'nama' => $data['nama'],
+            'mulai' => Carbon::parse($data['mulai'])->toDateString(),
+            'selesai' => Carbon::parse($data['selesai'])->toDateString(),
+        ];
+    }
+
     protected function getViewData(): array
     {
         return ['aktif' => DataTiruanPeriode::aktif()];
@@ -60,6 +114,21 @@ class KelolaPeriode extends Page implements HasTable
                 TextColumn::make('pengurus')->label('Pengurus')->numeric(),
                 TextColumn::make('kandidat')->label('Kandidat')->numeric(),
                 TextColumn::make('saran')->label('Saran')->numeric(),
+            ])
+            ->recordActions([
+                Action::make('ubah')
+                    ->label('Ubah')
+                    ->icon(Heroicon::OutlinedPencilSquare)
+                    ->modalHeading(fn (array $record) => 'Ubah periode '.$record['nama'])
+                    ->modalSubmitActionLabel('Simpan perubahan')
+                    ->fillForm(fn (array $record) => $record)
+                    ->schema(fn (array $record) => self::formPeriode($record['id']))
+                    ->action(function (array $record, array $data) {
+                        $semua = DataTiruanPeriode::semua();
+                        $semua[$record['id']] = [...$semua[$record['id']], ...self::isian($data)];
+                        DataTiruanPeriode::simpan($semua);
+                        Notification::make()->title('Periode '.$data['nama'].' diperbarui')->success()->send();
+                    }),
             ])
             ->emptyStateHeading('Belum ada periode')
             ->emptyStateDescription('Buat periode kepengurusan pertama, misalnya 2026/2027.');
