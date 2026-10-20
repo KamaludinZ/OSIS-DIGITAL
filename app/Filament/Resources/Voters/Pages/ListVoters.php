@@ -86,10 +86,7 @@ class ListVoters extends ListRecords
             ->modalHeading('Impor data '.($siswa ? 'siswa' : 'GTK'))
             ->modalSubmitActionLabel('Impor')
             ->schema([
-                Text::make($siswa
-                    ? 'Kolom: nisn, nama, kelas, tanggal_lahir (format 2013-05-21 atau 21/05/2013). Data dengan NISN yang sama akan diperbarui.'
-                    : 'Kolom: nik, nama, jabatan, tanggal_lahir. Data dengan NIK yang sama akan diperbarui.'),
-                Text::make(fn () => new \Illuminate\Support\HtmlString('<a class="font-bold text-primary-700 underline" href="/templat/pemilih-'.$jenis->value.'.csv" download>Unduh templat CSV</a>')),
+                \Filament\Schemas\Components\View::make('filament.panduan-kolom-impor')->viewData(['jenis' => $jenis->value]),
                 FileUpload::make('berkas')->label('Berkas CSV / Excel (.xlsx)')
                     ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])
                     ->maxSize(5120)

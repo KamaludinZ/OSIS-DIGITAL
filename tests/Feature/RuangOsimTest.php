@@ -539,4 +539,21 @@ class RuangOsimTest extends TestCase
         file_put_contents($rusak, 'bukan excel');
         $this->assertStringContainsString('Berkas tidak bisa dibaca', $impor->pratinjau($rusak, \App\Enums\JenisPemilih::Siswa, 'data.xlsx')['gagal'][0]);
     }
+
+    public function test_panduan_kolom_dan_unduh_templat_impor(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
+            ->mountAction('imporSiswa')
+            ->assertMountedActionModalSee(['nisn', 'tanggal_lahir', 'Format sel sebagai Teks', 'Unduh templat CSV siswa'])
+            ->assertMountedActionModalSeeHtml('href="/templat/pemilih-siswa.csv" download');
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
+            ->mountAction('imporGtk')
+            ->assertMountedActionModalSee(['nik', 'Tepat 16 angka', 'Unduh templat CSV GTK']);
+
+        $this->assertFileExists(public_path('templat/pemilih-siswa.csv'));
+        $this->assertStringStartsWith('nisn,nama,kelas,tanggal_lahir', file_get_contents(public_path('templat/pemilih-siswa.csv')));
+    }
 }
