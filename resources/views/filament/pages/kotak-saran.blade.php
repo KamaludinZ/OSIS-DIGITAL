@@ -2,7 +2,7 @@
     {{-- Ringkasan riwayat saran per periode; arsip tetap bisa dibaca lewat filter Periode --}}
     <section aria-label="Riwayat saran per periode" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         @foreach ($riwayat as $r)
-            <button type="button" wire:click="lihatPeriode('{{ $r['periode'] }}')" @class([
+            <button type="button" wire:click="lihatPeriode({{ $r['id'] }})" @class([
                 'flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-left ring-1 transition hover:ring-hijau-600',
                 'bg-hijau-50 ring-hijau-600' => $r['dipilih'],
                 'bg-white ring-garis' => ! $r['dipilih'],

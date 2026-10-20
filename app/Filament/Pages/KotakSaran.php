@@ -2,7 +2,9 @@
 
 namespace App\Filament\Pages;
 
-use App\Support\DataTiruanSaran;
+use App\Models\OsisPeriod;
+use App\Models\Suggestion;
+use App\Services\LayananSaran;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -14,7 +16,8 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 /** Saran dari halaman publik Kotak Saran, per periode. */
@@ -44,7 +47,7 @@ class KotakSaran extends Page implements HasTable
     /** Jumlah saran periode aktif yang belum ditanggapi. */
     public static function getNavigationBadge(): ?string
     {
-        $belum = collect(DataTiruanSaran::semua())->where('periode', self::periodeAktif())->whereNull('tanggapan')->count();
+        $belum = Suggestion::query()->belumDitanggapi()->count();
 
         return $belum ? (string) $belum : null;
     }
@@ -59,67 +62,62 @@ class KotakSaran extends Page implements HasTable
         return 'Saran siswa untuk OSIM. Hanya pengurus yang sedang menjabat yang bisa menanggapi.';
     }
 
-    private static function periodeAktif(): string
-    {
-        return \App\Models\OsisPeriod::aktif()?->nama ?? '2026/2027';
-    }
-
     protected function getViewData(): array
     {
-        $dipilih = $this->getTableFilterState('periode')['value'] ?? null;
+        $dipilih = (int) ($this->getTableFilterState('periode')['value'] ?? 0);
 
         return [
-            'riwayat' => collect(DataTiruanSaran::semua())->groupBy('periode')->sortKeysDesc()
-                ->map(fn ($saran, $periode) => [
-                    'periode' => $periode,
-                    'aktif' => $periode === self::periodeAktif(),
-                    'dipilih' => $periode === $dipilih,
-                    'total' => $saran->count(),
-                    'ditanggapi' => $saran->whereNotNull('tanggapan')->count(),
-                ])->values()->all(),
+            'riwayat' => OsisPeriod::query()->has('suggestions')->orWhere('status', 'aktif')
+                ->withCount(['suggestions', 'suggestions as ditanggapi_count' => fn ($q) => $q->whereNotNull('ditanggapi_pada')])
+                ->orderByDesc('nama')->get()
+                ->map(fn (OsisPeriod $p) => [
+                    'id' => $p->id,
+                    'periode' => $p->nama,
+                    'aktif' => $p->adalahAktif(),
+                    'dipilih' => $p->id === $dipilih,
+                    'total' => $p->suggestions_count,
+                    'ditanggapi' => $p->ditanggapi_count,
+                ])->all(),
         ];
     }
 
     /** Pilih periode dari kartu riwayat = setel filter tabel. */
-    public function lihatPeriode(string $periode): void
+    public function lihatPeriode(int $periode): void
     {
-        $this->tableFilters['periode']['value'] = $periode;
+        $this->tableFilters['periode']['value'] = (string) $periode;
         $this->resetPage();
-    }
-
-    /** Data tiruan: gate tanggapi-saran memeriksa periode_id; di sini dicocokkan lewat nama periode. */
-    private static function bolehMenanggapi(array $saran): bool
-    {
-        return (auth()->user()?->can('tanggapi-saran') ?? false) && $saran['periode'] === self::periodeAktif();
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn (?array $filters): array => collect(DataTiruanSaran::semua())
-                ->when($filters['periode']['value'] ?? null, fn ($c, $p) => $c->where('periode', $p))
-                ->when($filters['status']['value'] ?? null, fn ($c, $s) => $s === 'belum' ? $c->whereNull('tanggapan') : $c->whereNotNull('tanggapan'))
-                ->keyBy('id')->all())
+            // Semua periode dibaca lewat filter; bawaan periode aktif.
+            ->query(Suggestion::query()->semuaPeriode()->with(['penanggap', 'periode'])->latest()->latest('id'))
             ->columns([
                 TextColumn::make('isi')->label('Saran')->wrap()->lineClamp(3)->weight('medium')
-                    ->description(fn (array $record) => $record['tanggapan'] ? 'Tanggapan: '.str($record['tanggapan'])->limit(80) : null),
+                    ->description(fn (Suggestion $record) => $record->tanggapan ? 'Tanggapan: '.str($record->tanggapan)->limit(80) : null),
                 TextColumn::make('nama')->label('Pengirim')
-                    ->state(fn (array $record) => $record['nama'] ? $record['nama'].' · '.$record['kelas'] : 'Anonim')
-                    ->color(fn (array $record) => $record['nama'] ? null : 'gray')
-                    ->icon(fn (array $record) => $record['nama'] ? 'heroicon-m-user' : 'heroicon-m-eye-slash'),
-                TextColumn::make('dikirim')->label('Dikirim')
-                    ->formatStateUsing(fn (string $state) => Carbon::parse($state)->diffForHumans())
-                    ->tooltip(fn (array $record) => Carbon::parse($record['dikirim'])->translatedFormat('j F Y, H:i')),
+                    ->state(fn (Suggestion $record) => $record->pengirim())
+                    ->color(fn (Suggestion $record) => $record->anonim() ? 'gray' : null)
+                    ->icon(fn (Suggestion $record) => $record->anonim() ? 'heroicon-m-eye-slash' : 'heroicon-m-user'),
+                TextColumn::make('created_at')->label('Dikirim')->since()
+                    ->tooltip(fn (Suggestion $record) => $record->created_at->translatedFormat('j F Y, H:i')),
                 TextColumn::make('status')->label('Status')->badge()
-                    ->state(fn (array $record) => $record['tanggapan'] ? 'Ditanggapi' : 'Belum ditanggapi')
+                    ->state(fn (Suggestion $record) => $record->sudahDitanggapi() ? 'Ditanggapi' : 'Belum ditanggapi')
                     ->color(fn (string $state) => $state === 'Ditanggapi' ? 'success' : 'warning'),
             ])
             ->filters([
                 SelectFilter::make('periode')->label('Periode')
-                    ->options(fn () => collect(DataTiruanSaran::semua())->pluck('periode', 'periode')->sortDesc()->all())
-                    ->default(self::periodeAktif()),
+                    ->options(fn () => OsisPeriod::query()->orderByDesc('nama')->pluck('nama', 'id')->all())
+                    ->default(fn () => OsisPeriod::aktif()?->id)
+                    ->query(fn (Builder $query, array $data) => $query->when($data['value'] ?? null, fn ($q, $id) => $q->where('suggestions.periode_id', $id))),
                 SelectFilter::make('status')->label('Status')
-                    ->options(['belum' => 'Belum ditanggapi', 'sudah' => 'Ditanggapi']),
+                    ->options(['belum' => 'Belum ditanggapi', 'sudah' => 'Ditanggapi'])
+                    ->query(fn (Builder $query, array $data) => match ($data['value'] ?? null) {
+                        'belum' => $query->whereNull('ditanggapi_pada'),
+                        'sudah' => $query->whereNotNull('ditanggapi_pada'),
+                        default => $query,
+                    }),
             ])
             ->recordActions([
                 Action::make('lihat')
@@ -127,32 +125,33 @@ class KotakSaran extends Page implements HasTable
                     ->icon(Heroicon::OutlinedClock)
                     ->color('gray')
                     ->modalHeading('Riwayat saran')
-                    ->modalContent(fn (array $record) => view('filament.saran-detail', ['saran' => $record]))
+                    ->modalContent(fn (Suggestion $record) => view('filament.saran-detail', ['saran' => $record]))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
                     ->modalWidth('lg'),
                 Action::make('tanggapi')
-                    ->label(fn (array $record) => $record['tanggapan'] ? 'Ubah tanggapan' : 'Tanggapi')
+                    ->label(fn (Suggestion $record) => $record->sudahDitanggapi() ? 'Ubah tanggapan' : 'Tanggapi')
                     ->icon(Heroicon::OutlinedChatBubbleLeftRight)
-                    ->color(fn (array $record) => $record['tanggapan'] ? 'gray' : 'primary')
-                    // Hanya pengurus menjabat & saran periode aktif (gate tanggapi-saran).
-                    ->visible(fn (array $record) => self::bolehMenanggapi($record))
+                    ->color(fn (Suggestion $record) => $record->sudahDitanggapi() ? 'gray' : 'primary')
+                    // Hanya pengurus menjabat & saran periode aktif.
+                    ->visible(fn (Suggestion $record) => auth()->user()?->can('tanggapi-saran', $record) ?? false)
                     ->modalHeading('Tanggapi saran')
-                    ->modalDescription(fn (array $record) => '"'.str($record['isi'])->limit(160).'" — '.($record['nama'] ? $record['nama'].' · '.$record['kelas'] : 'Anonim'))
+                    ->modalDescription(fn (Suggestion $record) => '"'.str($record->isi)->limit(160).'" — '.$record->pengirim())
                     ->modalSubmitActionLabel('Kirim tanggapan')
-                    ->fillForm(fn (array $record) => ['tanggapan' => $record['tanggapan']])
+                    ->fillForm(fn (Suggestion $record) => ['tanggapan' => $record->tanggapan])
                     ->schema([
                         Textarea::make('tanggapan')->label('Tanggapan pengurus')->rows(4)
                             ->required()->minLength(5)->maxLength(1000)
                             ->placeholder('Contoh: Terima kasih, usulan ini kami bahas di rapat pleno Jumat ini.')
                             ->helperText('Tanggapan tercatat atas namamu dan tersimpan di riwayat periode ini.'),
                     ])
-                    ->action(function (array $record, array $data) {
-                        $semua = collect(DataTiruanSaran::semua())->map(fn ($s) => $s['id'] === $record['id']
-                            ? [...$s, 'tanggapan' => trim($data['tanggapan']), 'penanggap' => auth()->user()->name, 'ditanggapi' => now()->toDateTimeString()]
-                            : $s);
-                        DataTiruanSaran::simpan($semua->all());
-                        Notification::make()->title('Tanggapan terkirim')->success()->send();
+                    ->action(function (Suggestion $record, array $data) {
+                        try {
+                            app(LayananSaran::class)->tanggapi($record, $data['tanggapan'], auth()->user());
+                            Notification::make()->title('Tanggapan terkirim')->success()->send();
+                        } catch (AuthorizationException $e) {
+                            Notification::make()->title($e->getMessage())->danger()->send();
+                        }
                     }),
             ])
             ->emptyStateHeading('Belum ada saran')

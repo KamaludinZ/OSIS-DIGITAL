@@ -2,14 +2,48 @@
 
 namespace Tests\Feature;
 
-use App\Support\DataTiruanSaran;
+use App\Enums\Peran;
+use App\Filament\Pages\KotakSaran;
+use App\Models\OsisPeriod;
+use App\Models\Suggestion;
+use App\Models\User;
+use App\Services\LayananSaran;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class KotakSaranTest extends TestCase
 {
     use RefreshDatabase;
+
+    private OsisPeriod $lama;
+
+    private OsisPeriod $aktif;
+
+    private Suggestion $arsip;
+
+    private Suggestion $anonim;
+
+    private Suggestion $bernama;
+
+    private Suggestion $ditanggapi;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->lama = OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        $this->arsip = Suggestion::create(['isi' => 'Jadwal piket kelas sebaiknya ditempel di mading.']);
+        app(LayananSaran::class)->tanggapi($this->arsip, 'Terima kasih, sudah ditempel.', User::factory()->pengurusMenjabat()->create(['name' => 'Pengurus Lama']));
+
+        $this->aktif = OsisPeriod::factory()->tahun(2026)->create();
+        app(\App\Services\LayananPeriode::class)->aktifkan($this->aktif);
+
+        $this->ditanggapi = Suggestion::create(['isi' => 'Wifi perpustakaan sering mati.']);
+        app(LayananSaran::class)->tanggapi($this->ditanggapi, 'Sudah disampaikan ke sarpras.', User::factory()->pengurusMenjabat()->create(['name' => 'Siti Nurhaliza']));
+        $this->bernama = Suggestion::create(['isi' => 'Kajian Jumat diselingi lomba hafalan.', 'nama' => 'Nayla Safitri', 'kelas' => 'VIII-B']);
+        $this->anonim = Suggestion::create(['isi' => 'Tambah tempat sampah terpilah di kantin.']);
+    }
 
     public function test_halaman_publik_kotak_saran(): void
     {
@@ -22,72 +56,87 @@ class KotakSaranTest extends TestCase
     public function test_daftar_saran_di_panel_admin(): void
     {
         $this->get('/admin/kotak-saran')->assertRedirect('/login');
-        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Panitia]));
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
         $this->get('/admin/kotak-saran')->assertForbidden();
 
-        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]));
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
         $this->get('/admin/kotak-saran')->assertOk()->assertSee('Kotak Saran');
 
-        \Livewire\Livewire::test(\App\Filament\Pages\KotakSaran::class)
-            // Bawaan: periode aktif saja (saran 2025/2026 tidak tampil).
-            ->assertCanSeeTableRecords([5, 4, 3, 2])
-            ->assertCanNotSeeTableRecords([1])
-            ->assertTableColumnStateSet('nama', 'Anonim', 5)
-            ->assertTableColumnStateSet('nama', 'Nayla Safitri · VIII-B', 4)
-            ->assertTableColumnStateSet('status', 'Ditanggapi', 3)
+        Livewire::test(KotakSaran::class)
+            // Bawaan: periode aktif saja.
+            ->assertCanSeeTableRecords([$this->anonim, $this->bernama, $this->ditanggapi], inOrder: true)
+            ->assertCanNotSeeTableRecords([$this->arsip])
+            ->assertTableColumnStateSet('nama', 'Anonim', $this->anonim)
+            ->assertTableColumnStateSet('nama', 'Nayla Safitri · VIII-B', $this->bernama)
+            ->assertTableColumnStateSet('status', 'Ditanggapi', $this->ditanggapi)
             ->filterTable('status', 'belum')
-            ->assertCanSeeTableRecords([5, 4])
-            ->assertCanNotSeeTableRecords([3, 2])
-            ->filterTable('periode', '2025/2026')
+            ->assertCanSeeTableRecords([$this->anonim, $this->bernama])
+            ->assertCanNotSeeTableRecords([$this->ditanggapi])
+            ->filterTable('periode', (string) $this->lama->id)
             ->filterTable('status', null)
-            ->assertCanSeeTableRecords([1]);
+            ->assertCanSeeTableRecords([$this->arsip]);
 
-        $this->assertSame('2', \App\Filament\Pages\KotakSaran::getNavigationBadge());
+        $this->assertSame('2', KotakSaran::getNavigationBadge());
     }
 
     public function test_form_tanggapan_hanya_untuk_pengurus_menjabat(): void
     {
-        \App\Models\OsisPeriod::factory()->tahun(2026)->aktif()->create();
-
         // Pengurus tidak menjabat: tidak ada tombol tanggapi.
-        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]));
-        \Livewire\Livewire::test(\App\Filament\Pages\KotakSaran::class)->assertTableActionHidden('tanggapi', 5);
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        Livewire::test(KotakSaran::class)->assertTableActionHidden('tanggapi', $this->anonim);
 
-        $this->actingAs(\App\Models\User::factory()->pengurusMenjabat()->create(['name' => 'Ahmad Fauzan']));
-        \Livewire\Livewire::test(\App\Filament\Pages\KotakSaran::class)
-            ->assertTableActionHasLabel('tanggapi', 'Tanggapi', 5)
-            ->assertTableActionHasLabel('tanggapi', 'Ubah tanggapan', 3)
-            ->callTableAction('tanggapi', 5, data: ['tanggapan' => 'ok'])
+        $this->actingAs($pengurus = User::factory()->pengurusMenjabat()->create(['name' => 'Ahmad Fauzan']));
+        Livewire::test(KotakSaran::class)
+            ->assertTableActionHasLabel('tanggapi', 'Tanggapi', $this->anonim)
+            ->assertTableActionHasLabel('tanggapi', 'Ubah tanggapan', $this->ditanggapi)
+            ->callTableAction('tanggapi', $this->anonim, data: ['tanggapan' => 'ok'])
             ->assertHasTableActionErrors(['tanggapan' => 'min']);
 
-        \Livewire\Livewire::test(\App\Filament\Pages\KotakSaran::class)
-            ->callTableAction('tanggapi', 5, data: ['tanggapan' => 'Siap, kami ajukan ke koperasi madrasah pekan ini.'])
+        Livewire::test(KotakSaran::class)
+            ->callTableAction('tanggapi', $this->anonim, data: ['tanggapan' => 'Siap, kami ajukan ke koperasi madrasah pekan ini.'])
             ->assertHasNoTableActionErrors()
             ->assertNotified('Tanggapan terkirim')
-            ->filterTable('periode', '2025/2026')
-            ->assertTableActionHidden('tanggapi', 1);
+            ->filterTable('periode', (string) $this->lama->id)
+            ->assertTableActionHidden('tanggapi', $this->arsip);
 
-        $saran = collect(DataTiruanSaran::semua())->firstWhere('id', 5);
-        $this->assertSame('Ahmad Fauzan', $saran['penanggap']);
-        $this->assertStringStartsWith('Siap', $saran['tanggapan']);
+        $this->anonim->refresh();
+        $this->assertTrue($this->anonim->penanggap->is($pengurus));
+        $this->assertStringStartsWith('Siap', $this->anonim->tanggapan);
+        $this->assertNotNull($this->anonim->ditanggapi_pada);
+    }
+
+    public function test_layanan_menolak_tanggapan_tanpa_hak_atau_untuk_arsip(): void
+    {
+        $layanan = app(LayananSaran::class);
+
+        foreach ([User::factory()->create(['role' => Peran::Pengurus]), User::factory()->create(['role' => Peran::Admin])] as $tanpaHak) {
+            try {
+                $layanan->tanggapi($this->anonim, 'Tanggapan tanpa hak.', $tanpaHak);
+                $this->fail('Seharusnya ditolak.');
+            } catch (\Illuminate\Auth\Access\AuthorizationException) {
+            }
+        }
+
+        $this->expectException(\Illuminate\Auth\Access\AuthorizationException::class);
+        $layanan->tanggapi(Suggestion::diPeriode($this->lama)->first(), 'Menanggapi arsip.', User::factory()->pengurusMenjabat()->create());
     }
 
     public function test_riwayat_saran_per_periode(): void
     {
-        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]));
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
 
         $this->get('/admin/kotak-saran')->assertOk()
-            ->assertSeeInOrder(['Periode aktif', '2026/2027', '4', 'saran', '2 ditanggapi', 'Arsip', '2025/2026', '1', 'saran', '1 ditanggapi']);
+            ->assertSeeInOrder(['Periode aktif', '2026/2027', '3', 'saran', '1 ditanggapi', 'Arsip', '2025/2026', '1', 'saran', '1 ditanggapi']);
 
-        \Livewire\Livewire::test(\App\Filament\Pages\KotakSaran::class)
-            ->call('lihatPeriode', '2025/2026')
-            ->assertCanSeeTableRecords([1])
-            ->assertCanNotSeeTableRecords([5])
-            ->mountTableAction('lihat', 1)
-            ->assertMountedActionModalSee(['Jadwal piket kelas', 'Tanggapan Pengurus 2025/2026', 'Periode 2025/2026']);
+        Livewire::test(KotakSaran::class)
+            ->call('lihatPeriode', $this->lama->id)
+            ->assertCanSeeTableRecords([$this->arsip])
+            ->assertCanNotSeeTableRecords([$this->anonim])
+            ->mountTableAction('lihat', $this->arsip)
+            ->assertMountedActionModalSee(['Jadwal piket kelas', 'Tanggapan Pengurus Lama', 'Periode 2025/2026']);
 
-        \Livewire\Livewire::test(\App\Filament\Pages\KotakSaran::class)
-            ->mountTableAction('lihat', 5)
+        Livewire::test(KotakSaran::class)
+            ->mountTableAction('lihat', $this->anonim)
             ->assertMountedActionModalSee(['Anonim', 'Belum ditanggapi.']);
     }
 }
