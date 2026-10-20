@@ -105,4 +105,20 @@ class KelolaPeriodeTest extends TestCase
             ->assertSeeInOrder(['Periode aktif', '2026/2027'])
             ->assertDontSee('aria-label="Kelola periode OSIM"', false);
     }
+
+    public function test_arsipkan_periode_lewat_dialog_konfirmasi(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+
+        Livewire::test(KelolaPeriode::class)
+            ->assertTableActionHidden('arsipkan', 2)
+            ->mountTableAction('arsipkan', 3)
+            ->assertMountedActionModalSee(['Arsipkan periode 2026/2027?', 'Ruang OSIM tidak punya periode aktif', 'Ya, arsipkan'])
+            ->callMountedTableAction()
+            ->assertNotified('Periode 2026/2027 diarsipkan');
+
+        $this->assertSame('arsip', DataTiruanPeriode::semua()[3]['status']);
+        $this->assertNull(DataTiruanPeriode::aktif());
+        $this->get('/admin/periode-osim')->assertSee('Belum ada periode aktif');
+    }
 }

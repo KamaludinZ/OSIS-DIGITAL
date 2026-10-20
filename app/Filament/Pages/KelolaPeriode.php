@@ -134,9 +134,35 @@ class KelolaPeriode extends Page implements HasTable
                         DataTiruanPeriode::simpan($semua);
                         Notification::make()->title('Periode '.$data['nama'].' diperbarui')->success()->send();
                     }),
+                Action::make('arsipkan')
+                    ->label('Arsipkan')
+                    ->icon(Heroicon::OutlinedArchiveBoxArrowDown)
+                    ->color('warning')
+                    ->visible(fn (array $record) => $record['status'] !== 'arsip')
+                    ->requiresConfirmation()
+                    ->modalIcon(Heroicon::OutlinedArchiveBoxArrowDown)
+                    ->modalHeading(fn (array $record) => 'Arsipkan periode '.$record['nama'].'?')
+                    ->modalDescription(fn (array $record) => self::dampakArsip($record))
+                    ->modalSubmitActionLabel('Ya, arsipkan')
+                    ->action(function (array $record) {
+                        $semua = DataTiruanPeriode::semua();
+                        $semua[$record['id']]['status'] = 'arsip';
+                        DataTiruanPeriode::simpan($semua);
+                        Notification::make()->title('Periode '.$record['nama'].' diarsipkan')->success()->send();
+                    }),
             ])
             ->emptyStateHeading('Belum ada periode')
             ->emptyStateDescription('Buat periode kepengurusan pertama, misalnya 2026/2027.');
+    }
+
+    /** Penjelasan dampak sebelum periode dipindah ke arsip. */
+    public static function dampakArsip(array $periode): string
+    {
+        $isi = $periode['pengurus'].' pengurus, '.$periode['kandidat'].' kandidat, dan '.$periode['saran'].' saran tetap tersimpan dan hanya bisa dibaca. Arsip tidak bisa diaktifkan kembali.';
+
+        return $periode['status'] === 'aktif'
+            ? 'Ini periode yang sedang aktif. Setelah diarsipkan, Ruang OSIM tidak punya periode aktif sampai periode lain diaktifkan, dan data baru belum bisa ditambahkan. '.$isi
+            : $isi;
     }
 
     /** @param  array<string, mixed>  $periode */
