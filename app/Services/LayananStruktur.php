@@ -40,6 +40,23 @@ class LayananStruktur
     }
 
     /**
+     * Arsip bagan periode lama untuk halaman publik (hanya periode berstatus arsip), terbaru dulu.
+     *
+     * @return array<string, array{periode: string, gambar: string, rasio: string, diperbarui: string}> slug periode => data
+     */
+    public function arsipPublik(): array
+    {
+        return OsisPeriod::query()->where('status', \App\Enums\StatusPeriode::Arsip)->has('struktur')
+            ->with('struktur')->orderByDesc('nama')->get()
+            ->mapWithKeys(fn (OsisPeriod $p) => [str_replace('/', '-', $p->nama) => [
+                'periode' => $p->nama,
+                'gambar' => $p->struktur->urlGambar(),
+                'rasio' => $p->struktur->rasio,
+                'diperbarui' => $p->struktur->updated_at->toDateTimeString(),
+            ]])->all();
+    }
+
+    /**
      * Simpan bagan periode aktif dari berkas yang sudah tersimpan di disk public.
      * Bagan lama periode ini diganti dan berkas lamanya dihapus.
      *

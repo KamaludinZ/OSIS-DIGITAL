@@ -180,4 +180,24 @@ class StrukturOrganisasiTest extends TestCase
             ->assertTableColumnFormattedStateSet('rasio', 'Tinggi (3:4)', $lama)
             ->assertTableActionHasUrl('buka', $lama->urlGambar(), $lama);
     }
+
+    public function test_arsip_periode_di_halaman_publik(): void
+    {
+        $this->bagan('3:4');
+        app(\App\Services\LayananPeriode::class)->aktifkan(OsisPeriod::factory()->tahun(2027)->create());
+        Storage::disk('public')->put('struktur/baru.png', 'x');
+        OrganizationStructure::create(['gambar' => 'struktur/baru.png']);
+
+        $this->get('/struktur')->assertOk()
+            ->assertSee('/storage/struktur/baru.png')
+            ->assertSeeInOrder(['Arsip kepengurusan', '2027/2028 (sekarang)', '2026/2027']);
+
+        $this->get('/struktur?periode=2026-2027')->assertOk()
+            ->assertSee('Arsip kepengurusan 2026/2027')
+            ->assertSee('/storage/struktur/bagan.png')
+            ->assertSee('data-rasio="3:4"', false);
+
+        // Periode tidak dikenal / bukan arsip kembali ke periode aktif.
+        \Livewire\Volt\Volt::test('struktur')->set('lihat', '2027-2028')->assertSet('lihat', '')->set('lihat', '../x')->assertSet('lihat', '');
+    }
 }
