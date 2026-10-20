@@ -64,4 +64,16 @@ class MenuPublikTest extends TestCase
         $this->get('/struktur')->assertOk()->assertSee('Struktur Organisasi')->assertSee('2026/2027');
         $this->get('/saran')->assertOk()->assertSee('Kotak Saran');
     }
+
+    public function test_halaman_pemberitahuan_terkunci_ramah(): void
+    {
+        $this->get('/terkunci?halaman=bilik-suara')->assertOk()
+            ->assertSee('Bilik Suara sedang ditutup')
+            ->assertSee('Di luar masa pemilihan')
+            ->assertSee('href="'.route('struktur').'"', false)
+            ->assertSee('href="'.route('saran').'"', false);
+
+        $this->get('/terkunci?halaman=hasil')->assertOk()->assertSee('Hasil Pemilihan sedang ditutup');
+        $this->get('/terkunci')->assertOk()->assertSee('Halaman pemilihan sedang ditutup');
+    }
 }
