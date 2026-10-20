@@ -15,12 +15,12 @@ new #[Layout('components.layouts.siswa')] #[Title('Struktur Organisasi')] class 
     #[\Livewire\Attributes\Locked]
     public ?array $struktur = null;
 
-    public function mount(): void
+    public function mount(\App\Services\LayananStruktur $layanan): void
     {
-        $this->adaPeriodeAktif = \App\Models\OsisPeriod::aktif() !== null;
-        $this->periode = \App\Models\OsisPeriod::aktif()?->nama ?? \App\Models\Member::periodeAktif();
-        $bagan = app(\App\Services\LayananStruktur::class)->aktif();
-        $this->struktur = $bagan ? ['gambar' => $bagan->urlGambar(), 'rasio' => $bagan->rasio, 'diperbarui' => $bagan->updated_at->toDateTimeString()] : null;
+        $data = $layanan->untukPublik();
+        $this->adaPeriodeAktif = $data['ada_periode_aktif'];
+        $this->periode = $data['periode'] ?? \App\Models\Member::periodeAktif();
+        $this->struktur = $data['struktur'];
     }
 }; ?>
 

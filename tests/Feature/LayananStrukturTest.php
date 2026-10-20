@@ -110,4 +110,21 @@ class LayananStrukturTest extends TestCase
         }
         Storage::disk('public')->assertMissing('struktur/yatim2.png');
     }
+
+    public function test_data_publik_hanya_bagan_periode_aktif(): void
+    {
+        $layanan = app(LayananStruktur::class);
+        $this->assertSame(['periode' => null, 'ada_periode_aktif' => false, 'struktur' => null], $layanan->untukPublik());
+
+        $lama = OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        \App\Models\OrganizationStructure::create(['gambar' => 'struktur/lama.png', 'rasio' => '3:4']);
+        $this->assertSame('3:4', $layanan->untukPublik()['struktur']['rasio']);
+        $this->assertArrayNotHasKey('diunggah_oleh', $layanan->untukPublik()['struktur']);
+
+        app(\App\Services\LayananPeriode::class)->aktifkan(OsisPeriod::factory()->tahun(2026)->create());
+        $data = $layanan->untukPublik();
+        $this->assertSame('2026/2027', $data['periode']);
+        $this->assertNull($data['struktur']);
+        $this->get('/struktur')->assertDontSee('struktur/lama.png');
+    }
 }

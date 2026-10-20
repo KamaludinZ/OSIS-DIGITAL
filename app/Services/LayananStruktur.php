@@ -19,6 +19,27 @@ class LayananStruktur
     }
 
     /**
+     * Data halaman publik Struktur Organisasi: hanya bagan periode aktif, tanpa data pengunggah.
+     *
+     * @return array{periode: ?string, ada_periode_aktif: bool, struktur: ?array{gambar: string, rasio: string, diperbarui: string}}
+     */
+    public function untukPublik(): array
+    {
+        $periode = OsisPeriod::aktif();
+        $bagan = $periode ? $this->aktif() : null;
+
+        return [
+            'periode' => $periode?->nama,
+            'ada_periode_aktif' => $periode !== null,
+            'struktur' => $bagan ? [
+                'gambar' => $bagan->urlGambar(),
+                'rasio' => $bagan->rasio,
+                'diperbarui' => $bagan->updated_at->toDateTimeString(),
+            ] : null,
+        ];
+    }
+
+    /**
      * Simpan bagan periode aktif dari berkas yang sudah tersimpan di disk public.
      * Bagan lama periode ini diganti dan berkas lamanya dihapus.
      *
