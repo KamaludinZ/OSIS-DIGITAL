@@ -3,7 +3,11 @@
 namespace App\Filament\Resources\Elections\Pages;
 
 use App\Filament\Resources\Elections\ElectionResource;
+use App\Support\DataTiruanModePemilihan;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
+use Filament\Notifications\Notification;
+use Filament\Support\Icons\Heroicon;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
@@ -14,7 +18,21 @@ class ListElections extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [CreateAction::make()];
+        return [$this->aksiUbahMode(), CreateAction::make()];
+    }
+
+    /** Satu tombol sakelar; label, warna, dan ikon mengikuti mode saat ini. */
+    protected function aksiUbahMode(): Action
+    {
+        return Action::make('ubahMode')
+            ->label(fn () => DataTiruanModePemilihan::aktif() ? 'Matikan mode pemilihan' : 'Nyalakan mode pemilihan')
+            ->icon(fn () => DataTiruanModePemilihan::aktif() ? Heroicon::OutlinedPauseCircle : Heroicon::OutlinedPlayCircle)
+            ->color(fn () => DataTiruanModePemilihan::aktif() ? 'danger' : 'success')
+            ->action(function () {
+                $aktif = ! DataTiruanModePemilihan::aktif();
+                DataTiruanModePemilihan::setel($aktif, auth()->user()->name);
+                Notification::make()->title($aktif ? 'Mode pemilihan dinyalakan' : 'Mode pemilihan dimatikan')->success()->send();
+            });
     }
 
     /** Kartu sakelar mode pemilihan di atas daftar periode pemilihan. */
