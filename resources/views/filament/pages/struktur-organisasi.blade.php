@@ -1,8 +1,8 @@
 <x-filament-panels::page>
-    <x-filament::section heading="Pratinjau halaman publik" :description="$struktur ? 'Diperbarui '.\Illuminate\Support\Carbon::parse($struktur['diperbarui'])->translatedFormat('j F Y, H:i').' · rasio '.$struktur['rasio'] : null">
+    <x-filament::section heading="Pratinjau halaman publik" :description="$struktur ? 'Diperbarui '.$struktur->updated_at->translatedFormat('j F Y, H:i').($struktur->pengunggah ? ' oleh '.$struktur->pengunggah->name : '').' · rasio '.$struktur->rasio : null">
         @if ($struktur)
             <div class="mx-auto max-w-3xl overflow-hidden rounded-xl ring-1 ring-garis">
-                <x-bagan-struktur :gambar="$struktur['gambar']" :rasio="$struktur['rasio']" />
+                <x-bagan-struktur :gambar="$struktur->urlGambar()" :rasio="$struktur->rasio" />
             </div>
         @else
             <div class="flex flex-col items-center gap-2 rounded-xl bg-hijau-50 p-10 text-center ring-1 ring-garis">

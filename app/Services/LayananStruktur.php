@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Services;
+
+use App\Exceptions\PeriodeDitolak;
+use App\Models\OrganizationStructure;
+use App\Models\OsisPeriod;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+
+/** Bagan struktur organisasi periode aktif: unggah/ganti, ubah rasio, hapus. */
+class LayananStruktur
+{
+    public function aktif(): ?OrganizationStructure
+    {
+        return OrganizationStructure::aktif();
+    }
+
+    /**
+     * Simpan bagan periode aktif dari berkas yang sudah tersimpan di disk public.
+     * Bagan lama periode ini diganti dan berkas lamanya dihapus.
+     *
+     * @throws PeriodeDitolak|ValidationException
+     */
+    public function unggah(string $path, string $rasio, User $oleh): OrganizationStructure
+    {
+        $this->periksaRasio($rasio);
+        $periode = OsisPeriod::aktif() ?? throw new PeriodeDitolak('Belum ada periode aktif. Aktifkan periode OSIM dulu.');
+
+        [$struktur, $berkasLama] = DB::transaction(function () use ($path, $rasio, $oleh, $periode) {
+            $struktur = OrganizationStructure::query()->lockForUpdate()->firstOrNew(['periode_id' => $periode->id]);
+            $berkasLama = $struktur->exists ? $struktur->gambar : null;
+            $struktur->fill(['gambar' => $path, 'rasio' => $rasio, 'diunggah_oleh' => $oleh->id])->save();
+
+            return [$struktur, $berkasLama];
+        });
+
+        if ($berkasLama && $berkasLama !== $path) {
+            Storage::disk('public')->delete($berkasLama);
+        }
+
+        return $struktur;
+    }
+
+    /** @throws PeriodeDitolak|ValidationException */
+    public function ubahRasio(string $rasio): OrganizationStructure
+    {
+        $this->periksaRasio($rasio);
+        $struktur = $this->aktif() ?? throw new PeriodeDitolak('Belum ada bagan untuk periode aktif.');
+        $struktur->update(['rasio' => $rasio]);
+
+        return $struktur;
+    }
+
+    /** @throws PeriodeDitolak */
+    public function hapus(): void
+    {
+        $struktur = $this->aktif() ?? throw new PeriodeDitolak('Belum ada bagan untuk periode aktif.');
+        $struktur->delete();
+        Storage::disk('public')->delete($struktur->gambar);
+    }
+
+    /** @throws ValidationException */
+    private function periksaRasio(string $rasio): void
+    {
+        if (! array_key_exists($rasio, OrganizationStructure::RASIO)) {
+            throw ValidationException::withMessages(['rasio' => 'Rasio tampilan harus 4:3 atau 3:4.']);
+        }
+    }
+}

@@ -11,7 +11,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Struktur Organisasi')] class 
     #[\Livewire\Attributes\Locked]
     public bool $adaPeriodeAktif = false;
 
-    /** Data tiruan: satu bagan untuk periode aktif (diganti tabel organization_structures di backend). */
+    /** Bagan periode aktif: url gambar, rasio, tanggal diperbarui. */
     #[\Livewire\Attributes\Locked]
     public ?array $struktur = null;
 
@@ -19,7 +19,8 @@ new #[Layout('components.layouts.siswa')] #[Title('Struktur Organisasi')] class 
     {
         $this->adaPeriodeAktif = \App\Models\OsisPeriod::aktif() !== null;
         $this->periode = \App\Models\OsisPeriod::aktif()?->nama ?? \App\Models\Member::periodeAktif();
-        $this->struktur = \App\Support\DataTiruanStruktur::aktif();
+        $bagan = app(\App\Services\LayananStruktur::class)->aktif();
+        $this->struktur = $bagan ? ['gambar' => $bagan->urlGambar(), 'rasio' => $bagan->rasio, 'diperbarui' => $bagan->updated_at->toDateTimeString()] : null;
     }
 }; ?>
 
