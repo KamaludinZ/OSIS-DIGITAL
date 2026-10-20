@@ -55,6 +55,7 @@ class KelolaPeriode extends Page implements HasTable
     protected function getHeaderActions(): array
     {
         return [
+            \App\Filament\Actions\UbahModePemilihanAction::make()->outlined(),
             Action::make('tambah')
                 ->label('Tambah periode')
                 ->icon(Heroicon::OutlinedPlus)

@@ -116,19 +116,49 @@ class ModePemilihanTest extends TestCase
 
     public function test_kendali_mode_tersembunyi_bagi_yang_tidak_berhak(): void
     {
-        // Pengurus hanya melihat status mode di halaman Periode OSIM, tanpa tombol.
-        $this->actingAs(User::factory()->pengurusMenjabat()->create());
+        // Pengurus tidak menjabat hanya melihat status mode, tanpa tombol.
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
         $this->get('/admin/periode-osim')->assertOk()
             ->assertSeeInOrder(['Mode pemilihan', 'Aktif'])
-            ->assertSee('Hanya panitia atau admin yang bisa mengubah mode.')
-            ->assertDontSee('Matikan mode pemilihan');
-        $this->get('/admin/periode-pemilihan')->assertForbidden();
-        $this->assertFalse(auth()->user()->can('ubah-mode-pemilihan'));
+            ->assertSee('Hanya panitia, admin, atau pengurus menjabat yang bisa mengubah mode.');
+        Livewire::test(\App\Filament\Pages\KelolaPeriode::class)->assertActionHidden('ubahMode');
+
+        // Pengurus menjabat bisa mengubah dari halaman Periode OSIM.
+        $this->actingAs(User::factory()->pengurusMenjabat()->create());
+        $this->get('/admin/periode-osim')->assertOk()->assertDontSee('Hanya panitia, admin, atau pengurus menjabat');
+        Livewire::test(\App\Filament\Pages\KelolaPeriode::class)
+            ->assertActionVisible('ubahMode')
+            ->callAction('ubahMode')
+            ->assertNotified('Mode pemilihan dimatikan');
+        $this->assertFalse($this->periode->fresh()->mode_pemilihan);
 
         foreach ([Peran::Panitia, Peran::Admin] as $peran) {
             $this->actingAs(User::factory()->create(['role' => $peran]));
-            $this->get('/admin/periode-pemilihan')->assertOk()->assertDontSee('Hanya panitia atau admin yang bisa mengubah mode.');
+            $this->get('/admin/periode-pemilihan')->assertOk()->assertDontSee('Hanya panitia, admin, atau pengurus menjabat');
             Livewire::test(ListElections::class)->assertActionVisible('ubahMode');
         }
+    }
+
+    public function test_endpoint_ubah_mode_dengan_otorisasi(): void
+    {
+        $this->patch('/mode-pemilihan', ['aktif' => false])->assertRedirect('/login');
+
+        foreach ([User::factory()->create(['role' => Peran::Pengurus]), User::factory()->create(['role' => Peran::Kandidat])] as $tanpaHak) {
+            $this->actingAs($tanpaHak)->patchJson('/mode-pemilihan', ['aktif' => false])->assertForbidden();
+        }
+        $this->assertTrue($this->periode->fresh()->mode_pemilihan);
+
+        $pengurus = User::factory()->pengurusMenjabat()->create();
+        $this->actingAs($pengurus)->patchJson('/mode-pemilihan', ['aktif' => 'x'])->assertUnprocessable();
+        $this->actingAs($pengurus)->patchJson('/mode-pemilihan', ['aktif' => false])
+            ->assertOk()->assertJson(['aktif' => false, 'periode' => '2026/2027', 'pesan' => 'Mode pemilihan dimatikan']);
+        $this->assertTrue($this->periode->fresh()->pengubahMode->is($pengurus));
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]))
+            ->from('/admin/periode-pemilihan')->patch('/mode-pemilihan', ['aktif' => true])
+            ->assertRedirect('/admin/periode-pemilihan')->assertSessionHas('status', 'Mode pemilihan dinyalakan');
+
+        $this->periode->update(['status' => 'arsip']);
+        $this->actingAs($pengurus)->patchJson('/mode-pemilihan', ['aktif' => false])->assertStatus(409);
     }
 }

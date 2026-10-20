@@ -12,6 +12,8 @@ Volt::route('hasil', 'hasil')->name('hasil');
 Volt::route('notifikasi', 'notifikasi')->name('notifikasi');
 Route::get('notifikasi/umpan', fn (App\Services\LayananNotifikasi $layanan) => response()->json($layanan->umpan())->header('Cache-Control', 'public, max-age=60'))
     ->middleware('throttle:60,1')->name('notifikasi.umpan');
+Route::patch('mode-pemilihan', App\Http\Controllers\ModePemilihanController::class)
+    ->middleware(['auth', 'can:ubah-mode-pemilihan', 'throttle:10,1'])->name('mode-pemilihan.ubah');
 Route::get('admin-cetak/kartu-pemilih', App\Http\Controllers\KartuPemilihController::class)->middleware(['auth', 'can:kelola-pemilih'])->name('kartu-pemilih');
 Route::get('hasil/laporan', [App\Http\Controllers\LaporanHasilController::class, 'cetak'])->name('hasil.laporan');
 Route::get('hasil/laporan.csv', [App\Http\Controllers\LaporanHasilController::class, 'csv'])->name('hasil.laporan.csv');

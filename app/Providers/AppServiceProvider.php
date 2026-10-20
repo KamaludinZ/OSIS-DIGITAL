@@ -59,8 +59,10 @@ class AppServiceProvider extends ServiceProvider
             && ($aktif = \App\Models\OsisPeriod::aktif()) !== null
             && ($saran === null || (int) $saran->periode_id === $aktif->id));
 
-        // Sakelar mode pemilihan mengubah menu publik seluruh situs: hanya panitia & admin.
-        Gate::define('ubah-mode-pemilihan', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Panitia, \App\Enums\Peran::Admin], true));
+        // Sakelar mode pemilihan mengubah menu publik seluruh situs: panitia, admin,
+        // dan pengurus yang masih menjabat. Pengurus tidak menjabat hanya melihat statusnya.
+        Gate::define('ubah-mode-pemilihan', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Panitia, \App\Enums\Peran::Admin], true)
+            || $pengguna->menjabat());
 
         Gate::define('publikasikan-hasil', fn (User $pengguna) => in_array($pengguna->role, [\App\Enums\Peran::Panitia, \App\Enums\Peran::Admin], true));
 

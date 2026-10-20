@@ -43,7 +43,7 @@
         @cannot('ubah-mode-pemilihan')
             <p class="mt-2 inline-flex items-center gap-1 font-semibold">
                 <x-filament::icon icon="heroicon-m-lock-closed" class="size-3.5" />
-                Hanya panitia atau admin yang bisa mengubah mode.
+                Hanya panitia, admin, atau pengurus menjabat yang bisa mengubah mode.
             </p>
         @endcannot
     </div>
