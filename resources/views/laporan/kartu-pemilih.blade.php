@@ -7,8 +7,12 @@
         <link rel="icon" href="/favicon.png" type="image/png" />
         @vite(['resources/css/app.css'])
         <style>
-            @page { size: A4; margin: 10mm; }
+            /* Kartu pemilih: A4, 3 kolom, garis gunting & warna kop tetap tercetak, kartu tidak terbelah halaman. */
+            @page { size: A4 portrait; margin: 10mm; }
             .kartu { break-inside: avoid; }
+            @media print {
+                html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
         </style>
     </head>
     <body class="osim py-8 print:py-0" style="background:#fff">

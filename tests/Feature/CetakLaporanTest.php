@@ -56,4 +56,19 @@ class CetakLaporanTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
         $this->get(route('kartu-pemilih', ['contoh' => 1]))->assertForbidden();
     }
+
+    public function test_gaya_cetak_kartu_dan_berita_acara(): void
+    {
+        $this->seed(PemilihanSeeder::class);
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+
+        $this->get(route('kartu-pemilih', ['contoh' => 1]))
+            ->assertSee('@page { size: A4 portrait; margin: 10mm; }', false)
+            ->assertSee('print-color-adjust: exact', false);
+
+        $this->get(route('hasil.laporan'))->assertOk()
+            ->assertSee('@page { size: A4 portrait;', false)
+            ->assertSee('tr, .ttd { break-inside: avoid; }', false)
+            ->assertSee('class="ttd', false);
+    }
 }

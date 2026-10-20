@@ -6,6 +6,15 @@
         <title>Berita Acara Hasil · {{ $rekap['judul'] }}</title>
         <link rel="icon" href="/favicon.png" type="image/png" />
         @vite(['resources/css/app.css'])
+        <style>
+            /* Berita acara: A4 tegak, warna kop tetap tercetak, baris tabel & tanda tangan tidak terpotong halaman. */
+            @page { size: A4 portrait; margin: 15mm 15mm 18mm; }
+            @media print {
+                html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 11pt; }
+                tr, .ttd { break-inside: avoid; }
+                a[href]::after { content: none; }
+            }
+        </style>
     </head>
     <body class="osim min-h-screen py-8 print:py-0" style="background:#fff">
         <div class="mx-auto max-w-3xl px-6">
@@ -64,7 +73,7 @@
                 @endif
             </p>
 
-            <div class="mt-12 grid grid-cols-2 gap-8 text-center text-tinta">
+            <div class="ttd mt-12 grid grid-cols-2 gap-8 text-center text-tinta">
                 <div>
                     <p>Ketua Panitia Pemilihan</p>
                     <p class="mt-20 border-t border-tinta pt-1">(.................................)</p>
