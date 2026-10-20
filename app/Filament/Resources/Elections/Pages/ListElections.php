@@ -28,6 +28,13 @@ class ListElections extends ListRecords
             ->label(fn () => DataTiruanModePemilihan::aktif() ? 'Matikan mode pemilihan' : 'Nyalakan mode pemilihan')
             ->icon(fn () => DataTiruanModePemilihan::aktif() ? Heroicon::OutlinedPauseCircle : Heroicon::OutlinedPlayCircle)
             ->color(fn () => DataTiruanModePemilihan::aktif() ? 'danger' : 'success')
+            // Konfirmasi berisi dampak agar tidak salah tekan.
+            ->requiresConfirmation()
+            ->modalIcon(fn () => DataTiruanModePemilihan::aktif() ? Heroicon::OutlinedPauseCircle : Heroicon::OutlinedPlayCircle)
+            ->modalHeading(fn () => DataTiruanModePemilihan::aktif() ? 'Matikan mode pemilihan?' : 'Nyalakan mode pemilihan?')
+            ->modalDescription(null)
+            ->modalContent(fn () => view('filament.dampak-mode-pemilihan', ['menyalakan' => ! DataTiruanModePemilihan::aktif()]))
+            ->modalSubmitActionLabel(fn () => DataTiruanModePemilihan::aktif() ? 'Ya, matikan' : 'Ya, nyalakan')
             ->action(function () {
                 $aktif = ! DataTiruanModePemilihan::aktif();
                 DataTiruanModePemilihan::setel($aktif, auth()->user()->name);

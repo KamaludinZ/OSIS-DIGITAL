@@ -46,4 +46,16 @@ class ModePemilihanTest extends TestCase
 
         $this->assertTrue(\App\Support\DataTiruanModePemilihan::aktif());
     }
+
+    public function test_dialog_konfirmasi_menjelaskan_dampak_perubahan_mode(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Admin]));
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Elections\Pages\ListElections::class)
+            ->mountAction('ubahMode')
+            ->assertMountedActionModalSee(['Matikan mode pemilihan?', 'Struktur Organisasi dan Kotak Saran', 'dikunci', 'Ya, matikan'])
+            ->callMountedAction()
+            ->mountAction('ubahMode')
+            ->assertMountedActionModalSee(['Nyalakan mode pemilihan?', 'Bilik Suara, Kandidat, dan Hasil', 'Ya, nyalakan']);
+    }
 }
