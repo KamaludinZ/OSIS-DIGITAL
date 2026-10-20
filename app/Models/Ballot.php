@@ -24,7 +24,7 @@ class Ballot extends Model
     {
         // UUID v4 acak (bukan berurutan waktu) agar tidak bisa dikorelasikan dengan urutan kehadiran.
         static::creating(fn (Ballot $b) => $b->id ??= (string) Str::uuid());
-        static::updating(fn () => throw new \LogicException('Surat suara tidak bisa diubah.'));
+        static::updating(fn () => throw new \LogicException('Suara yang sudah tercatat tidak bisa diubah.'));
     }
 
     public function election(): BelongsTo

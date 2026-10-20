@@ -72,4 +72,29 @@ class SuaraAnonimTest extends TestCase
         $this->assertSame(2, \Illuminate\Support\Facades\DB::table('votes')->count());
         $this->assertFalse(Schema::hasColumn('votes', 'candidate_id'));
     }
+
+    public function test_suara_tidak_bisa_diubah_lewat_model_maupun_kueri_langsung(): void
+    {
+        $this->seed(PemilihanSeeder::class);
+        [$satu, $dua] = Candidate::orderBy('nomor_urut')->take(2)->get();
+        $hadir = app(\App\Services\LayananPemilihan::class)->kirimSuara(\App\Models\Voter::factory()->create(), $satu->election, $satu->id);
+        $kodeAsli = $hadir->kode_bukti;
+
+        foreach ([
+            fn () => $hadir->update(['kode_bukti' => 'OSIM-UBAH-UBAH']),
+            fn () => \Illuminate\Support\Facades\DB::table('votes')->update(['kode_bukti' => 'OSIM-UBAH-UBAH']),
+            fn () => \Illuminate\Support\Facades\DB::table('ballots')->update(['candidate_id' => $dua->id]),
+        ] as $i => $ubah) {
+            try {
+                // Savepoint: di PostgreSQL galat membatalkan transaksi uji bila tidak dibungkus.
+                \Illuminate\Support\Facades\DB::transaction($ubah);
+                $this->fail('Perubahan ke-'.$i.' seharusnya ditolak.');
+            } catch (\LogicException|\Illuminate\Database\QueryException $e) {
+                $this->assertStringContainsString('tidak bisa diubah', $e->getMessage());
+            }
+        }
+
+        $this->assertSame(1, Ballot::where('candidate_id', $satu->id)->count());
+        $this->assertSame($kodeAsli, \Illuminate\Support\Facades\DB::table('votes')->value('kode_bukti'));
+    }
 }

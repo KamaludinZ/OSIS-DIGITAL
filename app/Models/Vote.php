@@ -31,6 +31,9 @@ class Vote extends Model
             }
             unset($vote->candidate_id);
         });
+
+        // Suara tidak pernah diubah setelah dikirim (juga dijaga trigger basis data).
+        static::updating(fn () => throw new \LogicException('Suara yang sudah tercatat tidak bisa diubah.'));
     }
 
     public function election(): BelongsTo
