@@ -67,6 +67,12 @@ class MenuPublikTest extends TestCase
 
     public function test_halaman_pemberitahuan_terkunci_ramah(): void
     {
+        // Saat mode aktif, halaman terkunci langsung meneruskan ke tujuan.
+        $this->get('/terkunci?halaman=kandidat')->assertRedirect(route('kandidat.index'));
+        $this->get('/terkunci?halaman=ngawur')->assertRedirect(route('home'));
+
+        app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
+
         $this->get('/terkunci?halaman=bilik-suara')->assertOk()
             ->assertSee('Bilik Suara sedang ditutup')
             ->assertSee('Di luar masa pemilihan')
@@ -75,6 +81,7 @@ class MenuPublikTest extends TestCase
 
         $this->get('/terkunci?halaman=hasil')->assertOk()->assertSee('Hasil Pemilihan sedang ditutup');
         $this->get('/terkunci')->assertOk()->assertSee('Halaman pemilihan sedang ditutup');
+        $this->get('/terkunci?halaman=<b>x</b>')->assertOk()->assertSee('Halaman pemilihan sedang ditutup')->assertDontSee('<b>x</b>', false);
     }
 
     public function test_halaman_publik_memantau_pergantian_mode(): void

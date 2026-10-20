@@ -10,6 +10,22 @@ new #[Layout('components.layouts.siswa')] #[Title('Halaman ditutup sementara')] 
     #[Url(as: 'halaman')]
     public string $halaman = '';
 
+    /** Rute tujuan per halaman yang bisa terkunci. */
+    private const RUTE = ['bilik-suara' => 'bilik-suara', 'kandidat' => 'kandidat.index', 'hasil' => 'hasil'];
+
+    public function mount(): void
+    {
+        // Hanya nilai yang dikenal yang dipakai; selebihnya pesan umum.
+        if (! array_key_exists($this->halaman, self::RUTE)) {
+            $this->halaman = '';
+        }
+
+        // Mode pemilihan sudah aktif lagi: langsung ke halaman yang dituju.
+        if (app(\App\Services\LayananModePemilihan::class)->aktif()) {
+            $this->redirectRoute($this->halaman ? self::RUTE[$this->halaman] : 'home', navigate: true);
+        }
+    }
+
     public function namaHalaman(): string
     {
         return match ($this->halaman) {
