@@ -15,14 +15,8 @@ new #[Layout('components.layouts.siswa')] #[Title('Bukti Suara')] class extends 
         $pemilih = app(\App\Services\SesiPemilih::class)->pemilih();
         $bukti = $pemilih ? $layanan->buktiSuara($pemilih) : null;
 
-        if (! $bukti) {
-            // Belum memilih: arahkan ke bilik suara.
-            $this->redirectRoute('bilik-suara', navigate: true);
-
-            return;
-        }
-
-        $this->bukti = $bukti;
+        // Belum memilih / sesi berakhir: tampilkan keadaan kosong, bukan galat.
+        $this->bukti = $bukti ?? [];
     }
 
     /** Akhiri sesi pemilih agar komputer bisa dipakai siswa berikutnya. */
@@ -34,6 +28,26 @@ new #[Layout('components.layouts.siswa')] #[Title('Bukti Suara')] class extends 
 }; ?>
 
 <div>
+    @if (empty($bukti))
+        <x-osim.pita class="pt-6 sm:pt-10 pb-24">
+            <h1 class="font-display text-4xl font-black leading-none sm:text-5xl">Belum ada bukti suara</h1>
+            <p class="mt-3 max-w-xl text-hijau-50">Bukti hanya tampil di perangkat yang dipakai memilih, selama sesi bilik suara masih berjalan. Kode bukti tetap tercatat di sistem panitia.</p>
+        </x-osim.pita>
+        <x-osim.wadah class="-mt-14 max-w-xl">
+            <section class="flex flex-col items-center gap-3 rounded-[14px] bg-white p-8 text-center shadow-[0_18px_40px_-18px_rgb(4_41_26/0.5)] ring-1 ring-garis">
+                <flux:icon.document-magnifying-glass class="size-12 text-hijau-600" />
+                <p class="font-bold text-tinta">Kamu belum memilih, atau sesi bilik suara sudah diakhiri.</p>
+                <div class="mt-2 flex w-full flex-col gap-2 sm:flex-row">
+                    <a href="{{ route('bilik-suara') }}" wire:navigate class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-hijau-600 px-5 py-3 font-bold text-white hover:bg-hijau-700">
+                        <flux:icon.check-badge variant="mini" /> Masuk bilik suara
+                    </a>
+                    <a href="{{ route('home') }}" wire:navigate class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-hijau-800 ring-1 ring-garis hover:bg-hijau-50">
+                        <flux:icon.arrow-left variant="mini" /> Kembali ke Beranda
+                    </a>
+                </div>
+            </section>
+        </x-osim.wadah>
+    @else
     <x-osim.pita class="pt-6 sm:pt-10 pb-28">
         <h1 class="font-display text-4xl font-black leading-none sm:text-5xl">Suara Anda sudah tercatat</h1>
         <p class="mt-3 max-w-xl text-hijau-50">Terima kasih telah menggunakan hak pilih. Suara Anda sudah dikunci dan tidak bisa diubah lagi.</p>
@@ -75,6 +89,9 @@ new #[Layout('components.layouts.siswa')] #[Title('Bukti Suara')] class extends 
         </section>
 
         <div class="mt-5 flex flex-col gap-2 sm:flex-row print:hidden">
+            <a href="{{ route('home') }}" wire:navigate class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-hijau-800 ring-1 ring-garis hover:bg-hijau-50 sm:order-last">
+                <flux:icon.arrow-left variant="mini" /> Kembali
+            </a>
             <button type="button" wire:click="selesai" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-hijau-600 px-5 py-3 font-bold text-white hover:bg-hijau-700">
                 <flux:icon.arrow-right-start-on-rectangle variant="mini" /> Selesai &amp; keluar
             </button>
@@ -84,4 +101,5 @@ new #[Layout('components.layouts.siswa')] #[Title('Bukti Suara')] class extends 
         </div>
 
     </x-osim.wadah>
+    @endif
 </div>

@@ -186,6 +186,9 @@ class BilikSuaraTest extends TestCase
             ->assertSee('OSIM-ABCD-EFGH')
             ->assertSee('Stempel: SUDAH MEMILIH')
             ->assertSee('Selesai &amp; keluar', false)
+            ->assertSee('Cetak bukti')
+            ->assertSee('window.print()', false)
+            ->assertSeeInOrder(['Kembali', 'Selesai'])
             ->assertDontSee('Nadia Kusuma');
 
         session([SesiPemilih::KUNCI_PEMILIH => $this->pemilih->id, 'pemilih_masuk_pada' => now()->timestamp]);
@@ -193,9 +196,16 @@ class BilikSuaraTest extends TestCase
         $this->assertNull(session(SesiPemilih::KUNCI_PEMILIH));
     }
 
-    public function test_bukti_tanpa_sesi_diarahkan_ke_bilik(): void
+    public function test_bukti_tanpa_sesi_menampilkan_keadaan_kosong(): void
     {
-        $this->get('/bilik-suara/bukti')->assertRedirect(route('bilik-suara'));
+        $this->get('/bilik-suara/bukti')->assertOk()
+            ->assertSee('Belum ada bukti suara')
+            ->assertSee('href="'.route('bilik-suara').'"', false)
+            ->assertSee('Kembali ke Beranda')
+            ->assertDontSee('Kartu Bukti Memilih');
+
+        // Sudah masuk tapi belum memilih: tetap keadaan kosong.
+        $this->masuk()->get('/bilik-suara/bukti')->assertOk()->assertSee('Belum ada bukti suara');
     }
 
     public function test_tombol_beranda_berubah_setelah_memilih(): void
