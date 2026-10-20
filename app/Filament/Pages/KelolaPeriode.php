@@ -14,6 +14,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -76,12 +77,30 @@ class KelolaPeriode extends Page implements HasTable
             TextInput::make('nama')->label('Nama periode')->placeholder('Contoh: 2027/2028')->required()
                 ->regex('/^\d{4}\/\d{4}$/')
                 ->unique(OsisPeriod::class, 'nama', modifyRuleUsing: fn (Unique $rule) => $kecuali ? $rule->ignore($kecuali->id) : $rule)
+                ->rule(fn (Get $get) => self::aturanRentang('nama', $get, $kecuali))
                 ->validationMessages(['regex' => 'Format periode: 2027/2028.', 'unique' => 'Periode ini sudah ada.'])
                 ->columnSpanFull(),
-            DatePicker::make('mulai')->label('Mulai menjabat')->required(),
+            DatePicker::make('mulai')->label('Mulai menjabat')->required()
+                ->rule(fn (Get $get) => self::aturanRentang('mulai', $get, $kecuali)),
             DatePicker::make('selesai')->label('Selesai menjabat')->required()->after('mulai')
-                ->validationMessages(['after' => 'Tanggal selesai harus sesudah tanggal mulai.']),
+                ->validationMessages(['after' => 'Tanggal selesai harus sesudah tanggal mulai.'])
+                ->rule(fn (Get $get) => self::aturanRentang('selesai', $get, $kecuali)),
         ];
+    }
+
+    /** Aturan rentang dari LayananPeriode, ditampilkan di bawah isian yang bersangkutan. */
+    private static function aturanRentang(string $isian, Get $get, ?OsisPeriod $kecuali): \Closure
+    {
+        return function (string $attribute, $value, \Closure $fail) use ($isian, $get, $kecuali) {
+            $galat = app(LayananPeriode::class)->periksaRentang(
+                ['nama' => $get('nama'), 'mulai' => $get('mulai'), 'selesai' => $get('selesai')],
+                $kecuali,
+            );
+
+            if (isset($galat[$isian])) {
+                $fail($galat[$isian]);
+            }
+        };
     }
 
     protected function getViewData(): array

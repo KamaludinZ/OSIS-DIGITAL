@@ -188,4 +188,36 @@ class KelolaPeriodeTest extends TestCase
             ->assertSee('1 dari 3 akun pengurus masih menjabat')
             ->assertSeeInOrder(['Ahmad Fauzan', 'Menjabat', 'Zaki Mantan', 'Tidak menjabat']);
     }
+
+    public function test_validasi_rentang_tanggal_periode(): void
+    {
+        $this->masukSebagai();
+        $tambah = fn (array $isian) => Livewire::test(KelolaPeriode::class)->callAction('tambah', data: $isian);
+
+        // Tahun kedua harus tahun pertama + 1.
+        $tambah(['nama' => '2027/2029', 'mulai' => '2027-07-12', 'selesai' => '2028-06-23'])
+            ->assertHasFormErrors(['nama']);
+        // Mulai harus di tahun pertama; selesai paling lambat akhir tahun kedua.
+        $tambah(['nama' => '2027/2028', 'mulai' => '2028-01-05', 'selesai' => '2028-06-23'])
+            ->assertHasFormErrors(['mulai']);
+        $tambah(['nama' => '2027/2028', 'mulai' => '2027-07-12', 'selesai' => '2029-01-10'])
+            ->assertHasFormErrors(['selesai']);
+        // Tidak boleh bertumpang tindih dengan periode 2026/2027 (14 Jul 2026 – 26 Jun 2027).
+        $tambah(['nama' => '2027/2028', 'mulai' => '2027-06-01', 'selesai' => '2028-05-31'])
+            ->assertHasFormErrors(['mulai']);
+        $tambah(['nama' => '2027/2028', 'mulai' => '2027-06-27', 'selesai' => '2028-06-23'])
+            ->assertHasNoFormErrors();
+
+        // Mengubah periode tidak bentrok dengan dirinya sendiri.
+        Livewire::test(KelolaPeriode::class)
+            ->callTableAction('ubah', $this->aktif, data: ['nama' => '2026/2027', 'mulai' => '2026-07-01', 'selesai' => '2027-06-26'])
+            ->assertHasNoTableActionErrors();
+    }
+
+    public function test_layanan_menolak_rentang_tidak_valid_tanpa_lewat_form(): void
+    {
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+
+        app(\App\Services\LayananPeriode::class)->buat(['nama' => '2026/2027', 'mulai' => '2026-08-01', 'selesai' => '2027-06-01']);
+    }
 }
