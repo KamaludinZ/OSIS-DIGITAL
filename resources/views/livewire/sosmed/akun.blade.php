@@ -14,6 +14,7 @@ new #[Layout('components.layouts.siswa')] class extends Component {
         abort_unless($akun?->tautanSah(), 404);
 
         $this->akun = [
+            'id' => $akun->id,
             'platform' => $akun->platform->value,
             'label' => $akun->platform->label(),
             'nama_akun' => $akun->nama_akun,
@@ -52,7 +53,7 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                 </div>
                 <p class="text-sm text-tinta-2" aria-live="polite">Dialihkan otomatis dalam <span x-text="sisa">5</span> detik…</p>
                 <div class="flex flex-col gap-2 sm:flex-row">
-                    <a x-ref="tujuan" href="{{ $akun['tautan'] }}" rel="noopener noreferrer"
+                    <a x-ref="tujuan" href="{{ route('sosmed.akun.buka', $akun['id']) }}" rel="noopener noreferrer"
                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-hijau-600 px-5 py-3 font-bold text-white hover:bg-hijau-700">
                         Lanjutkan ke {{ $akun['label'] }} <flux:icon.arrow-top-right-on-square variant="micro" />
                     </a>

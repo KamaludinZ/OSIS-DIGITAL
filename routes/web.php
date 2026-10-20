@@ -7,6 +7,7 @@ Volt::route('/', 'beranda')->name('home');
 
 Volt::route('cari', 'cari')->name('cari');
 Volt::route('sosmed/akun/{id}', 'sosmed.akun')->whereNumber('id')->middleware('throttle:60,1')->name('sosmed.akun');
+Route::get('sosmed/akun/{akun}/buka', [App\Http\Controllers\BukaSosmedController::class, 'akun'])->whereNumber('akun')->middleware('throttle:60,1')->name('sosmed.akun.buka');
 Volt::route('struktur', 'struktur')->name('struktur');
 Volt::route('saran', 'saran')->name('saran');
 Volt::route('terkunci', 'terkunci')->name('terkunci');

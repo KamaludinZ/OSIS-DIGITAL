@@ -144,7 +144,7 @@ class AkunSosmedTest extends TestCase
         $this->get('/sosmed/akun/'.$this->instagram->id)->assertOk()
             ->assertSee('Membuka Instagram')
             ->assertSee('www.instagram.com')
-            ->assertSee('href="https://www.instagram.com/osim.mtsn2malang" rel="noopener noreferrer"', false)
+            ->assertSee('href="'.route('sosmed.akun.buka', $this->instagram->id).'" rel="noopener noreferrer"', false)
             ->assertSee('Tetap di situs OSIM');
 
         // Akun arsip / tidak dikenal tidak bisa dipakai untuk dialihkan.
@@ -195,5 +195,19 @@ class AkunSosmedTest extends TestCase
         $layanan->hapus($this->tiktok);
         $this->assertCount(2, $layanan->publik());
         $this->assertSame(['id', 'platform', 'label', 'nama_akun', 'url'], array_keys($layanan->publik()[0]));
+    }
+
+    public function test_endpoint_pengalihan_aman_menghitung_dan_menolak_alamat_tidak_valid(): void
+    {
+        $this->get('/sosmed/akun/'.$this->instagram->id.'/buka')->assertRedirect('https://www.instagram.com/osim.mtsn2malang');
+        $this->get('/sosmed/akun/'.$this->instagram->id.'/buka')->assertRedirect('https://www.instagram.com/osim.mtsn2malang');
+        $this->assertSame(1, $this->instagram->fresh()->jumlah_klik, 'Dihitung sekali per sesi.');
+
+        $this->get('/sosmed/akun/'.$this->arsip->id.'/buka')->assertNotFound();
+        $this->get('/sosmed/akun/abc/buka')->assertNotFound();
+
+        \Illuminate\Support\Facades\DB::table('social_links')->where('id', $this->tiktok->id)->update(['tautan' => 'javascript:alert(1)']);
+        $this->get('/sosmed/akun/'.$this->tiktok->id.'/buka')->assertNotFound();
+        $this->assertSame(0, $this->tiktok->fresh()->jumlah_klik);
     }
 }
