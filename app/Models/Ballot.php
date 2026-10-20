@@ -25,7 +25,11 @@ class Ballot extends Model
         // UUID v4 acak (bukan berurutan waktu) agar tidak bisa dikorelasikan dengan urutan kehadiran.
         static::creating(fn (Ballot $b) => $b->id ??= (string) Str::uuid());
         // Rekap agregat ikut bertambah dalam transaksi yang sama (atomik, tanpa waktu).
-        static::created(fn (Ballot $b) => \App\Services\LayananHasil::tambahHitungan($b->election_id, $b->candidate_id));
+        static::created(function (Ballot $b) {
+            \App\Services\LayananHasil::tambahHitungan($b->election_id, $b->candidate_id);
+            // Rekap ter-cache di halaman Hasil langsung kedaluwarsa.
+            \App\Services\LayananHasil::lupakanCache($b->election_id);
+        });
         static::updating(fn () => throw new \LogicException('Suara yang sudah tercatat tidak bisa diubah.'));
     }
 

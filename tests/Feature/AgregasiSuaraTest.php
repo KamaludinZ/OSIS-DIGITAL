@@ -109,4 +109,26 @@ class AgregasiSuaraTest extends TestCase
         $this->assertSame([2, 1], array_column(app(LayananHasil::class)->perolehanSuara($e), 'suara'));
         $this->artisan('osim:hitung-ulang-rekap', ['pemilihan' => $e->id])->expectsOutputToContain('sudah sesuai')->assertSuccessful();
     }
+
+    public function test_rekap_di_cache_dan_kedaluwarsa_saat_ada_suara_atau_kandidat_berubah(): void
+    {
+        config(['cache.default' => 'array']);
+        $e = Election::factory()->create();
+        $a = Candidate::factory()->for($e)->create(['nomor_urut' => 1, 'nama_ketua' => 'Nama Lama']);
+        $layanan = app(LayananHasil::class);
+
+        $this->assertSame(0, $layanan->rekap($e)['suara_masuk']);
+
+        // Tanpa invalidasi, rekap tetap dari cache (tidak ada kueri lagi).
+        DB::enableQueryLog();
+        $layanan->rekap($e);
+        $this->assertCount(0, DB::getQueryLog());
+        DB::disableQueryLog();
+
+        \App\Models\Ballot::create(['election_id' => $e->id, 'candidate_id' => $a->id]);
+        $this->assertSame(1, $layanan->rekap($e)['suara_masuk']);
+
+        $a->update(['nama_ketua' => 'Nama Baru']);
+        $this->assertSame('Nama Baru', $layanan->rekap($e)['kandidat'][0]['nama_ketua']);
+    }
 }

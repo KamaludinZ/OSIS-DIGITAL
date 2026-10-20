@@ -97,11 +97,15 @@ class HasilTest extends TestCase
         app(\App\Services\LayananPemilihan::class)->kirimSuara($pemilih, $e, Candidate::first()->id);
         $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 11);
 
-        // Tanpa pembuangan cache, angka bertahan sampai cache kedaluwarsa.
+        // Jalur lain yang mencatat surat suara juga langsung membuang cache.
         Vote::create(['election_id' => $e->id, 'voter_id' => \App\Models\Voter::factory()->create()->id, 'candidate_id' => Candidate::first()->id, 'kode_bukti' => 'OSIM-LANGSUNG-1']);
-        $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 11);
-        $this->travel(\App\Services\LayananHasil::CACHE_DETIK + 1)->seconds();
         $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 12);
+
+        // Perubahan di luar model (mis. pemulihan manual) bertahan sampai cache kedaluwarsa.
+        \Illuminate\Support\Facades\DB::table('vote_tallies')->where('candidate_id', Candidate::first()->id)->increment('jumlah');
+        $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 12);
+        $this->travel(\App\Services\LayananHasil::CACHE_DETIK + 1)->seconds();
+        $komponen->call('muatUlang')->assertSet('rekap.suara_masuk', 13);
     }
 
     public function test_hasil_sebelum_bilik_dibuka_tidak_ditulis_ditutup(): void

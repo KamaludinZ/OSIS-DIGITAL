@@ -12,6 +12,13 @@ class Candidate extends Model
     /** @use HasFactory<\Database\Factories\CandidateFactory> */
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        // Nama/foto/nomor kandidat berubah -> rekap ter-cache di halaman Hasil ikut diperbarui.
+        static::saved(fn (Candidate $c) => \App\Services\LayananHasil::lupakanCache($c->election_id));
+        static::deleted(fn (Candidate $c) => \App\Services\LayananHasil::lupakanCache($c->election_id));
+    }
+
     protected $fillable = [
         'election_id',
         'nomor_urut',
