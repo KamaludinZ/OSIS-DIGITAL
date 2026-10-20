@@ -152,4 +152,41 @@ class BilikSuaraLanjutanTest extends TestCase
         $this->assertSame('OSIM-BBBB-CCCC', $suara->kode_bukti);
         $this->assertSame(2, Vote::count());
     }
+
+    public function test_penolakan_suara_ganda_berlapis_tetap_berjalan(): void
+    {
+        $layanan = app(\App\Services\LayananPemilihan::class);
+        $pemilihan = \App\Models\Election::find(Candidate::find($this->idNomor(1))->election_id);
+
+        $layanan->kirimSuara($this->pemilih, $pemilihan, $this->idNomor(1));
+
+        // Lapis 1: kelayakan di server.
+        try {
+            $layanan->kirimSuara($this->pemilih, $pemilihan, $this->idNomor(2));
+            $this->fail('Suara kedua seharusnya ditolak.');
+        } catch (\App\Exceptions\SuaraDitolak $e) {
+            $this->assertSame('sudah_memilih', $e->alasan);
+        }
+
+        // Lapis 2: indeks unik basis data (meniru dua permintaan bersamaan yang lolos cek kelayakan).
+        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        Vote::create(['election_id' => $pemilihan->id, 'voter_id' => $this->pemilih->id, 'candidate_id' => $this->idNomor(3), 'kode_bukti' => 'OSIM-ZZZZ-ZZZZ']);
+    }
+
+    public function test_tabrakan_karena_pemilih_sama_tetap_ditolak_tanpa_mencoba_ulang(): void
+    {
+        $pemilihan = \App\Models\Election::find(Candidate::find($this->idNomor(1))->election_id);
+        $layanan = \Mockery::mock(\App\Services\LayananPemilihan::class)->makePartial();
+        // Kelayakan "lolos" (seolah permintaan bersamaan), tetapi suara pemilih ini sudah tersimpan.
+        $layanan->shouldReceive('kelayakan')->andReturn(['boleh' => true, 'alasan' => null, 'pesan' => null]);
+        Vote::create(['election_id' => $pemilihan->id, 'voter_id' => $this->pemilih->id, 'candidate_id' => $this->idNomor(1), 'kode_bukti' => 'OSIM-YYYY-YYYY']);
+
+        try {
+            $layanan->kirimSuara($this->pemilih, $pemilihan, $this->idNomor(2));
+            $this->fail('Seharusnya ditolak.');
+        } catch (\App\Exceptions\SuaraDitolak $e) {
+            $this->assertSame('sudah_memilih', $e->alasan);
+        }
+        $this->assertSame(1, Vote::count());
+    }
 }
