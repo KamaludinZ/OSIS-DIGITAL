@@ -194,7 +194,8 @@ class LayananNotifikasi
     {
         $e = Election::aktif();
 
-        if (! $e) {
+        // Di luar masa pemilihan, tautan bilik suara/kandidat/hasil terkunci: jangan diumumkan.
+        if (! $e || ! app(LayananModePemilihan::class)->aktif()) {
             return [];
         }
 

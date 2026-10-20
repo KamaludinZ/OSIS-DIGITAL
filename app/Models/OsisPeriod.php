@@ -23,6 +23,12 @@ class OsisPeriod extends Model
     protected static function booted(): void
     {
         static::saved(fn () => static::lupakanAktif());
+        // Mode/periode aktif berganti: umpan pemberitahuan publik disusun ulang.
+        static::saved(function (OsisPeriod $periode) {
+            if ($periode->wasChanged(['mode_pemilihan', 'status']) || $periode->wasRecentlyCreated) {
+                \App\Services\LayananNotifikasi::lupakan();
+            }
+        });
         static::deleted(fn () => static::lupakanAktif());
     }
 

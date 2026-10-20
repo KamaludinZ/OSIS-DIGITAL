@@ -102,4 +102,20 @@ class SakelarModePemilihanTest extends TestCase
         $this->assertFalse($this->periode->fresh()->mode_pemilihan);
         $this->assertTrue(app(LayananModePemilihan::class)->aktif());
     }
+
+    public function test_umpan_publik_mengikuti_mode_pemilihan(): void
+    {
+        $pemilihan = \App\Models\Election::aktif();
+        $pemilihan->update(['status' => 'berjalan', 'mulai' => now()->subHour(), 'selesai' => now()->addHours(3)]);
+
+        $jenis = fn () => collect($this->getJson('/notifikasi/umpan')->assertOk()->json())->pluck('jenis')->all();
+        $this->assertContains('pemilihan', $jenis());
+
+        // Mode dimatikan: pengingat pemilihan langsung hilang dari umpan (cache dibersihkan).
+        app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
+        $this->assertNotContains('pemilihan', $jenis());
+
+        app(LayananModePemilihan::class)->ubah(true, User::factory()->create());
+        $this->assertContains('pemilihan', $jenis());
+    }
 }
