@@ -358,7 +358,9 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                 </div>
 
                 @forelse ($tanyaJawab as $item)
-                    <article wire:key="tanya-{{ $item['id'] }}" class="rounded-[14px] bg-white p-5 ring-1 ring-garis">
+                    {{-- Pertanyaan & jawaban berdampingan di layar lebar, bertumpuk di ponsel. --}}
+                    <article wire:key="tanya-{{ $item['id'] }}" @class(['osim-tanya-jawab rounded-[14px] bg-white p-5 ring-1 ring-garis', 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5' => ! $this->kandidatSaya()])>
+                        <div>
                         <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-tinta-2">
                             <span>{{ $item['penanya'] }} · {{ \Illuminate\Support\Carbon::parse($item['created_at'])->diffForHumans() }}</span>
                             <span class="flex flex-wrap items-center gap-1.5">
@@ -371,6 +373,7 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                             </span>
                         </div>
                         <p class="mt-2 text-lg font-bold leading-snug text-tinta">{{ $item['pertanyaan'] }}</p>
+                        </div>
 
                         @if ($this->kandidatSaya())
                             <form wire:submit="tanggapi({{ $item['id'] }})" class="mt-3 flex flex-col gap-2 rounded-xl bg-hijau-50 p-3 ring-1 ring-garis">
@@ -389,13 +392,15 @@ new #[Layout('components.layouts.siswa')] class extends Component {
                                 </div>
                             </form>
                         @elseif ($item['jawaban'])
-                            <div class="mt-3 rounded-xl bg-hijau-50 px-4 py-3 ring-1 ring-garis">
+                            <div class="mt-3 rounded-xl bg-hijau-50 px-4 py-3 ring-1 ring-garis lg:mt-0">
                                 <div class="flex items-center gap-2 text-xs font-bold text-hijau-700">
                                     <span class="font-display angka flex size-5 items-center justify-center rounded bg-hijau-600 text-[11px] font-black text-white">{{ $calon['nomor_urut'] }}</span>
                                     Jawaban {{ $calon['berpasangan'] ? 'Paslon' : 'Calon' }} {{ $calon['nomor_urut'] }}
                                 </div>
                                 <p class="mt-1 text-tinta">{{ $item['jawaban'] }}</p>
                             </div>
+                        @else
+                            <p class="mt-3 hidden rounded-xl border-2 border-dashed border-garis px-4 py-3 text-sm text-tinta-2 lg:mt-0 lg:block">Belum ada jawaban dari {{ $calon['berpasangan'] ? 'paslon' : 'calon' }} ini.</p>
                         @endif
                     </article>
                 @empty

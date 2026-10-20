@@ -289,4 +289,15 @@ class KandidatTest extends TestCase
         app(\App\Services\LayananKampanye::class)->kirimPertanyaan($siswa, $calon, 'Kapan kelompok belajar dimulai?');
         $this->assertSame(2, $calon->questions()->where('voter_id', $siswa->id)->count());
     }
+
+    public function test_tanya_jawab_berdampingan_dengan_tanggapan(): void
+    {
+        $this->seed([PemilihanSeeder::class, \Database\Seeders\KampanyeSeeder::class]);
+        $id = Candidate::where('nomor_urut', 1)->value('id');
+
+        Volt::test('kandidat.profil', ['id' => $id])
+            ->set('tab', 'tanya-jawab')
+            ->assertSeeHtml('lg:grid lg:grid-cols-2')
+            ->assertSee('Jawaban Paslon 1');
+    }
 }
