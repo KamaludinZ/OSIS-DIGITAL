@@ -31,7 +31,7 @@ class NavigasiPublik
             // Mode aktif: item Bilik Suara diberi penanda selama bilik suara dibuka.
             'bilikDibuka' => $modePemilihan && ($this->pemilihan->pemilihanAktif()?->sedangDibuka() ?? false),
             // Akun resmi OSIM periode aktif di kaki halaman.
-            'akunSosmed' => \App\Support\DataTiruanAkunSosmed::publik(),
+            'akunSosmed' => app(\App\Services\LayananAkunSosmed::class)->publik(),
         ]);
     }
 }

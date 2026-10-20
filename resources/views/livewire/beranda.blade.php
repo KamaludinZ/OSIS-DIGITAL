@@ -36,7 +36,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Beranda')] class extends Comp
     public function mount(LayananPemilihan $layanan, LayananPublikasi $publikasi, LayananSosmed $sosmed): void
     {
         $this->sosmed = $sosmed->perPlatform();
-        $this->akunSosmed = \App\Support\DataTiruanAkunSosmed::publik();
+        $this->akunSosmed = app(\App\Services\LayananAkunSosmed::class)->publik();
         $this->modePemilihan = app(\App\Services\LayananModePemilihan::class)->aktif();
         $this->pemilihan = $layanan->ringkasanPemilihan();
         $this->pengumuman = $publikasi->pengumumanTerbaru(batas: 4);

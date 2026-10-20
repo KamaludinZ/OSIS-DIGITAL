@@ -1,12 +1,15 @@
 <?php
 
 use App\Enums\PlatformSosmed;
-use App\Support\DataTiruanAkunSosmed;
+use App\Exceptions\PeriodeDitolak;
+use App\Models\OsisPeriod;
+use App\Models\SocialLink;
+use App\Services\LayananAkunSosmed;
 use Livewire\Volt\Component;
 
 new class extends Component {
-    /** Periode yang sedang dilihat; bawaan periode aktif. Periode lain hanya-baca (arsip). */
-    public string $periode = '';
+    /** id periode yang sedang dilihat; bawaan periode aktif. Periode lain hanya-baca (arsip). */
+    public ?int $periode = null;
 
     // Formulir tambah/ubah akun periode aktif.
     public ?int $diubah = null;
@@ -20,44 +23,37 @@ new class extends Component {
     public function mount(): void
     {
         $this->authorize('kelola-publikasi');
-        $this->periode = DataTiruanAkunSosmed::periodeAktif();
+        $this->periode = OsisPeriod::aktif()?->id;
     }
 
-    public function simpan(): void
+    private function bolehUbah(): bool
+    {
+        return $this->periode !== null && $this->periode === OsisPeriod::aktif()?->id;
+    }
+
+    public function simpan(LayananAkunSosmed $layanan): void
     {
         $this->authorize('kelola-publikasi');
-        abort_unless($this->periode === DataTiruanAkunSosmed::periodeAktif(), 403);
+        abort_unless($this->bolehUbah(), 403);
 
-        $platform = PlatformSosmed::tryFrom($this->platform);
-        $this->validate([
-            'platform' => ['required', \Illuminate\Validation\Rule::enum(PlatformSosmed::class),
-                // Satu akun per platform di tiap periode.
-                function ($attr, $nilai, $gagal) {
-                    $kembar = collect(DataTiruanAkunSosmed::semua())->where('periode', $this->periode)
-                        ->where('platform', $nilai)->where('id', '!=', $this->diubah)->isNotEmpty();
-                    if ($kembar) {
-                        $gagal('Akun '.PlatformSosmed::from($nilai)->label().' periode ini sudah ada. Ubah saja yang lama.');
-                    }
-                }],
-            'namaAkun' => ['required', 'string', 'min:3', 'max:100'],
-            'tautan' => ['required', 'url', 'max:300', function ($attr, $nilai, $gagal) use ($platform) {
-                if ($platform && ! $platform->cocokDengan($nilai)) {
-                    $gagal('Tautan harus diawali https:// dan berasal dari '.implode(' atau ', $platform->domain()).'.');
-                }
-            }],
-        ], [
-            'namaAkun.required' => 'Tulis nama akunnya, misalnya @osim.mtsn2malang.',
-            'namaAkun.min' => 'Nama akun minimal :min karakter.',
-            'tautan.required' => 'Tempel tautan profil akunnya.',
-            'tautan.url' => 'Tautan belum benar. Salin langsung dari aplikasinya, contoh https://www.instagram.com/osim.mtsn2malang',
-        ]);
+        $data = ['platform' => $this->platform, 'nama_akun' => $this->namaAkun, 'tautan' => $this->tautan];
 
-        $semua = collect(DataTiruanAkunSosmed::semua());
-        $isian = ['platform' => $this->platform, 'nama_akun' => trim($this->namaAkun), 'tautan' => trim($this->tautan)];
-        $semua = $this->diubah
-            ? $semua->map(fn ($a) => $a['id'] === $this->diubah ? [...$a, ...$isian] : $a)
-            : $semua->push(['id' => ($semua->max('id') ?? 0) + 1, 'periode' => $this->periode, ...$isian]);
-        DataTiruanAkunSosmed::simpan($semua->all());
+        try {
+            $this->diubah
+                ? $layanan->ubah(SocialLink::findOrFail($this->diubah), $data)
+                : $layanan->tambah($data);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Nama isian layanan -> nama properti komponen.
+            foreach ($e->errors() as $isian => $pesan) {
+                $this->addError(['nama_akun' => 'namaAkun'][$isian] ?? $isian, $pesan[0]);
+            }
+
+            return;
+        } catch (PeriodeDitolak $e) {
+            $this->addError('platform', $e->getMessage());
+
+            return;
+        }
 
         session()->flash('status-akun', $this->diubah ? 'Akun diperbarui.' : 'Akun ditambahkan.');
         $this->batal();
@@ -65,23 +61,22 @@ new class extends Component {
 
     public function ubah(int $id): void
     {
-        $akun = collect(DataTiruanAkunSosmed::semua())->where('periode', DataTiruanAkunSosmed::periodeAktif())->firstWhere('id', $id);
-        abort_unless($akun, 404);
+        $akun = SocialLink::findOrFail($id); // global scope: hanya akun periode aktif
 
-        $this->diubah = $id;
-        $this->platform = $akun['platform'];
-        $this->namaAkun = $akun['nama_akun'];
-        $this->tautan = $akun['tautan'];
+        $this->diubah = $akun->id;
+        $this->platform = $akun->platform->value;
+        $this->namaAkun = $akun->nama_akun;
+        $this->tautan = $akun->tautan;
         $this->resetErrorBag();
     }
 
-    public function hapus(int $id): void
+    public function hapus(int $id, LayananAkunSosmed $layanan): void
     {
         $this->authorize('kelola-publikasi');
-        $semua = collect(DataTiruanAkunSosmed::semua());
-        abort_unless($semua->where('periode', DataTiruanAkunSosmed::periodeAktif())->contains('id', $id), 403);
+        $akun = SocialLink::find($id);
+        abort_unless($akun && $this->bolehUbah(), 403);
 
-        DataTiruanAkunSosmed::simpan($semua->reject(fn ($a) => $a['id'] === $id)->all());
+        $layanan->hapus($akun);
         session()->flash('status-akun', 'Akun dihapus.');
         if ($this->diubah === $id) {
             $this->batal();
@@ -96,32 +91,33 @@ new class extends Component {
     }
 
     /** Nilai periode dari peramban hanya diterima bila memang ada; selain itu kembali ke periode aktif. */
-    public function updatedPeriode(string $nilai): void
+    public function updatedPeriode($nilai): void
     {
-        if (! array_key_exists($nilai, $this->jumlahPerPeriode())) {
-            $this->periode = DataTiruanAkunSosmed::periodeAktif();
+        if (! array_key_exists((int) $nilai, $this->daftarPeriode())) {
+            $this->periode = OsisPeriod::aktif()?->id;
         }
     }
 
-    /** @return array<string, int> periode => jumlah akun, periode aktif selalu ada dan di depan. */
-    private function jumlahPerPeriode(): array
+    /** @return array<int, array{nama: string, aktif: bool, jumlah: int}> id => periode; aktif di depan, lalu arsip yang punya akun. */
+    private function daftarPeriode(): array
     {
-        $aktif = DataTiruanAkunSosmed::periodeAktif();
-
-        return collect(DataTiruanAkunSosmed::semua())->countBy('periode')
-            ->union([$aktif => 0])
-            ->sortKeysDesc()
-            ->sortBy(fn ($n, $p) => $p === $aktif ? 0 : 1)
+        return OsisPeriod::query()
+            ->where(fn ($q) => $q->where('status', 'aktif')->orWhereHas('socialLinks'))
+            ->withCount('socialLinks')->urutTampil()->get()
+            ->mapWithKeys(fn (OsisPeriod $p) => [$p->id => ['nama' => $p->nama, 'aktif' => $p->adalahAktif(), 'jumlah' => $p->social_links_count]])
             ->all();
     }
 
     public function with(): array
     {
+        $daftar = $this->daftarPeriode();
+
         return [
-            'daftarPeriode' => $this->jumlahPerPeriode(),
-            'akun' => collect(DataTiruanAkunSosmed::semua())->where('periode', $this->periode)->values()->all(),
+            'daftarPeriode' => $daftar,
+            'namaPeriode' => $daftar[$this->periode]['nama'] ?? '—',
+            'akun' => $this->periode ? SocialLink::diPeriode($this->periode)->orderBy('urutan')->orderBy('id')->get() : collect(),
             // Arsip baca-saja: tombol ubah/tambah disembunyikan bila false.
-            'bolehUbah' => $this->periode === DataTiruanAkunSosmed::periodeAktif(),
+            'bolehUbah' => $this->bolehUbah(),
         ];
     }
 }; ?>
@@ -133,47 +129,48 @@ new class extends Component {
             <p class="text-sm text-tinta-2">Tautan akun yang tampil di halaman publik. Tiap periode punya daftarnya sendiri.</p>
         </div>
         <div role="tablist" aria-label="Pilih periode" class="flex flex-wrap gap-1.5">
-            @foreach ($daftarPeriode as $p => $jumlah)
-                @php($dipilih = $p === $periode)
-                <button type="button" role="tab" wire:click="$set('periode', '{{ $p }}')" aria-selected="{{ $dipilih ? 'true' : 'false' }}"
+            @foreach ($daftarPeriode as $id => $p)
+                @php($dipilih = $id === $periode)
+                <button type="button" role="tab" wire:click="$set('periode', {{ $id }})" aria-selected="{{ $dipilih ? 'true' : 'false' }}"
                         @class(['inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold ring-1 transition',
                             'bg-hijau-600 text-white ring-hijau-600' => $dipilih,
                             'bg-white text-hijau-800 ring-garis hover:bg-hijau-50' => ! $dipilih])>
-                    @if ($loop->first) <flux:icon.check-circle variant="micro" /> @else <flux:icon.archive-box variant="micro" /> @endif
-                    {{ $p }}
-                    <span class="angka rounded-full bg-black/10 px-1.5 text-xs">{{ $jumlah }}</span>
+                    @if ($p['aktif']) <flux:icon.check-circle variant="micro" /> @else <flux:icon.archive-box variant="micro" /> @endif
+                    {{ $p['nama'] }}
+                    <span class="angka rounded-full bg-black/10 px-1.5 text-xs">{{ $p['jumlah'] }}</span>
                 </button>
             @endforeach
         </div>
     </div>
 
-    @unless ($bolehUbah)
-        <p class="flex items-center gap-1.5 bg-emas-300/40 px-5 py-2 text-sm font-semibold text-tinta"><flux:icon.lock-closed variant="micro" /> Arsip periode {{ $periode }}: hanya bisa dilihat.</p>
-    @endunless
+    @if ($periode === null)
+        <p class="flex items-center gap-1.5 bg-emas-300/40 px-5 py-2 text-sm font-semibold text-tinta"><flux:icon.exclamation-triangle variant="micro" /> Belum ada periode aktif. Aktifkan periode OSIM dulu untuk menambah akun.</p>
+    @elseif (! $bolehUbah)
+        <p class="flex items-center gap-1.5 bg-emas-300/40 px-5 py-2 text-sm font-semibold text-tinta"><flux:icon.lock-closed variant="micro" /> Arsip periode {{ $namaPeriode }}: hanya bisa dilihat.</p>
+    @endif
 
     <ul @class(['divide-y divide-dashed divide-garis', 'opacity-75 grayscale' => ! $bolehUbah])>
         @forelse ($akun as $a)
-            @php($platform = PlatformSosmed::from($a['platform']))
-            <li wire:key="akun-{{ $a['id'] }}" class="flex items-center gap-3 px-5 py-3">
+            <li wire:key="akun-{{ $a->id }}" class="flex items-center gap-3 px-5 py-3">
                 <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-hijau-50 text-hijau-700 ring-1 ring-garis">
-                    <x-osim.ikon-sosmed :platform="$a['platform']" class="size-5" />
+                    <x-osim.ikon-sosmed :platform="$a->platform->value" class="size-5" />
                 </span>
                 <div class="min-w-0 flex-1">
-                    <p class="text-xs font-bold text-hijau-700">{{ $platform->label() }}</p>
-                    <p class="truncate font-bold text-tinta">{{ $a['nama_akun'] }}</p>
-                    <p class="truncate text-sm text-tinta-2">{{ $a['tautan'] }}</p>
+                    <p class="text-xs font-bold text-hijau-700">{{ $a->platform->label() }} · <span class="angka">{{ number_format($a->jumlah_klik, 0, ',', '.') }}</span> kali dibuka</p>
+                    <p class="truncate font-bold text-tinta">{{ $a->nama_akun }}</p>
+                    <p class="truncate text-sm text-tinta-2">{{ $a->tautan }}</p>
                 </div>
                 @if ($bolehUbah)
                     <div class="flex shrink-0 gap-1.5">
-                        <button type="button" wire:click="ubah({{ $a['id'] }})" class="rounded-lg px-3 py-1.5 text-sm font-bold text-hijau-800 ring-1 ring-garis hover:bg-hijau-50">Ubah</button>
-                        <button type="button" wire:click="hapus({{ $a['id'] }})"
-                                wire:confirm="Hapus akun {{ $platform->label() }} {{ $a['nama_akun'] }} dari periode {{ $periode }}? Tautannya tidak tampil lagi di halaman publik."
+                        <button type="button" wire:click="ubah({{ $a->id }})" class="rounded-lg px-3 py-1.5 text-sm font-bold text-hijau-800 ring-1 ring-garis hover:bg-hijau-50">Ubah</button>
+                        <button type="button" wire:click="hapus({{ $a->id }})"
+                                wire:confirm="Hapus akun {{ $a->platform->label() }} {{ $a->nama_akun }} dari periode {{ $namaPeriode }}? Tautannya tidak tampil lagi di halaman publik."
                                 class="rounded-lg px-3 py-1.5 text-sm font-bold text-cap hover:bg-cap/10">Hapus</button>
                     </div>
                 @endif
             </li>
         @empty
-            <li class="px-5 py-8 text-center text-tinta-2">Belum ada akun untuk periode {{ $periode }}.</li>
+            <li class="px-5 py-8 text-center text-tinta-2">Belum ada akun untuk periode {{ $namaPeriode }}.</li>
         @endforelse
     </ul>
 
@@ -204,7 +201,7 @@ new class extends Component {
                 </div>
                 <div>
                     <label for="tautan-akun" class="text-sm font-bold text-tinta">Tautan profil</label>
-                    <input id="tautan-akun" wire:model="tautan" type="url" maxlength="300" placeholder="https://…"
+                    <input id="tautan-akun" wire:model="tautan" type="text" inputmode="url" maxlength="300" placeholder="https://…"
                            class="mt-1 h-11 w-full rounded-xl border-2 border-garis bg-white px-3 text-tinta focus:border-hijau-600 focus:outline-none" />
                     @error('tautan') <p class="mt-1 text-sm font-bold text-cap" role="alert">{{ $message }}</p> @enderror
                 </div>

@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\Peran;
+use App\Enums\PlatformSosmed;
+use App\Models\OsisPeriod;
+use App\Models\SocialLink;
 use App\Models\User;
+use App\Services\LayananAkunSosmed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -12,9 +16,39 @@ class AkunSosmedTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_halaman_kelola_menampilkan_akun_periode_aktif_dan_arsip(): void
+    private OsisPeriod $lama;
+
+    private OsisPeriod $aktif;
+
+    private SocialLink $arsip;
+
+    private SocialLink $instagram;
+
+    private SocialLink $youtube;
+
+    private SocialLink $tiktok;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->lama = OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        $this->arsip = SocialLink::create(['platform' => 'instagram', 'nama_akun' => '@osim2526.mtsn2', 'tautan' => 'https://www.instagram.com/osim2526.mtsn2']);
+
+        app(\App\Services\LayananPeriode::class)->aktifkan($this->aktif = OsisPeriod::factory()->tahun(2026)->create());
+        $this->instagram = SocialLink::create(['platform' => 'instagram', 'nama_akun' => '@osim.mtsn2malang', 'tautan' => 'https://www.instagram.com/osim.mtsn2malang', 'urutan' => 1]);
+        $this->youtube = SocialLink::create(['platform' => 'youtube', 'nama_akun' => 'OSIM MTsN 2 Kota Malang', 'tautan' => 'https://www.youtube.com/@osimmtsn2malang', 'urutan' => 2]);
+        $this->tiktok = SocialLink::create(['platform' => 'tiktok', 'nama_akun' => '@osim.mtsn2', 'tautan' => 'https://www.tiktok.com/@osim.mtsn2', 'urutan' => 3]);
+    }
+
+    private function masukPengurus(): void
     {
         $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+    }
+
+    public function test_halaman_kelola_menampilkan_akun_periode_aktif_dan_arsip(): void
+    {
+        $this->masukPengurus();
 
         $this->get('/kelola/sosmed')->assertOk()
             ->assertSeeInOrder(['Akun resmi OSIM', '2026/2027', '3', '2025/2026', '1', '@osim.mtsn2malang', 'Konten baru']);
@@ -22,7 +56,7 @@ class AkunSosmedTest extends TestCase
         Volt::test('kelola.akun-sosmed')
             ->assertSee('OSIM MTsN 2 Kota Malang')
             ->assertDontSee('@osim2526.mtsn2')
-            ->set('periode', '2025/2026')
+            ->set('periode', $this->lama->id)
             ->assertSee('@osim2526.mtsn2')
             ->assertSee('hanya bisa dilihat');
     }
@@ -35,75 +69,91 @@ class AkunSosmedTest extends TestCase
 
     public function test_periode_tidak_dikenal_kembali_ke_periode_aktif(): void
     {
-        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $this->masukPengurus();
 
         Volt::test('kelola.akun-sosmed')
-            ->set('periode', '1999/2000')
-            ->assertSet('periode', '2026/2027')
+            ->set('periode', 9999)
+            ->assertSet('periode', $this->aktif->id)
             ->assertDontSee('hanya bisa dilihat')
-            ->set('periode', '2025/2026')
+            ->set('periode', $this->lama->id)
             ->assertSee('grayscale', false);
     }
 
     public function test_tambah_ubah_hapus_akun_dengan_validasi_ramah(): void
     {
-        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $this->masukPengurus();
 
         Volt::test('kelola.akun-sosmed')
             // Satu akun per platform per periode.
             ->set('platform', 'instagram')->set('namaAkun', '@baru')->set('tautan', 'https://www.instagram.com/baru')
-            ->call('simpan')->assertHasErrors(['platform'])->assertSee('Akun Instagram periode ini sudah ada')
-            // Domain harus sesuai platform.
-            ->call('ubah', 2)->assertSet('platform', 'youtube')
-            ->set('tautan', 'http://youtube.com/x')->call('simpan')->assertHasErrors(['tautan'])
-            ->assertSee('Tautan harus diawali https:// dan berasal dari youtube.com atau youtu.be.')
-            ->set('tautan', 'https://www.youtube.com/@osimbaru')->call('simpan')->assertHasNoErrors()
+            ->call('simpan')->assertHasErrors(['platform'])->assertSee('Akun platform ini untuk periode aktif sudah ada')
+            // Domain harus sesuai platform; http diterima lalu disimpan https.
+            ->call('ubah', $this->youtube->id)->assertSet('platform', 'youtube')
+            ->set('tautan', 'https://www.tiktok.com/@x')->call('simpan')->assertHasErrors(['tautan'])
+            ->assertSee('Tautan ini bukan alamat YouTube.')
+            ->set('tautan', 'http://www.youtube.com/@osimbaru')->call('simpan')->assertHasNoErrors()
             ->assertSee('Akun diperbarui.')->assertSet('diubah', null)
-            ->call('hapus', 3)->assertSee('Akun dihapus.')
-            ->set('platform', 'tiktok')->set('namaAkun', '@osim.baru')->set('tautan', 'https://www.tiktok.com/@osim.baru')
+            ->call('hapus', $this->tiktok->id)->assertSee('Akun dihapus.')
+            ->set('platform', 'tiktok')->set('namaAkun', '@osim.baru')->set('tautan', 'www.tiktok.com/@osim.baru')
             ->call('simpan')->assertHasNoErrors()->assertSee('Akun ditambahkan.');
 
-        $akun = collect(\App\Support\DataTiruanAkunSosmed::semua())->where('periode', '2026/2027');
-        $this->assertSame('https://www.youtube.com/@osimbaru', $akun->firstWhere('id', 2)['tautan']);
-        $this->assertSame('@osim.baru', $akun->firstWhere('platform', 'tiktok')['nama_akun']);
-        $this->assertCount(3, $akun);
+        $this->assertSame('https://www.youtube.com/@osimbaru', $this->youtube->fresh()->tautan);
+        $this->assertModelMissing($this->tiktok);
+        $baru = SocialLink::where('platform', 'tiktok')->sole();
+        $this->assertSame('https://www.tiktok.com/@osim.baru', $baru->tautan);
+        $this->assertSame($this->aktif->id, $baru->periode_id);
+        $this->assertSame(3, SocialLink::count());
     }
 
     public function test_akun_arsip_tidak_bisa_diubah(): void
     {
-        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $this->masukPengurus();
 
         Volt::test('kelola.akun-sosmed')
-            ->set('periode', '2025/2026')
+            ->set('periode', $this->lama->id)
             ->assertDontSee('Tambah akun')
-            ->call('hapus', 4)->assertForbidden();
+            ->call('hapus', $this->arsip->id)->assertForbidden();
+
+        $this->expectException(\App\Exceptions\PeriodeDitolak::class);
+        app(LayananAkunSosmed::class)->hapus(SocialLink::diPeriode($this->lama)->first());
+    }
+
+    public function test_layanan_crud_menolak_tanpa_periode_aktif(): void
+    {
+        $this->aktif->update(['status' => 'arsip']);
+
+        $this->expectException(\App\Exceptions\PeriodeDitolak::class);
+        app(LayananAkunSosmed::class)->tambah(['platform' => 'youtube', 'nama_akun' => '@osim', 'tautan' => 'https://youtube.com/@osim']);
     }
 
     public function test_tautan_periode_aktif_tampil_di_halaman_publik(): void
     {
         $this->get('/')->assertOk()
             ->assertSee('Akun media sosial resmi OSIM')
-            ->assertSee('href="'.route('sosmed.akun', 1).'"', false)
+            ->assertSeeInOrder(['@osim.mtsn2malang', 'OSIM MTsN 2 Kota Malang', '@osim.mtsn2'])
+            ->assertSee('href="'.route('sosmed.akun', $this->instagram->id).'"', false)
             ->assertDontSee('href="https://www.instagram.com/osim.mtsn2malang"', false)
             ->assertDontSee('@osim2526.mtsn2');
 
         $this->get('/saran')->assertOk()->assertSee('@osim.mtsn2malang');
+        $this->assertSame([PlatformSosmed::Instagram->value, 'youtube', 'tiktok'], array_column(app(LayananAkunSosmed::class)->publik(), 'platform'));
     }
 
     public function test_halaman_pengalihan_aman(): void
     {
-        $this->get('/sosmed/akun/1')->assertOk()
+        $this->get('/sosmed/akun/'.$this->instagram->id)->assertOk()
             ->assertSee('Membuka Instagram')
             ->assertSee('www.instagram.com')
             ->assertSee('href="https://www.instagram.com/osim.mtsn2malang" rel="noopener noreferrer"', false)
             ->assertSee('Tetap di situs OSIM');
 
         // Akun arsip / tidak dikenal tidak bisa dipakai untuk dialihkan.
-        $this->get('/sosmed/akun/4')->assertNotFound();
-        $this->get('/sosmed/akun/99')->assertNotFound();
+        $this->get('/sosmed/akun/'.$this->arsip->id)->assertNotFound();
+        $this->get('/sosmed/akun/99999')->assertNotFound();
 
-        // Tautan yang tidak cocok domainnya ditolak.
-        \App\Support\DataTiruanAkunSosmed::simpan([['id' => 7, 'periode' => '2026/2027', 'platform' => 'instagram', 'nama_akun' => '@palsu', 'tautan' => 'https://instagram.com.jahat.test/x']]);
-        $this->get('/sosmed/akun/7')->assertNotFound();
+        // Tautan yang tidak cocok domainnya ditolak walau tersimpan (mis. diubah langsung di basis data).
+        \Illuminate\Support\Facades\DB::table('social_links')->where('id', $this->tiktok->id)->update(['tautan' => 'https://tiktok.com.jahat.test/x']);
+        $this->get('/sosmed/akun/'.$this->tiktok->id)->assertNotFound();
+        $this->assertNotContains('tiktok', array_column(app(LayananAkunSosmed::class)->publik(), 'platform'));
     }
 }

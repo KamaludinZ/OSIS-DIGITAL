@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\PlatformSosmed;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -11,10 +10,16 @@ new #[Layout('components.layouts.siswa')] class extends Component {
     /** Hanya akun periode aktif yang tautannya cocok dengan domain platformnya; selain itu 404. */
     public function mount(int $id): void
     {
-        $akun = collect(\App\Support\DataTiruanAkunSosmed::publik())->firstWhere('id', $id);
-        abort_unless($akun && PlatformSosmed::from($akun['platform'])->cocokDengan($akun['tautan']), 404);
+        $akun = \App\Models\SocialLink::find($id); // global scope: hanya akun periode aktif
+        abort_unless($akun?->tautanSah(), 404);
 
-        $this->akun = [...$akun, 'host' => parse_url($akun['tautan'], PHP_URL_HOST)];
+        $this->akun = [
+            'platform' => $akun->platform->value,
+            'label' => $akun->platform->label(),
+            'nama_akun' => $akun->nama_akun,
+            'tautan' => $akun->tautan,
+            'host' => parse_url($akun->tautan, PHP_URL_HOST),
+        ];
     }
 
     public function rendering($view): void
