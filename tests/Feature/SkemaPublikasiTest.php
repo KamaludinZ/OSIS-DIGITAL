@@ -39,4 +39,20 @@ class SkemaPublikasiTest extends TestCase
 
         $this->assertSame(['Hari ini', 'Nanti'], Event::mendatang()->pluck('nama')->all());
     }
+
+    public function test_agenda_per_periode_dan_bentrok_hanya_dalam_periode_aktif(): void
+    {
+        $lama = \App\Models\OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        $tanggal = now()->addDays(5)->toDateString();
+        \App\Models\Event::factory()->create(['nama' => 'Agenda Lama', 'tanggal_mulai' => $tanggal, 'tanggal_selesai' => $tanggal, 'tempat' => 'Aula']);
+
+        app(\App\Services\LayananPeriode::class)->aktifkan(\App\Models\OsisPeriod::factory()->tahun(2026)->create());
+        $baru = \App\Models\Event::factory()->create(['nama' => 'Agenda Baru', 'tanggal_mulai' => $tanggal, 'tanggal_selesai' => $tanggal, 'tempat' => 'Aula']);
+
+        $this->assertSame(['Agenda Baru'], \App\Models\Event::pluck('nama')->all());
+        $this->assertSame(1, \App\Models\Event::diPeriode($lama)->count());
+        // Bentrok dihitung di periode aktif saja.
+        $this->assertTrue(\App\Models\Event::bentrok($tanggal, $tanggal, 'Aula')->contains('id', $baru->id));
+        $this->assertSame(1, \App\Models\Event::bentrok($tanggal, $tanggal, 'Aula')->count());
+    }
 }

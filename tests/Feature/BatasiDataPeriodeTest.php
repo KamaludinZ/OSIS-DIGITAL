@@ -32,8 +32,12 @@ class BatasiDataPeriodeTest extends TestCase
     public function test_kegiatan_periode_aktif_dan_arsip_terbuka_periode_disiapkan_tidak(): void
     {
         $sekarang = Event::factory()->create(['periode_id' => $this->aktif->id]);
-        $lama = Event::factory()->create(['periode_id' => $this->arsip->id]);
         $depan = Event::factory()->create(['periode_id' => $this->disiapkan->id]);
+        // Data arsip tidak bisa ditambah lewat model; dibuat langsung seolah tercatat saat periode itu aktif.
+        $lama = Event::semuaPeriode()->find(\Illuminate\Support\Facades\DB::table('events')->insertGetId([
+            'periode_id' => $this->arsip->id, 'nama' => 'Kegiatan Lama', 'tanggal_mulai' => now()->subYear()->toDateString(),
+            'tanggal_selesai' => now()->subYear()->toDateString(), 'created_at' => now(), 'updated_at' => now(),
+        ]));
 
         $this->get('/kegiatan/'.$sekarang->id)->assertOk();
         $this->get('/kegiatan/'.$lama->id)->assertOk();

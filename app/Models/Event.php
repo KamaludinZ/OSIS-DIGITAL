@@ -10,7 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Event extends Model
 {
     /** @use HasFactory<\Database\Factories\EventFactory> */
-    use HasFactory;
+    use \App\Models\Concerns\IkutPeriode, HasFactory;
+
+    /** Agenda lama tanpa periode tetap terbaca; tanpa periode aktif tidak difilter. */
+    public function periodeLonggar(): bool
+    {
+        return true;
+    }
 
     protected $fillable = [
         'nama',

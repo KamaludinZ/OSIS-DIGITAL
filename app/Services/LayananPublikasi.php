@@ -46,7 +46,8 @@ class LayananPublikasi
     /** Detail kegiatan (termasuk yang sudah lewat, untuk arsip). */
     public function cariKegiatan(int $id): ?array
     {
-        $item = Event::with('divisi:id,nama')->find($id);
+        // Detail lewat tautan langsung: kegiatan arsip tetap terbaca (aksesnya dijaga middleware periode).
+        $item = Event::semuaPeriode()->with('divisi:id,nama')->find($id);
 
         return $item ? $this->kegiatanKeArray($item) + ['deskripsi' => $item->deskripsi] : null;
     }
