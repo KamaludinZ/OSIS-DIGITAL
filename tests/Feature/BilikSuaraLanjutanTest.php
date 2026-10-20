@@ -189,4 +189,19 @@ class BilikSuaraLanjutanTest extends TestCase
         }
         $this->assertSame(1, Vote::count());
     }
+
+    public function test_data_bukti_suara_tanpa_pilihan(): void
+    {
+        $layanan = app(\App\Services\LayananPemilihan::class);
+        $this->assertNull($layanan->buktiSuara($this->pemilih));
+
+        $pemilihan = \App\Models\Election::find(Candidate::find($this->idNomor(2))->election_id);
+        $suara = $layanan->kirimSuara($this->pemilih, $pemilihan, $this->idNomor(2));
+        $bukti = $layanan->buktiSuara($this->pemilih);
+
+        $this->assertSame(['kode', 'pemilihan', 'waktu'], array_keys($bukti));
+        $this->assertSame($suara->kode_bukti, $bukti['kode']);
+        $this->assertSame($pemilihan->judul, $bukti['pemilihan']);
+        $this->assertArrayNotHasKey('candidate_id', $bukti);
+    }
 }
