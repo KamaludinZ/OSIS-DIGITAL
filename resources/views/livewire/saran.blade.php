@@ -1,14 +1,19 @@
 <?php
 
-use App\Support\DataTiruanSaran;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.siswa')] #[Title('Kotak Saran')] class extends Component {
-    #[Validate('required|string|min:10|max:1000', as: 'isi saran')]
     public string $isi = '';
+
+    /** false = anonim (bawaan); true = sertakan nama & kelas agar bisa dihubungi. */
+    public bool $bernama = false;
+
+    public string $nama = '';
+
+    public string $kelas = '';
 
     #[\Livewire\Attributes\Locked]
     public bool $terkirim = false;
@@ -16,17 +21,39 @@ new #[Layout('components.layouts.siswa')] #[Title('Kotak Saran')] class extends 
     #[\Livewire\Attributes\Locked]
     public string $periode = '';
 
+    #[\Livewire\Attributes\Locked]
+    public bool $dibuka = false;
+
     public function mount(): void
     {
-        $this->periode = \App\Models\OsisPeriod::aktif()?->nama ?? \App\Models\Member::periodeAktif();
+        $aktif = \App\Models\OsisPeriod::aktif();
+        $this->dibuka = $aktif !== null;
+        $this->periode = $aktif?->nama ?? \App\Models\Member::periodeAktif();
     }
 
-    /** Data tiruan: saran disimpan di sesi sampai tabel suggestions tersedia. */
-    public function kirim(): void
+    public function kirim(\App\Services\LayananSaran $layanan): void
     {
-        $this->validate();
-        DataTiruanSaran::kirim(trim($this->isi));
-        $this->reset('isi');
+        $this->terkirim = false;
+        $this->validate(\App\Services\LayananSaran::aturan(), [], ['isi' => 'isi saran', 'nama' => 'nama', 'kelas' => 'kelas']);
+
+        // Cegah banjir kiriman dari satu perangkat/jaringan (tanpa menyimpan IP bersama saran).
+        $kunci = 'kirim-saran:'.request()->ip();
+        if (RateLimiter::tooManyAttempts($kunci, 5)) {
+            $this->addError('isi', 'Terlalu banyak saran dalam waktu singkat. Coba lagi '.ceil(RateLimiter::availableIn($kunci) / 60).' menit lagi.');
+
+            return;
+        }
+        RateLimiter::hit($kunci, 600);
+
+        try {
+            $layanan->kirim(['isi' => $this->isi, 'bernama' => $this->bernama, 'nama' => $this->nama, 'kelas' => $this->kelas]);
+        } catch (\App\Exceptions\PeriodeDitolak $e) {
+            $this->addError('isi', $e->getMessage());
+
+            return;
+        }
+
+        $this->reset('isi', 'nama', 'kelas', 'bernama');
         $this->terkirim = true;
     }
 }; ?>
@@ -45,6 +72,9 @@ new #[Layout('components.layouts.siswa')] #[Title('Kotak Saran')] class extends 
 
             <form wire:submit="kirim" class="flex flex-col gap-4 p-6">
                 <h2 id="judul-kirim" class="font-display text-2xl font-extrabold text-tinta">Tulis saranmu</h2>
+                @unless ($dibuka)
+                    <p class="rounded-lg bg-emas-300/40 px-3 py-2 text-sm font-semibold text-tinta ring-1 ring-garis">Kotak saran sedang ditutup karena kepengurusan baru belum aktif.</p>
+                @endunless
                 <div>
                     <label for="isi-saran" class="font-bold text-tinta">Isi saran</label>
                     <textarea id="isi-saran" wire:model="isi" rows="5" maxlength="1000"
@@ -56,8 +86,38 @@ new #[Layout('components.layouts.siswa')] #[Title('Kotak Saran')] class extends 
                     @enderror
                 </div>
 
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <p class="flex items-center gap-1.5 text-sm text-tinta-2"><flux:icon.eye-slash variant="micro" /> Dikirim tanpa nama.</p>
+                <fieldset class="flex flex-col gap-3">
+                    <legend class="font-bold text-tinta">Kirim sebagai</legend>
+                    <div class="grid grid-cols-2 gap-2">
+                        @foreach ([0 => ['eye-slash', 'Anonim'], 1 => ['user', 'Dengan nama']] as $nilai => [$ikon, $label])
+                            <label @class(['flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-bold ring-1', 'bg-hijau-600 text-white ring-hijau-600' => (int) $bernama === $nilai, 'bg-white text-hijau-800 ring-garis hover:bg-hijau-50' => (int) $bernama !== $nilai])>
+                                <input type="radio" wire:model.live="bernama" value="{{ $nilai }}" class="sr-only" />
+                                <flux:icon :name="$ikon" variant="micro" /> {{ $label }}
+                            </label>
+                        @endforeach
+                    </div>
+                    @if ($bernama)
+                        <div class="grid gap-3 sm:grid-cols-[1fr_8rem]">
+                            <div>
+                                <label for="nama-pengirim" class="text-sm font-bold text-tinta">Nama</label>
+                                <input id="nama-pengirim" wire:model="nama" type="text" maxlength="100" autocomplete="name"
+                                       class="mt-1 h-11 w-full rounded-xl border-2 border-garis bg-hijau-50/50 px-3 text-tinta focus:border-hijau-600 focus:bg-white focus:outline-none" />
+                                @error('nama') <p class="mt-1 text-sm font-bold text-cap" role="alert">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label for="kelas-pengirim" class="text-sm font-bold text-tinta">Kelas</label>
+                                <input id="kelas-pengirim" wire:model="kelas" type="text" maxlength="20" placeholder="VIII-B"
+                                       class="mt-1 h-11 w-full rounded-xl border-2 border-garis bg-hijau-50/50 px-3 uppercase text-tinta focus:border-hijau-600 focus:bg-white focus:outline-none" />
+                                @error('kelas') <p class="mt-1 text-sm font-bold text-cap" role="alert">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+                        <p class="text-sm text-tinta-2">Nama & kelasmu hanya terlihat oleh pengurus OSIM, agar bisa menghubungimu kembali.</p>
+                    @else
+                        <p class="text-sm text-tinta-2">Pengurus hanya melihat isi saran. Nama, kelas, dan perangkatmu tidak dicatat.</p>
+                    @endif
+                </fieldset>
+
+                <div class="flex flex-wrap items-center justify-end gap-3">
                     <button type="submit" wire:loading.attr="disabled" wire:target="kirim"
                             class="inline-flex items-center gap-2 rounded-xl bg-hijau-600 px-5 py-2.5 font-bold text-white shadow-[0_4px_10px_-3px_var(--color-hijau-900)] hover:bg-hijau-700 disabled:opacity-60">
                         <flux:icon.paper-airplane variant="micro" /> Kirim saran
@@ -76,7 +136,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Kotak Saran')] class extends 
             <h2 id="judul-cara" class="font-bold text-tinta">Bagaimana saran diproses?</h2>
             <ol class="mt-3 flex flex-col gap-3 text-sm text-tinta-2">
                 @foreach ([
-                    ['pencil-square', 'Tulis saran, boleh tanpa nama.'],
+                    ['pencil-square', 'Tulis saran, anonim atau dengan nama & kelas.'],
                     ['inbox-arrow-down', 'Saran masuk ke Ruang OSIM periode '.$periode.'.'],
                     ['chat-bubble-left-right', 'Pengurus yang sedang menjabat membaca dan menanggapinya.'],
                 ] as $i => [$ikon, $teks])

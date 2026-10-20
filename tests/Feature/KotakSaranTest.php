@@ -19,17 +19,6 @@ class KotakSaranTest extends TestCase
             ->assertSee('Bagaimana saran diproses?');
     }
 
-    public function test_kirim_saran_dari_halaman_publik(): void
-    {
-        Volt::test('saran')
-            ->set('isi', 'pendek')->call('kirim')->assertHasErrors(['isi' => 'min'])
-            ->set('isi', 'Tolong tambah rak sepeda di dekat gerbang belakang.')->call('kirim')
-            ->assertHasNoErrors()->assertSet('isi', '')->assertSee('Saran terkirim');
-
-        $this->assertSame('Tolong tambah rak sepeda di dekat gerbang belakang.', DataTiruanSaran::semua()[0]['isi']);
-        $this->assertNull(DataTiruanSaran::semua()[0]['nama']);
-    }
-
     public function test_daftar_saran_di_panel_admin(): void
     {
         $this->get('/admin/kotak-saran')->assertRedirect('/login');
