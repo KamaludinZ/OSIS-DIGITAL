@@ -62,4 +62,40 @@ class BilikSuaraLanjutanTest extends TestCase
 
         $this->assertSame(0, Vote::count());
     }
+
+    public function test_gangguan_sistem_saat_kirim_suara_ditangani_ramah(): void
+    {
+        $this->mock(\App\Services\LayananPemilihan::class, function ($mock) {
+            $asli = new \App\Services\LayananPemilihan;
+            $mock->shouldReceive('ringkasanPemilihan')->andReturnUsing(fn (...$a) => $asli->ringkasanPemilihan(...$a));
+            $mock->shouldReceive('daftarKandidat')->andReturnUsing(fn (...$a) => $asli->daftarKandidat(...$a));
+            $mock->shouldReceive('kelayakan')->andReturnUsing(fn (...$a) => $asli->kelayakan(...$a));
+            $mock->shouldReceive('pemilihanAktif')->andReturnUsing(fn () => $asli->pemilihanAktif());
+            $mock->shouldReceive('kirimSuara')->andThrow(new \RuntimeException('basis data sibuk'));
+        });
+
+        Volt::test('bilik-suara')->call('tutupPanduan')
+            ->call('pilih', $this->idNomor(2))
+            ->call('bukaKonfirmasi')
+            ->call('kirimSuara')
+            ->assertSet('terkirim', false)
+            ->assertSet('konfirmasi', false)
+            ->assertSet('dipilih', $this->idNomor(2))
+            ->assertHasErrors('dipilih')
+            ->assertSee('Suara belum terkirim karena gangguan sistem.');
+
+        $this->assertSame(0, Vote::count());
+    }
+
+    public function test_suara_ditolak_tampil_di_samping_pilihan(): void
+    {
+        Vote::create(['election_id' => Candidate::find($this->idNomor(1))->election_id, 'candidate_id' => $this->idNomor(1), 'voter_id' => $this->pemilih->id, 'kode_bukti' => 'OSIM-UJI1-UJI1']);
+
+        Volt::test('bilik-suara')->call('tutupPanduan')
+            ->set('dipilih', $this->idNomor(2))
+            ->set('konfirmasi', true)
+            ->call('kirimSuara')
+            ->assertSet('terkirim', false)
+            ->assertHasErrors('dipilih');
+    }
 }

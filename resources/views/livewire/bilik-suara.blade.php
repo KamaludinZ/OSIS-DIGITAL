@@ -150,6 +150,13 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
             unset($this->kelayakan);
 
             return;
+        } catch (\Throwable $e) {
+            // Gangguan tak terduga (mis. basis data sibuk): suara belum tercatat, pilihan tetap, boleh coba lagi.
+            report($e);
+            $this->konfirmasi = false;
+            $this->addError('dipilih', 'Suara belum terkirim karena gangguan sistem. Pilihanmu masih tersimpan di layar; tekan "Lanjut ke konfirmasi" untuk mencoba lagi. Bila terus gagal, lapor ke panitia.');
+
+            return;
         }
 
         $this->konfirmasi = false;
@@ -408,6 +415,11 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                                 <div>
                                     <x-osim.label class="text-hijau-200">Pilihanmu</x-osim.label>
                                     <div class="font-bold leading-tight">Nomor {{ $calon['nomor_urut'] }} — {{ $calon['nama_tampil'] }}</div>
+                                    @error('dipilih')
+                                        <p class="mt-1 flex items-start gap-1.5 text-sm font-bold text-emas-300" role="alert">
+                                            <flux:icon.exclamation-circle variant="micro" class="mt-0.5 shrink-0" /> {{ $message }}
+                                        </p>
+                                    @enderror
                                 </div>
                             </div>
                         @else
