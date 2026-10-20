@@ -10,16 +10,35 @@ use App\Support\MenuPublik;
 /** Sakelar mode pemilihan milik periode aktif; menentukan menu & alamat publik yang terbuka. */
 class LayananModePemilihan
 {
-    /** Tanpa periode aktif, situs tetap dalam mode pemilihan (perilaku sebelum ada sakelar). */
+    /**
+     * Penentu mode pemilihan yang berlaku untuk situs:
+     * - ada periode aktif: mengikuti sakelar periode itu;
+     * - tanpa periode aktif: tetap mode pemilihan (perilaku sebelum ada sakelar).
+     */
     public function aktif(): bool
     {
         return OsisPeriod::aktif()?->mode_pemilihan ?? true;
     }
 
     /**
+     * Peringatan bila sakelar tidak selaras dengan jadwal pemilihan, mis. bilik suara
+     * sedang terjadwal dibuka tetapi mode pemilihan dimatikan (pemilih tidak bisa masuk).
+     */
+    public function peringatan(): ?string
+    {
+        $pemilihan = app(LayananPemilihan::class)->pemilihanAktif();
+
+        if (! $this->aktif() && $pemilihan?->sedangDibuka()) {
+            return 'Pemilihan "'.$pemilihan->judul.'" sedang dibuka, tetapi mode pemilihan nonaktif: pemilih tidak bisa masuk bilik suara.';
+        }
+
+        return null;
+    }
+
+    /**
      * Status sakelar untuk Ruang OSIM: mode, periode, jejak perubahan, dan menu yang sedang tampil.
      *
-     * @return array{aktif: bool, periode: ?string, diubah_pada: ?\Illuminate\Support\Carbon, diubah_oleh: ?string, bisa_diubah: bool, menu: list<array>}
+     * @return array{aktif: bool, periode: ?string, diubah_pada: ?\Illuminate\Support\Carbon, diubah_oleh: ?string, bisa_diubah: bool, peringatan: ?string, menu: list<array>}
      */
     public function status(): array
     {
@@ -31,6 +50,7 @@ class LayananModePemilihan
             'diubah_pada' => $periode?->mode_diubah_pada,
             'diubah_oleh' => $periode?->pengubahMode?->name,
             'bisa_diubah' => $periode !== null,
+            'peringatan' => $this->peringatan(),
             'menu' => $this->menu(),
         ];
     }

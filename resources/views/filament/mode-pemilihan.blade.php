@@ -49,6 +49,13 @@
     </div>
 </section>
 
+@if ($status['peringatan'])
+    <p class="flex items-start gap-2 rounded-xl bg-emas-300/50 px-4 py-3 text-sm font-semibold text-tinta ring-1 ring-emas-500" role="alert">
+        <x-filament::icon icon="heroicon-m-exclamation-triangle" class="mt-0.5 size-4 shrink-0 text-hijau-900" />
+        {{ $status['peringatan'] }}
+    </p>
+@endif
+
 {{-- Pratinjau menu publik kedua mode --}}
 <section class="grid gap-3 md:grid-cols-2" aria-label="Pratinjau menu publik">
     @foreach (app(\App\Services\LayananModePemilihan::class)->pratinjau() as $mode => $p)

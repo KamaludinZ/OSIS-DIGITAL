@@ -212,4 +212,18 @@ class ModePemilihanTest extends TestCase
 
         $this->assertContains(\App\Http\Middleware\WajibModePemilihan::class, $persisten);
     }
+
+    public function test_penentu_mode_memberi_peringatan_bila_bilik_suara_dibuka_saat_mode_nonaktif(): void
+    {
+        $layanan = app(LayananModePemilihan::class);
+        \App\Models\Election::factory()->create(['judul' => 'Pemilihan Ketua OSIM', 'status' => 'berjalan', 'mulai' => now()->subHour(), 'selesai' => now()->addHour()]);
+
+        $this->assertNull($layanan->peringatan());
+
+        $layanan->ubah(false, User::factory()->create());
+        $this->assertStringContainsString('sedang dibuka, tetapi mode pemilihan nonaktif', $layanan->peringatan());
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $this->get('/admin/periode-pemilihan')->assertSee('pemilih tidak bisa masuk bilik suara');
+    }
 }

@@ -15,7 +15,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Satu penentu mode per permintaan (dipakai layout, middleware, dan Ruang OSIM).
+        $this->app->scoped(\App\Services\LayananModePemilihan::class);
     }
 
     /**
