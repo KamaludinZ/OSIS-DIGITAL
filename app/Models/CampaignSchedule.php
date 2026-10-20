@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CampaignSchedule extends Model
 {
+    use \App\Models\Concerns\PeriodeDariKandidat;
+
     /** @use HasFactory<\Database\Factories\CampaignScheduleFactory> */
     use HasFactory;
 

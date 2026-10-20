@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CandidateQuestion extends Model
 {
+    use \App\Models\Concerns\PeriodeDariKandidat;
+
     /** @use HasFactory<\Database\Factories\CandidateQuestionFactory> */
     use HasFactory;
 

@@ -56,4 +56,21 @@ class KelolaKampanyeTest extends TestCase
         $this->assertFalse($q->fresh()->ditampilkan);
         $this->get('/kandidat/'.$calon->id.'?tab=tanya-jawab')->assertDontSee('Pertanyaan tidak pantas sekali');
     }
+
+    public function test_data_kampanye_tercatat_di_periode_kandidat(): void
+    {
+        $periode = \App\Models\OsisPeriod::factory()->tahun(2026)->aktif()->create();
+        $calon = \App\Models\Candidate::factory()->create(['periode_id' => $periode->id]);
+
+        $materi = \App\Models\CampaignMaterial::create(['candidate_id' => $calon->id, 'tipe' => 'janji', 'deskripsi' => 'Janji kampanye.']);
+        $tanya = \App\Models\CandidateQuestion::factory()->create(['candidate_id' => $calon->id]);
+
+        $this->assertSame($periode->id, $materi->periode_id);
+        $this->assertSame($periode->id, $tanya->periode_id);
+        $this->assertTrue($tanya->periode->is($periode));
+        foreach (['campaign_materials', 'campaign_schedules', 'candidate_questions'] as $tabel) {
+            $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumns($tabel, ['periode_id']), $tabel);
+        }
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumns('candidate_questions', ['ditampilkan', 'jawaban']));
+    }
 }
