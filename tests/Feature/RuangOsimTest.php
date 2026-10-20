@@ -272,7 +272,7 @@ class RuangOsimTest extends TestCase
         $this->assertSame([3, 0, 1], array_column($r['kelompok'], 'memilih'));
 
         $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
-        $this->get('/admin/partisipasi')->assertOk()->assertSee('Pantau Partisipasi')->assertSee('57,1%')->assertSee('75%')->assertDontSee('Nadia Kusuma');
+        $this->get('/admin/partisipasi')->assertOk()->assertSee('Pantau Partisipasi')->assertSee('57,14%')->assertSee('75,00%')->assertDontSee('Nadia Kusuma');
 
         $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
         $this->get('/admin/partisipasi')->assertForbidden();

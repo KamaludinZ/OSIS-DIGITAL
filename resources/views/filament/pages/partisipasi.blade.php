@@ -19,7 +19,7 @@
             <div class="border-t border-white/10 px-5 py-4">
                 <div class="flex justify-between text-sm font-semibold">
                     <span class="text-hijau-100">Partisipasi</span>
-                    <span class="tabular-nums text-emas-300">{{ str_replace('.', ',', $persen($memilih, $total)) }}%</span>
+                    <span class="tabular-nums text-emas-300">{{ \App\Support\Angka::persen($memilih, $total) }}</span>
                 </div>
                 <div class="mt-2 h-3 overflow-hidden rounded-full bg-hijau-900" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $persen($memilih, $total) }}" aria-label="Partisipasi keseluruhan">
                     <div class="h-full rounded-full bg-emas-400 transition-[width] duration-500" style="width: {{ $persen($memilih, $total) }}%"></div>
@@ -44,7 +44,7 @@
                                     <div @class(['h-full rounded-full transition-[width] duration-500', 'bg-hijau-600' => $p >= 50, 'bg-emas-400' => $p < 50]) style="width: {{ max($p, 1) }}%"></div>
                                 </div>
                                 <span class="hidden text-right text-sm tabular-nums text-tinta-2 sm:block">{{ $k['memilih'] }} / {{ $k['total'] }} orang</span>
-                                <span class="text-right font-black tabular-nums text-hijau-800">{{ str_replace('.', ',', $p) }}%</span>
+                                <span class="text-right font-black tabular-nums text-hijau-800">{{ \App\Support\Angka::persen($k['memilih'], $k['total']) }}</span>
                                 <span class="hidden items-center justify-end gap-1 text-sm font-bold text-hijau-700 sm:flex">
                                     @if (empty($nama))
                                         Lengkap
