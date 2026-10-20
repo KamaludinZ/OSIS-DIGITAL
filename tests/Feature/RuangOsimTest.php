@@ -345,6 +345,12 @@ class RuangOsimTest extends TestCase
             ->call('tutupRingkasanImpor')
             ->assertDontSee('Impor terakhir');
 
+        // Tercatat di log impor.
+        $log = \App\Models\VoterImport::sole();
+        $this->assertSame([1, 1, 1], [$log->tambah, $log->perbarui, $log->dilewati]);
+        $this->assertSame('siswa.csv', $log->nama_berkas);
+        $this->assertSame(auth()->id(), $log->user_id);
+
         // Tombol "Buat kode pilih" pada notifikasi membuat kode untuk pemilih baru.
         \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
             ->dispatch('buat-kode-pemilih-baru')

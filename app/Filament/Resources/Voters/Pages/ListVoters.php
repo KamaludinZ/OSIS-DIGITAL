@@ -104,11 +104,8 @@ class ListVoters extends ListRecords
             ->action(function (array $data) use ($jenis) {
                 $berkas = self::berkasDari($data['berkas']);
                 $hasil = app(ImporPemilih::class)->impor($berkas->getRealPath(), $jenis, $berkas->getClientOriginalName());
-                // Ringkasan menetap di halaman (panel "Impor terakhir") untuk akun ini selama sehari.
-                \Illuminate\Support\Facades\Cache::put(self::kunciRingkasan(), [
-                    ...\Illuminate\Support\Arr::only($hasil, ['tambah', 'perbarui', 'sama', 'gagal']),
-                    'jenis' => $jenis->value, 'berkas' => $berkas->getClientOriginalName(), 'waktu' => now()->toDateTimeString(),
-                ], now()->addDay());
+                // Panel "Impor terakhir" muncul lagi untuk log baru ini.
+                session()->forget('impor_pemilih_ditutup');
 
                 $judul = "Impor selesai: {$hasil['tambah']} ditambahkan, {$hasil['perbarui']} diperbarui".($hasil['sama'] ? ", {$hasil['sama']} tidak berubah" : '');
                 $tanpaKode = Voter::terverifikasi()->whereNull('kode_pilih')->count();
@@ -138,14 +135,24 @@ class ListVoters extends ListRecords
             });
     }
 
-    public static function kunciRingkasan(): string
+    /** Log impor terakhir akun ini (dari voter_imports), kecuali sudah ditutup. */
+    public static function ringkasanImporTerakhir(): ?array
     {
-        return 'impor-pemilih-terakhir:'.auth()->id();
+        $log = \App\Models\VoterImport::query()->where('user_id', auth()->id())->latest('id')->first();
+
+        if (! $log || session('impor_pemilih_ditutup') === $log->id) {
+            return null;
+        }
+
+        return [
+            'tambah' => $log->tambah, 'perbarui' => $log->perbarui, 'sama' => $log->sama, 'gagal' => $log->galat ?? [],
+            'jenis' => $log->jenis, 'berkas' => $log->nama_berkas, 'waktu' => $log->created_at->toDateTimeString(),
+        ];
     }
 
     public function tutupRingkasanImpor(): void
     {
-        \Illuminate\Support\Facades\Cache::forget(self::kunciRingkasan());
+        session(['impor_pemilih_ditutup' => \App\Models\VoterImport::query()->where('user_id', auth()->id())->max('id')]);
     }
 
     /** Panel ringkasan impor terakhir di atas tabel pemilih. */
@@ -155,7 +162,7 @@ class ListVoters extends ListRecords
 
         return $isi->components([
             \Filament\Schemas\Components\View::make('filament.ringkasan-impor')
-                ->viewData(fn () => ['ringkasan' => \Illuminate\Support\Facades\Cache::get(self::kunciRingkasan())]),
+                ->viewData(fn () => ['ringkasan' => self::ringkasanImporTerakhir()]),
             ...$isi->getComponents(withHidden: true),
         ]);
     }

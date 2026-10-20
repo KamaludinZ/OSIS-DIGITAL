@@ -147,7 +147,7 @@ class ImporPemilih
         if ($galatBerkas = self::galatBerkas($isi)) {
             $hasil['gagal'][] = $galatBerkas;
 
-            return $hasil;
+            return $this->catatLog($hasil, $jenis, $namaAsli ?? basename($path));
         }
 
         $kolomKet = $jenis === JenisPemilih::Siswa ? 'kelas' : 'jabatan';
@@ -175,7 +175,25 @@ class ImporPemilih
             }
         });
 
-        return $hasil;
+        return $this->catatLog($hasil, $jenis, $namaAsli ?? basename($path));
+    }
+
+    /** Simpan ringkasan impor ke log voter_imports; mengembalikan hasil + id log. */
+    private function catatLog(array $hasil, JenisPemilih $jenis, string $namaBerkas): array
+    {
+        $log = \App\Models\VoterImport::create([
+            'periode_id' => \App\Models\OsisPeriod::aktif()?->id,
+            'user_id' => auth()->id(),
+            'jenis' => $jenis->value,
+            'nama_berkas' => mb_substr($namaBerkas, 0, 255),
+            'tambah' => $hasil['tambah'],
+            'perbarui' => $hasil['perbarui'],
+            'sama' => $hasil['sama'],
+            'dilewati' => count($hasil['gagal']),
+            'galat' => $hasil['gagal'] ?: null,
+        ]);
+
+        return [...$hasil, 'log_id' => $log->id];
     }
 
     /** NISN 10 digit (nol di depan sering hilang di Excel); NIK 16 digit. */
