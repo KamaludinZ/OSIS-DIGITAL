@@ -126,4 +126,30 @@ class BilikSuaraLanjutanTest extends TestCase
         // Bilik suara menautkan panduan lengkap.
         Volt::test('bilik-suara')->assertSee('Pertanyaan umum &amp; panduan lengkap', false);
     }
+
+    public function test_kode_bukti_unik_tanpa_karakter_ambigu(): void
+    {
+        $layanan = app(\App\Services\LayananPemilihan::class);
+        $kode = collect(range(1, 200))->map(fn () => $layanan->buatKodeBukti());
+
+        $this->assertSame(200, $kode->unique()->count());
+        $kode->each(fn ($k) => $this->assertMatchesRegularExpression('/^OSIM-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/', $k));
+        $this->assertDoesNotMatchRegularExpression('/[01ILO]/', $kode->map(fn ($k) => substr($k, 5))->implode(''));
+    }
+
+    public function test_tabrakan_kode_bukti_diterbitkan_ulang_bukan_dianggap_sudah_memilih(): void
+    {
+        $election = Candidate::find($this->idNomor(1))->election_id;
+        $lain = Voter::factory()->create();
+        Vote::create(['election_id' => $election, 'candidate_id' => $this->idNomor(1), 'voter_id' => $lain->id, 'kode_bukti' => 'OSIM-AAAA-AAAA']);
+
+        // Kode pertama bertabrakan (meniru dua permintaan bersamaan), kode kedua unik.
+        $layanan = \Mockery::mock(\App\Services\LayananPemilihan::class)->makePartial();
+        $layanan->shouldReceive('buatKodeBukti')->andReturn('OSIM-AAAA-AAAA', 'OSIM-BBBB-CCCC');
+
+        $suara = $layanan->kirimSuara($this->pemilih, \App\Models\Election::find($election), $this->idNomor(2));
+
+        $this->assertSame('OSIM-BBBB-CCCC', $suara->kode_bukti);
+        $this->assertSame(2, Vote::count());
+    }
 }

@@ -10,7 +10,6 @@ use App\Models\Voter;
 use App\Models\Vote;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Sumber data bilik suara untuk antarmuka siswa (Livewire).
@@ -140,20 +139,26 @@ class LayananPemilihan
             throw new SuaraDitolak(ucfirst(\App\Support\Istilah::calon()).' tidak ditemukan pada pemilihan ini.', 'kandidat_tidak_valid');
         }
 
-        try {
-            $suara = DB::transaction(fn () => Vote::create([
-                'election_id' => $pemilihan->id,
-                'voter_id' => $pemilih->id,
-                'candidate_id' => $calon->id,
-                'kode_bukti' => $this->buatKodeBukti(),
-            ]));
+        // Kode bukti unik: bila (sangat jarang) bertabrakan saat bersamaan, terbitkan ulang.
+        // Pelanggaran unik karena pemilih yang sama memilih dua kali tetap ditolak.
+        for ($percobaan = 1; ; $percobaan++) {
+            try {
+                $suara = DB::transaction(fn () => Vote::create([
+                    'election_id' => $pemilihan->id,
+                    'voter_id' => $pemilih->id,
+                    'candidate_id' => $calon->id,
+                    'kode_bukti' => $this->buatKodeBukti(),
+                ]));
 
-            // Rekap di halaman Hasil langsung ikut berubah.
-            LayananHasil::lupakanCache($pemilihan->id);
+                // Rekap di halaman Hasil langsung ikut berubah.
+                LayananHasil::lupakanCache($pemilihan->id);
 
-            return $suara;
-        } catch (UniqueConstraintViolationException) {
-            throw new SuaraDitolak('Anda sudah menggunakan hak pilih pada pemilihan ini.', 'sudah_memilih');
+                return $suara;
+            } catch (UniqueConstraintViolationException $e) {
+                if ($pemilih->sudahMemilih($pemilihan) || $percobaan >= 3) {
+                    throw new SuaraDitolak('Anda sudah menggunakan hak pilih pada pemilihan ini.', 'sudah_memilih');
+                }
+            }
         }
     }
 
@@ -178,10 +183,16 @@ class LayananPemilihan
         ] : null;
     }
 
-    private function buatKodeBukti(): string
+    /** Huruf & angka yang tidak mudah tertukar saat dibaca/didiktekan (tanpa 0/O, 1/I/L). */
+    public const HURUF_KODE_BUKTI = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+    /** Kode bukti acak kriptografis, format OSIM-XXXX-XXXX. */
+    public function buatKodeBukti(): string
     {
+        $acak = fn () => collect(range(1, 4))->map(fn () => self::HURUF_KODE_BUKTI[random_int(0, strlen(self::HURUF_KODE_BUKTI) - 1)])->implode('');
+
         do {
-            $kode = 'OSIM-'.Str::upper(Str::random(4)).'-'.Str::upper(Str::random(4));
+            $kode = 'OSIM-'.$acak().'-'.$acak();
         } while (Vote::where('kode_bukti', $kode)->exists());
 
         return $kode;
