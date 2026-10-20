@@ -38,4 +38,16 @@ class MenuPublikTest extends TestCase
             ->assertSee('grid-cols-3', false)
             ->assertDontSee('>Bilik Suara<', false);
     }
+
+    public function test_penanda_bilik_suara_dibuka_saat_mode_aktif(): void
+    {
+        $this->get('/')->assertDontSee('(sedang dibuka)');
+
+        \App\Models\Election::factory()->create(['status' => 'berjalan', 'mulai' => now()->subHour(), 'selesai' => now()->addHours(5)]);
+
+        $this->get('/')->assertOk()->assertSeeInOrder(['Bilik Suara', '(sedang dibuka)']);
+
+        app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
+        $this->get('/')->assertDontSee('(sedang dibuka)');
+    }
 }

@@ -1,6 +1,9 @@
 @php
     // Menu publik mengikuti sakelar mode pemilihan (sama dengan pratinjau di Ruang OSIM).
     $menu = app(\App\Services\LayananModePemilihan::class)->menu();
+    // Mode aktif: item Bilik Suara diberi penanda selama bilik suara dibuka.
+    $bilikDibuka = collect($menu)->contains('rute', 'bilik-suara')
+        && (app(\App\Services\LayananPemilihan::class)->pemilihanAktif()?->sedangDibuka() ?? false);
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -39,6 +42,13 @@
                            ])>
                             <flux:icon :name="$item['ikon']" variant="micro" />
                             {{ $item['label'] }}
+                            @if ($bilikDibuka && $item['rute'] === 'bilik-suara')
+                                <span class="osim-penanda-dibuka relative flex size-2" title="Bilik suara sedang dibuka">
+                                    <span class="absolute inline-flex size-full animate-ping rounded-full bg-emas-300 opacity-75 motion-reduce:hidden"></span>
+                                    <span class="relative inline-flex size-2 rounded-full {{ $aktif ? 'bg-hijau-700' : 'bg-emas-300' }}"></span>
+                                </span>
+                                <span class="sr-only">(sedang dibuka)</span>
+                            @endif
                         </a>
                     @endforeach
                 </nav>
@@ -125,8 +135,12 @@
                     <li>
                         <a href="{{ \App\Support\MenuPublik::url($item) }}" wire:navigate @if ($aktif) aria-current="page" @endif
                            class="flex flex-col items-center gap-1 px-1 pb-2 pt-2.5 text-[11px] font-semibold {{ $aktif ? 'text-hijau-800' : 'text-tinta-2' }}">
-                            <span @class(['flex h-7 w-12 items-center justify-center rounded-full transition', 'bg-emas-400 text-hijau-950' => $aktif])>
+                            <span @class(['relative flex h-7 w-12 items-center justify-center rounded-full transition', 'bg-emas-400 text-hijau-950' => $aktif])>
                                 <flux:icon :name="$item['ikon']" variant="{{ $aktif ? 'solid' : 'outline' }}" class="size-5" />
+                                @if ($bilikDibuka && $item['rute'] === 'bilik-suara')
+                                    <span class="absolute right-2 top-0.5 size-2 rounded-full bg-cap ring-2 ring-white" aria-hidden="true"></span>
+                                    <span class="sr-only">(sedang dibuka)</span>
+                                @endif
                             </span>
                             {{ $item['label_pendek'] }}
                         </a>
