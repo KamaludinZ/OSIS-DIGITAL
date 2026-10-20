@@ -16,9 +16,9 @@ class OsisPeriod extends Model
 
     private const KUNCI_AKTIF = 'osim.periode-aktif';
 
-    protected $fillable = ['nama', 'mulai', 'selesai', 'status'];
+    protected $fillable = ['nama', 'mulai', 'selesai', 'status', 'mode_pemilihan', 'mode_diubah_pada', 'mode_diubah_oleh'];
 
-    protected $attributes = ['status' => 'disiapkan'];
+    protected $attributes = ['status' => 'disiapkan', 'mode_pemilihan' => false];
 
     protected static function booted(): void
     {
@@ -32,6 +32,8 @@ class OsisPeriod extends Model
             'mulai' => 'date',
             'selesai' => 'date',
             'status' => StatusPeriode::class,
+            'mode_pemilihan' => 'boolean',
+            'mode_diubah_pada' => 'datetime',
         ];
     }
 
@@ -48,6 +50,12 @@ class OsisPeriod extends Model
     public static function lupakanAktif(): void
     {
         app()->forgetInstance(self::KUNCI_AKTIF);
+    }
+
+    /** Akun yang terakhir mengubah sakelar mode pemilihan. */
+    public function pengubahMode(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'mode_diubah_oleh');
     }
 
     // Relasi isi periode melepas batas periode aktif agar arsip tetap terbaca.

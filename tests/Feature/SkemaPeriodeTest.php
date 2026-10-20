@@ -49,4 +49,33 @@ class SkemaPeriodeTest extends TestCase
         $this->assertFalse($nonaktif->menjabat());
         $this->assertSame([$menjabat->id], \App\Models\User::pengurusMenjabat()->pluck('id')->all());
     }
+
+    public function test_kolom_mode_pemilihan_per_periode(): void
+    {
+        $this->assertTrue(Schema::hasColumns('osis_periods', ['mode_pemilihan', 'mode_diubah_pada', 'mode_diubah_oleh']));
+
+        $pengubah = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Panitia]);
+        $periode = \App\Models\OsisPeriod::factory()->aktif()->create();
+        $this->assertFalse($periode->fresh()->mode_pemilihan);
+
+        $periode->update(['mode_pemilihan' => true, 'mode_diubah_pada' => now(), 'mode_diubah_oleh' => $pengubah->id]);
+        $this->assertTrue($periode->fresh()->mode_pemilihan);
+        $this->assertTrue($periode->fresh()->pengubahMode->is($pengubah));
+
+        // Akun dihapus: jejak pengubah dikosongkan, mode tetap.
+        $pengubah->delete();
+        $this->assertNull($periode->fresh()->mode_diubah_oleh);
+        $this->assertTrue($periode->fresh()->mode_pemilihan);
+    }
+
+    public function test_periode_lama_tetap_dalam_mode_pemilihan_setelah_migrasi(): void
+    {
+        $migrasi = require database_path('migrations/2026_10_20_000400_add_mode_pemilihan_to_osis_periods_table.php');
+        $migrasi->down();
+        DB::table('osis_periods')->insert(['nama' => '2026/2027', 'mulai' => '2026-07-13', 'selesai' => '2027-06-25', 'status' => 'aktif']);
+
+        $migrasi->up();
+
+        $this->assertTrue((bool) DB::table('osis_periods')->value('mode_pemilihan'));
+    }
 }
