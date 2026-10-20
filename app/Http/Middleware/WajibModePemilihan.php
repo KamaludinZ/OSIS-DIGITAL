@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 class WajibModePemilihan
 {
     /** Awalan alamat => nama halaman di pemberitahuan. */
-    private const HALAMAN = ['bilik-suara' => 'bilik-suara', 'kandidat' => 'kandidat', 'hasil' => 'hasil'];
+    private const HALAMAN = ['bilik-suara' => 'bilik-suara', 'panduan-memilih' => 'bilik-suara', 'kandidat' => 'kandidat', 'hasil' => 'hasil'];
 
     public function handle(Request $request, Closure $next): Response
     {

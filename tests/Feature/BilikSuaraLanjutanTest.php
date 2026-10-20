@@ -115,4 +115,15 @@ class BilikSuaraLanjutanTest extends TestCase
             ->assertSee('Suaramu sudah tercatat dan tidak bisa diubah.')
             ->assertSee('Lihat bukti');
     }
+
+    public function test_halaman_panduan_cara_memilih(): void
+    {
+        $this->get('/panduan-memilih')->assertOk()
+            ->assertSeeInOrder(['Empat langkah memilih', 'Kenali kandidat', 'Pilih satu nomor', 'Konfirmasi', 'Simpan bukti'])
+            ->assertSee('Kartu pemilihku hilang atau kodenya salah.')
+            ->assertSee('href="'.route('bilik-suara').'"', false);
+
+        // Bilik suara menautkan panduan lengkap.
+        Volt::test('bilik-suara')->assertSee('Pertanyaan umum &amp; panduan lengkap', false);
+    }
 }

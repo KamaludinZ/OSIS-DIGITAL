@@ -31,6 +31,7 @@ Volt::route('pengumuman/{id}', 'pengumuman.detail')->whereNumber('id')->name('pe
 Volt::route('kegiatan/{id}', 'kegiatan.detail')->whereNumber('id')->middleware('periode:'.App\Models\Event::class.',id,arsip')->name('kegiatan.detail');
 Volt::route('bilik-suara', 'bilik-suara')->middleware('mode-pemilihan')->name('bilik-suara');
 Volt::route('bilik-suara/bukti', 'bilik-suara.bukti')->middleware('mode-pemilihan')->name('bilik-suara.bukti');
+Volt::route('panduan-memilih', 'panduan-memilih')->middleware('mode-pemilihan')->name('panduan-memilih');
 Volt::route('kandidat', 'kandidat.index')->middleware('mode-pemilihan')->name('kandidat.index');
 Volt::route('kandidat/{id}', 'kandidat.profil')->whereNumber('id')->middleware(['mode-pemilihan', 'periode:'.App\Models\Candidate::class])->name('kandidat.profil');
 

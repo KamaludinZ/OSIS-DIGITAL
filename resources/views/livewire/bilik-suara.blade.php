@@ -296,24 +296,10 @@ new #[Layout('components.layouts.siswa')] #[Title('Bilik Suara')] class extends 
                         <button type="button" wire:click="tutupPanduan" class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold text-tinta-2 hover:bg-hijau-50 hover:text-hijau-800">Lewati</button>
                     </div>
 
-                    <ol class="grid gap-px bg-garis sm:grid-cols-2 lg:grid-cols-4">
-                        @foreach ([
-                            ['user-group', 'Kenali kandidat', 'Lihat foto, nomor urut, dan buka profil untuk membaca visi misi.'],
-                            ['cursor-arrow-rays', 'Pilih satu nomor', 'Tekan tombol “Pilih” pada satu '.\App\Support\Istilah::calon().'. Tekan lagi untuk membatalkan.'],
-                            ['shield-check', 'Konfirmasi', 'Periksa kembali pilihanmu di layar konfirmasi, lalu tekan “Kirim Suara”.'],
-                            ['check-badge', 'Simpan bukti', 'Suara langsung tercatat dan terkunci. Kamu akan mendapat kode bukti.'],
-                        ] as $i => [$ikon, $judul, $isi])
-                            <li class="flex gap-4 bg-white p-5">
-                                <span class="font-display angka text-5xl font-black leading-none text-hijau-200">{{ $i + 1 }}</span>
-                                <div>
-                                    <div class="flex items-center gap-1.5 font-bold text-tinta"><flux:icon :name="$ikon" variant="mini" class="text-hijau-600" /> {{ $judul }}</div>
-                                    <p class="mt-1 text-sm text-tinta-2">{{ $isi }}</p>
-                                </div>
-                            </li>
-                        @endforeach
-                    </ol>
+                    <x-langkah-memilih />
 
-                    <div class="flex justify-end border-t border-dashed border-garis p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-garis p-5">
+                        <a href="{{ route('panduan-memilih') }}" wire:navigate class="text-sm font-bold text-hijau-700 hover:underline">Pertanyaan umum &amp; panduan lengkap</a>
                         <button type="button" wire:click="tutupPanduan" class="inline-flex items-center gap-2 rounded-xl bg-emas-400 px-5 py-3 font-bold text-hijau-950 shadow-[0_4px_10px_-3px_var(--color-emas-500)] hover:bg-emas-300 active:translate-y-0.5">
                             Mengerti, mulai memilih <flux:icon.arrow-right variant="micro" />
                         </button>
