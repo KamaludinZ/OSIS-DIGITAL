@@ -80,10 +80,15 @@ class OsisPeriod extends Model
         return $this->hasMany(Election::class, 'periode_id')->withoutGlobalScope(Scopes\PeriodeAktifScope::class);
     }
 
+    public function struktur(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(OrganizationStructure::class, 'periode_id')->withoutGlobalScope(Scopes\PeriodeAktifScope::class);
+    }
+
     /** Sudah ada data operasional yang menempel ke periode ini. */
     public function punyaData(): bool
     {
-        return collect(['members', 'work_programs', 'events', 'social_posts', 'elections', 'candidates'])
+        return collect(['members', 'work_programs', 'events', 'social_posts', 'elections', 'candidates', 'organization_structures'])
             ->contains(fn (string $tabel) => \Illuminate\Support\Facades\DB::table($tabel)->where('periode_id', $this->id)->exists());
     }
 
