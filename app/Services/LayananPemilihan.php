@@ -143,12 +143,18 @@ class LayananPemilihan
         // Pelanggaran unik karena pemilih yang sama memilih dua kali tetap ditolak.
         for ($percobaan = 1; ; $percobaan++) {
             try {
-                $suara = DB::transaction(fn () => Vote::create([
-                    'election_id' => $pemilihan->id,
-                    'voter_id' => $pemilih->id,
-                    'candidate_id' => $calon->id,
-                    'kode_bukti' => $this->buatKodeBukti(),
-                ]));
+                // Satu transaksi, dua catatan yang tidak saling terhubung:
+                // kehadiran (votes: pemilih + kode bukti) dan pilihan anonim (ballots: kandidat saja).
+                $suara = DB::transaction(function () use ($pemilihan, $pemilih, $calon) {
+                    $hadir = Vote::create([
+                        'election_id' => $pemilihan->id,
+                        'voter_id' => $pemilih->id,
+                        'kode_bukti' => $this->buatKodeBukti(),
+                    ]);
+                    \App\Models\Ballot::create(['election_id' => $pemilihan->id, 'candidate_id' => $calon->id]);
+
+                    return $hadir;
+                });
 
                 // Rekap di halaman Hasil langsung ikut berubah.
                 LayananHasil::lupakanCache($pemilihan->id);

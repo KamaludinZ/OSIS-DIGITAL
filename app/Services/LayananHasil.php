@@ -25,7 +25,8 @@ class LayananHasil
      */
     public function perolehanSuara(Election $pemilihan): array
     {
-        $hitungan = Vote::query()
+        // Dihitung dari surat suara anonim (ballots), bukan dari catatan kehadiran pemilih.
+        $hitungan = \App\Models\Ballot::query()
             ->where('election_id', $pemilihan->id)
             ->selectRaw('candidate_id, count(*) as jumlah')
             ->groupBy('candidate_id')

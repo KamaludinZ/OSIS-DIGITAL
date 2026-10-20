@@ -66,9 +66,10 @@ class Candidate extends Model
         return $this->belongsTo(Election::class);
     }
 
+    /** Surat suara anonim untuk kandidat ini (tanpa identitas pemilih). */
     public function votes(): HasMany
     {
-        return $this->hasMany(Vote::class);
+        return $this->hasMany(Ballot::class);
     }
 
     public function materials(): HasMany

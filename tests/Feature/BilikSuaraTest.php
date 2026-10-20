@@ -144,7 +144,9 @@ class BilikSuaraTest extends TestCase
             ->assertSet('terkirim', true)
             ->assertRedirect(route('bilik-suara.bukti'));
 
-        $this->assertDatabaseHas('votes', ['voter_id' => $this->pemilih->id, 'candidate_id' => $this->idNomor(2)]);
+        // Kehadiran tercatat tanpa pilihan; pilihan tercatat anonim di ballots.
+        $this->assertDatabaseHas('votes', ['voter_id' => $this->pemilih->id]);
+        $this->assertDatabaseHas('ballots', ['candidate_id' => $this->idNomor(2)]);
         $this->assertMatchesRegularExpression('/^OSIM-[A-Z0-9]{4}-[A-Z0-9]{4}$/', Vote::value('kode_bukti'));
 
         // Kode yang sama tidak bisa dipakai memilih lagi.
