@@ -17,6 +17,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Satu penentu mode per permintaan (dipakai layout, middleware, dan Ruang OSIM).
         $this->app->scoped(\App\Services\LayananModePemilihan::class);
+        $this->app->scoped(\App\Services\LayananAkunSosmed::class);
     }
 
     /**

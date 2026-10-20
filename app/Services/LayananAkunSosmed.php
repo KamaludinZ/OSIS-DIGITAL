@@ -13,6 +13,9 @@ use Illuminate\Validation\Rule;
 /** Akun media sosial resmi OSIM per periode. */
 class LayananAkunSosmed
 {
+    /** Hasil publik() diingat selama satu permintaan (layout & Beranda memakai data yang sama). */
+    private ?array $publik = null;
+
     /** Aturan isian akun; platform wajib dan tautan harus alamat platform tersebut. */
     public static function aturan(?string $platform, ?SocialLink $kecuali = null): array
     {
@@ -41,6 +44,7 @@ class LayananAkunSosmed
     public function tambah(array $data): SocialLink
     {
         $this->pastikanPeriodeAktif();
+        $this->publik = null;
 
         return SocialLink::create([...$this->isian($data), 'urutan' => (SocialLink::max('urutan') ?? 0) + 1]);
     }
@@ -49,6 +53,7 @@ class LayananAkunSosmed
     public function ubah(SocialLink $akun, array $data): SocialLink
     {
         $this->pastikanMilikPeriodeAktif($akun);
+        $this->publik = null;
         $akun->update($this->isian($data, $akun));
 
         return $akun;
@@ -63,6 +68,7 @@ class LayananAkunSosmed
     public function hapus(SocialLink $akun): void
     {
         $this->pastikanMilikPeriodeAktif($akun);
+        $this->publik = null;
         $akun->delete();
     }
 
@@ -83,7 +89,7 @@ class LayananAkunSosmed
      */
     public function publik(): array
     {
-        return SocialLink::query()->orderBy('urutan')->orderBy('id')->get()
+        return $this->publik ??= SocialLink::query()->orderBy('urutan')->orderBy('id')->get()
             ->filter(fn (SocialLink $a) => $a->tautanSah())
             ->map(fn (SocialLink $a) => [
                 'id' => $a->id,

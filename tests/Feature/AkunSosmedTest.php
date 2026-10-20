@@ -154,6 +154,7 @@ class AkunSosmedTest extends TestCase
         // Tautan yang tidak cocok domainnya ditolak walau tersimpan (mis. diubah langsung di basis data).
         \Illuminate\Support\Facades\DB::table('social_links')->where('id', $this->tiktok->id)->update(['tautan' => 'https://tiktok.com.jahat.test/x']);
         $this->get('/sosmed/akun/'.$this->tiktok->id)->assertNotFound();
+        app()->forgetScopedInstances(); // permintaan baru (memo publik() hanya per permintaan)
         $this->assertNotContains('tiktok', array_column(app(LayananAkunSosmed::class)->publik(), 'platform'));
     }
 
@@ -177,5 +178,22 @@ class AkunSosmedTest extends TestCase
         // Akun periode aktif boleh dihapus.
         $layanan->hapus($this->youtube);
         $this->assertModelMissing($this->youtube);
+    }
+
+    public function test_query_publik_sekali_per_permintaan_dan_segar_setelah_diubah(): void
+    {
+        $kueri = 0;
+        \Illuminate\Support\Facades\DB::listen(function ($q) use (&$kueri) {
+            $kueri += str_contains($q->sql, '"social_links"') ? 1 : 0;
+        });
+
+        $this->get('/')->assertOk();
+        $this->assertSame(1, $kueri, 'Beranda + kaki halaman cukup satu kueri akun.');
+
+        $layanan = app(LayananAkunSosmed::class);
+        $this->assertCount(3, $layanan->publik());
+        $layanan->hapus($this->tiktok);
+        $this->assertCount(2, $layanan->publik());
+        $this->assertSame(['id', 'platform', 'label', 'nama_akun', 'url'], array_keys($layanan->publik()[0]));
     }
 }
