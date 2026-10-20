@@ -28,7 +28,9 @@ class VoterForm
                     ->required()
                     ->regex(fn (Get $get) => $siswa($get) ? '/^\d{10}$/' : '/^\d{16}$/')
                     ->validationMessages(['regex' => 'NISN harus 10 angka, NIK harus 16 angka.'])
-                    ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule, Get $get) => $rule->where('jenis', $siswa($get) ? 'siswa' : 'gtk')),
+                    ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule, Get $get) => $rule->where('jenis', $siswa($get) ? 'siswa' : 'gtk')
+                        // Unik di periode aktif saja: siswa yang sama boleh terdaftar lagi tahun berikutnya.
+                        ->where('periode_id', \App\Models\OsisPeriod::aktif()?->id)),
                 TextInput::make('nama')->label('Nama lengkap')->required()->maxLength(150),
                 TextInput::make('kelas')->label('Kelas')->placeholder('Contoh: VIII-B')->maxLength(20)->visible($siswa),
                 TextInput::make('jabatan')->label('Jabatan')->placeholder('Contoh: Guru Matematika')->maxLength(100)->hidden($siswa),

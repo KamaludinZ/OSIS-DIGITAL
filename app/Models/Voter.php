@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Voter extends Model
 {
     /** @use HasFactory<\Database\Factories\VoterFactory> */
-    use HasFactory;
+    use \App\Models\Concerns\IkutPeriode, HasFactory;
 
     protected $fillable = [
         'jenis', 'nomor_induk', 'nama', 'kelas', 'jabatan', 'tanggal_lahir', 'verifikasi',
@@ -28,6 +28,12 @@ class Voter extends Model
             'kode_dibuat_pada' => 'datetime',
             'penanya_terverifikasi_pada' => 'datetime',
         ];
+    }
+
+    /** Pemilih lama tanpa periode tetap terbaca; tanpa periode aktif tidak difilter. */
+    public function periodeLonggar(): bool
+    {
+        return true;
     }
 
     public function votes(): HasMany
