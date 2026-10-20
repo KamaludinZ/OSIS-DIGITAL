@@ -32,6 +32,7 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
         'kelas',
         'candidate_id',
         'aktif',
+        'is_aktif',
     ];
 
     /**
@@ -55,6 +56,7 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'aktif' => 'boolean',
+            'is_aktif' => 'boolean',
             'terakhir_masuk_pada' => 'datetime',
             'role' => Peran::class,
         ];
@@ -69,6 +71,17 @@ class User extends Authenticatable implements FilamentUser // implements MustVer
             ->explode(' ')
             ->map(fn (string $name) => Str::of($name)->substr(0, 1))
             ->implode('');
+    }
+
+    /** Pengurus yang masih menjabat di periode berjalan dan akunnya aktif. */
+    public function scopePengurusMenjabat(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->where('role', Peran::Pengurus)->where('is_aktif', true)->where('aktif', true);
+    }
+
+    public function menjabat(): bool
+    {
+        return $this->role === Peran::Pengurus && $this->is_aktif && $this->aktif;
     }
 
     /** Ruang OSIM (panel Filament) hanya untuk pengurus, panitia, dan admin. */

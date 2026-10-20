@@ -43,4 +43,13 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /** Akun pengurus yang masih menjabat di periode berjalan. */
+    public function pengurusMenjabat(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => \App\Enums\Peran::Pengurus,
+            'is_aktif' => true,
+        ]);
+    }
 }

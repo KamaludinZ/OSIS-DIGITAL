@@ -34,4 +34,19 @@ class SkemaPeriodeTest extends TestCase
         $this->expectException(QueryException::class);
         DB::table('osis_periods')->insert(['nama' => '2026/2027', 'mulai' => '2026-07-13', 'selesai' => '2027-06-25']);
     }
+
+    public function test_kolom_is_aktif_menandai_pengurus_menjabat(): void
+    {
+        $this->assertTrue(Schema::hasColumn('users', 'is_aktif'));
+
+        $menjabat = \App\Models\User::factory()->pengurusMenjabat()->create();
+        $mantan = \App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]);
+        $nonaktif = \App\Models\User::factory()->pengurusMenjabat()->create(['aktif' => false]);
+
+        $this->assertFalse($mantan->fresh()->is_aktif);
+        $this->assertTrue($menjabat->menjabat());
+        $this->assertFalse($mantan->menjabat());
+        $this->assertFalse($nonaktif->menjabat());
+        $this->assertSame([$menjabat->id], \App\Models\User::pengurusMenjabat()->pluck('id')->all());
+    }
 }
