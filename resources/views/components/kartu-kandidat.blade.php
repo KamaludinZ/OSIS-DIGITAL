@@ -5,7 +5,7 @@
     'relative flex flex-col overflow-hidden rounded-[14px] bg-white transition',
     'shadow-[0_2px_10px_-3px_var(--color-garis),0_10px_24px_-14px_rgb(4_41_26/0.35)] ring-1 ring-garis' => ! $terpilih,
     'shadow-[0_14px_30px_-12px_rgb(15_122_61/0.55)] ring-[3px] ring-hijau-600' => $terpilih,
-]) }}>
+]) }} data-terpilih="{{ $terpilih ? 'ya' : 'tidak' }}">
     @php($berpasangan = $calon['berpasangan'] ?? filled($calon['nama_wakil'] ?? null))
     <h3 class="sr-only">{{ $berpasangan ? 'Pasangan Calon' : 'Calon Ketua' }} {{ $calon['nomor_urut'] }}: {{ $berpasangan ? $calon['nama_ketua'].' dan '.$calon['nama_wakil'] : $calon['nama_ketua'] }}</h3>
 
