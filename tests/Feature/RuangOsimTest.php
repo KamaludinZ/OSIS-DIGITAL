@@ -608,4 +608,21 @@ class RuangOsimTest extends TestCase
 
         $this->assertSame($sebelum + 1, $layanan->rekap($pemilihan)['total_pemilih']);
     }
+
+    public function test_ringkasan_kondisi_periode_berjalan(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $this->get('/admin/ringkasan')->assertOk()->assertSee('Belum ada periode aktif');
+
+        $periode = \App\Models\OsisPeriod::factory()->tahun(2026)->aktif()->create(['mode_pemilihan' => false]);
+        \App\Models\Suggestion::factory()->count(2)->create();
+        \App\Models\SocialLink::factory()->create();
+
+        $k = app(\App\Services\LayananRingkasan::class)->kondisiPeriode();
+        $this->assertSame(['2026/2027', false, false, 2, 1], [$k['periode'], $k['mode_pemilihan'], $k['ada_bagan'], $k['saran_belum'], $k['akun_sosmed']]);
+
+        $this->get('/admin/ringkasan')->assertOk()
+            ->assertSee('periode 2026/2027')
+            ->assertSeeInOrder(['Mode pemilihan', 'Nonaktif', 'Bagan struktur', 'Belum ada', 'Kotak saran', '2 belum ditanggapi', 'Akun media sosial', '1 akun']);
+    }
 }

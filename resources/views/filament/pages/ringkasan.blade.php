@@ -3,6 +3,8 @@
         $statusLabel = ['jalan' => ['Sedang berjalan', 'bg-emas-400 text-hijau-950'], 'rencana' => ['Direncanakan', 'bg-white text-tinta-2 ring-1 ring-garis'], 'selesai' => ['Selesai', 'bg-hijau-600 text-white']];
     @endphp
 
+    @include('filament.kondisi-periode')
+
     {{-- Papan angka --}}
     <dl class="grid grid-cols-2 overflow-hidden rounded-[14px] bg-hijau-950 text-white lg:grid-cols-4">
         @foreach ($angka as [$label, $nilai])

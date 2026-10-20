@@ -27,7 +27,9 @@ class Ringkasan extends Page
 
     public function getSubheading(): ?string
     {
-        return 'Kepengurusan OSIM periode '.Member::periodeAktif();
+        $periode = \App\Models\OsisPeriod::aktif();
+
+        return 'Kepengurusan OSIM periode '.($periode?->nama ?? Member::periodeAktif()).($periode ? ' · '.$periode->rentang() : '');
     }
 
     protected function getViewData(): array
