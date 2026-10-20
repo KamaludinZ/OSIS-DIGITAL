@@ -10,7 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class WorkProgram extends Model
 {
     /** @use HasFactory<\Database\Factories\WorkProgramFactory> */
-    use HasFactory;
+    use \App\Models\Concerns\IkutPeriode, HasFactory;
+
+    /** Program lama tanpa periode tetap terbaca; tanpa periode aktif tidak difilter. */
+    public function periodeLonggar(): bool
+    {
+        return true;
+    }
 
     /** Jumlah maksimum program unggulan (sorotan Beranda menampilkan 6). */
     public const BATAS_UNGGULAN = 6;

@@ -42,4 +42,17 @@ class SkemaOrganisasiTest extends TestCase
 
         $this->assertNull($m->fresh()->divisi_id);
     }
+
+    public function test_program_kerja_per_divisi_per_periode(): void
+    {
+        $divisi = Division::create(['nama' => 'Divisi Lingkungan']);
+        $lama = \App\Models\OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        \App\Models\WorkProgram::factory()->create(['nama' => 'Bank Sampah', 'divisi_id' => $divisi->id]);
+
+        app(\App\Services\LayananPeriode::class)->aktifkan(\App\Models\OsisPeriod::factory()->tahun(2026)->create());
+        \App\Models\WorkProgram::factory()->create(['nama' => 'Kebun Sekolah', 'divisi_id' => $divisi->id]);
+
+        $this->assertSame(['Kebun Sekolah'], $divisi->workPrograms()->pluck('nama')->all());
+        $this->assertSame(['Bank Sampah'], \App\Models\WorkProgram::diPeriode($lama)->pluck('nama')->all());
+    }
 }
