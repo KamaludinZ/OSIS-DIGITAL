@@ -64,4 +64,50 @@ class LayananStrukturTest extends TestCase
         $this->expectException(\Illuminate\Validation\ValidationException::class);
         $layanan->unggah('struktur/a.png', '16:9', User::factory()->create());
     }
+
+    public function test_ganti_mempertahankan_rasio_dan_tidak_menyentuh_periode_lain(): void
+    {
+        Storage::fake('public');
+        $layanan = app(LayananStruktur::class);
+        $oleh = User::factory()->create();
+        $lama = OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        Storage::disk('public')->put('struktur/lama.png', 'x');
+        $layanan->unggah('struktur/lama.png', '3:4', $oleh);
+
+        app(\App\Services\LayananPeriode::class)->aktifkan(OsisPeriod::factory()->tahun(2026)->create());
+        Storage::disk('public')->put('struktur/baru.png', 'x');
+        $layanan->unggah('struktur/baru.png', '4:3', $oleh);
+        Storage::disk('public')->put('struktur/baru2.png', 'x');
+        $diganti = $layanan->ganti('struktur/baru2.png', $oleh);
+
+        $this->assertSame('4:3', $diganti->rasio);
+        Storage::disk('public')->assertMissing('struktur/baru.png');
+
+        $layanan->hapus();
+        Storage::disk('public')->assertMissing('struktur/baru2.png');
+        // Bagan periode arsip tetap utuh.
+        $this->assertSame('struktur/lama.png', $lama->fresh()->struktur->gambar);
+        Storage::disk('public')->assertExists('struktur/lama.png');
+    }
+
+    public function test_berkas_terunggah_dibersihkan_bila_ditolak(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('struktur/yatim.png', 'x');
+
+        try {
+            app(LayananStruktur::class)->unggah('struktur/yatim.png', '4:3', User::factory()->create());
+        } catch (\App\Exceptions\PeriodeDitolak) {
+        }
+
+        Storage::disk('public')->assertMissing('struktur/yatim.png');
+
+        OsisPeriod::factory()->tahun(2026)->aktif()->create();
+        Storage::disk('public')->put('struktur/yatim2.png', 'x');
+        try {
+            app(LayananStruktur::class)->ganti('struktur/yatim2.png', User::factory()->create());
+        } catch (\App\Exceptions\PeriodeDitolak) {
+        }
+        Storage::disk('public')->assertMissing('struktur/yatim2.png');
+    }
 }

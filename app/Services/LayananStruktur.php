@@ -26,8 +26,15 @@ class LayananStruktur
      */
     public function unggah(string $path, string $rasio, User $oleh): OrganizationStructure
     {
-        $this->periksaRasio($rasio);
-        $periode = OsisPeriod::aktif() ?? throw new PeriodeDitolak('Belum ada periode aktif. Aktifkan periode OSIM dulu.');
+        try {
+            $this->periksaRasio($rasio);
+            $periode = OsisPeriod::aktif() ?? throw new PeriodeDitolak('Belum ada periode aktif. Aktifkan periode OSIM dulu.');
+        } catch (PeriodeDitolak|ValidationException $e) {
+            // Berkas yang terlanjur diunggah tidak dipakai: jangan tinggalkan sampah di disk.
+            Storage::disk('public')->delete($path);
+
+            throw $e;
+        }
 
         [$struktur, $berkasLama] = DB::transaction(function () use ($path, $rasio, $oleh, $periode) {
             $struktur = OrganizationStructure::query()->lockForUpdate()->firstOrNew(['periode_id' => $periode->id]);
@@ -54,7 +61,21 @@ class LayananStruktur
         return $struktur;
     }
 
-    /** @throws PeriodeDitolak */
+    /** Ganti gambar bagan periode aktif (rasio tetap bila tidak diberikan). @throws PeriodeDitolak|ValidationException */
+    public function ganti(string $path, User $oleh, ?string $rasio = null): OrganizationStructure
+    {
+        $lama = $this->aktif();
+
+        if (! $lama) {
+            Storage::disk('public')->delete($path);
+
+            throw new PeriodeDitolak('Belum ada bagan untuk periode aktif. Unggah dulu.');
+        }
+
+        return $this->unggah($path, $rasio ?? $lama->rasio, $oleh);
+    }
+
+    /** Hapus bagan periode aktif beserta berkasnya; bagan periode lain tidak tersentuh. @throws PeriodeDitolak */
     public function hapus(): void
     {
         $struktur = $this->aktif() ?? throw new PeriodeDitolak('Belum ada bagan untuk periode aktif.');
