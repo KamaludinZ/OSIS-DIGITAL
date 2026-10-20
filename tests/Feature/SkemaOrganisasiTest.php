@@ -55,4 +55,16 @@ class SkemaOrganisasiTest extends TestCase
         $this->assertSame(['Kebun Sekolah'], $divisi->workPrograms()->pluck('nama')->all());
         $this->assertSame(['Bank Sampah'], \App\Models\WorkProgram::diPeriode($lama)->pluck('nama')->all());
     }
+
+    public function test_anggota_pengurus_mengikuti_periode(): void
+    {
+        $aktif = \App\Models\OsisPeriod::factory()->tahun(2026)->aktif()->create();
+        $m = Member::factory()->create(['periode' => '2026/2027']);
+        $this->assertSame($aktif->id, $m->periode_id);
+
+        $tanpaTeks = Member::create(['nama' => 'Anggota Baru', 'jabatan' => 'Anggota']);
+        $this->assertSame('2026/2027', $tanpaTeks->periode);
+        $this->assertSame($aktif->id, $tanpaTeks->periode_id);
+        $this->assertSame(2, Member::periode('2026/2027')->count());
+    }
 }

@@ -13,6 +13,21 @@ class Member extends Model
     /** @use HasFactory<\Database\Factories\MemberFactory> */
     use HasFactory;
 
+    /**
+     * Anggota dibatasi per periode lewat scope periode() (teks "2026/2027", dipakai luas);
+     * periode_id ikut ditautkan agar arsip & penghapusan periode tetap konsisten.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Member $m) {
+            $m->periode ??= OsisPeriod::aktif()?->nama ?? static::periodeAktif();
+
+            if (! $m->periode_id && ($id = OsisPeriod::query()->where('nama', $m->periode)->value('id'))) {
+                $m->periode_id = $id;
+            }
+        });
+    }
+
     public const JABATAN_INTI = ['Ketua OSIM', 'Wakil Ketua', 'Sekretaris', 'Bendahara'];
 
     protected $fillable = ['nama', 'kelas', 'divisi_id', 'jabatan', 'periode', 'voter_id', 'urutan'];

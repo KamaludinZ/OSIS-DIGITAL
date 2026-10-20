@@ -25,9 +25,11 @@ class KelolaPeriodeTest extends TestCase
         parent::setUp();
 
         OsisPeriod::factory()->tahun(2024)->arsip()->create();
-        $this->lama = OsisPeriod::factory()->tahun(2025)->arsip()->create();
-        $this->aktif = OsisPeriod::factory()->tahun(2026)->aktif()->create();
+        // Anggota tercatat saat periode 2025/2026 masih aktif, lalu periode itu diarsipkan.
+        $this->lama = OsisPeriod::factory()->tahun(2025)->aktif()->create();
         Member::factory()->count(3)->create(['periode' => '2025/2026', 'periode_id' => $this->lama->id]);
+        $this->lama->update(['status' => 'arsip']);
+        $this->aktif = OsisPeriod::factory()->tahun(2026)->aktif()->create();
     }
 
     private function masukSebagai(Peran $peran = Peran::Pengurus): User

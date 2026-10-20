@@ -55,7 +55,10 @@ class BatasiDataPeriodeTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
         $sekarang = Member::factory()->create(['periode' => '2026/2027', 'periode_id' => $this->aktif->id]);
-        $lama = Member::factory()->create(['periode' => '2025/2026', 'periode_id' => $this->arsip->id]);
+        $lama = Member::find(\Illuminate\Support\Facades\DB::table('members')->insertGetId([
+            'nama' => 'Anggota Lama', 'jabatan' => 'Anggota', 'periode' => '2025/2026', 'periode_id' => $this->arsip->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]));
 
         $this->get('/admin/anggota/'.$sekarang->id.'/edit')->assertOk();
         $this->get('/admin/anggota/'.$lama->id.'/edit')->assertNotFound();
