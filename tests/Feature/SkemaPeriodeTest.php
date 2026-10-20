@@ -103,4 +103,17 @@ class SkemaPeriodeTest extends TestCase
         $this->expectException(QueryException::class);
         DB::table('osis_periods')->where('id', $periode->id)->delete();
     }
+
+    public function test_tabel_social_links_satu_akun_per_platform_per_periode(): void
+    {
+        $this->assertTrue(Schema::hasColumns('social_links', ['id', 'periode_id', 'platform', 'nama_akun', 'tautan', 'urutan', 'jumlah_klik']));
+
+        [$a, $b] = \App\Models\OsisPeriod::factory()->count(2)->create();
+        $baris = fn ($p) => ['periode_id' => $p->id, 'platform' => 'instagram', 'nama_akun' => '@osim', 'tautan' => 'https://www.instagram.com/osim'];
+        DB::table('social_links')->insert([$baris($a), $baris($b)]);
+        $this->assertSame(2, DB::table('social_links')->count());
+
+        $this->expectException(QueryException::class);
+        DB::table('social_links')->insert($baris($a));
+    }
 }
