@@ -577,4 +577,35 @@ class RuangOsimTest extends TestCase
             ->callAction('segarkan')
             ->assertOk();
     }
+
+    private function csvImporSiar(): string
+    {
+        $csv = tempnam(sys_get_temp_dir(), 'siar').'.csv';
+        file_put_contents($csv, "nisn,nama,kelas,tanggal_lahir\n0097777777,Siswa Baru,VII-A,2013-05-21\nabc,Salah,VII-A,2013-05-21\n");
+
+        return $csv;
+    }
+
+    public function test_impor_menyiarkan_pembaruan_daftar_pemilih(): void
+    {
+        \Illuminate\Support\Facades\Event::fake([\App\Events\PemilihDiimpor::class]);
+
+        $hasil = app(\App\Services\ImporPemilih::class)->impor($this->csvImporSiar(), \App\Enums\JenisPemilih::Siswa);
+
+        \Illuminate\Support\Facades\Event::assertDispatched(\App\Events\PemilihDiimpor::class, fn ($e) => $e->log->id === $hasil['log_id'] && $e->log->dilewati === 1);
+        $this->assertSame(['Baris 3: NISN kosong atau bukan angka (paling banyak 10 angka). Di Excel, ubah format sel NISN menjadi Teks agar angka 0 di depan tidak hilang.'], \App\Models\VoterImport::sole()->galat);
+    }
+
+    public function test_impor_menyegarkan_rekap_partisipasi_tercache(): void
+    {
+        config(['cache.default' => 'array']);
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+        $pemilihan = \App\Models\Election::first();
+        $layanan = app(\App\Services\LayananHasil::class);
+        $sebelum = $layanan->rekap($pemilihan)['total_pemilih'];
+
+        app(\App\Services\ImporPemilih::class)->impor($this->csvImporSiar(), \App\Enums\JenisPemilih::Siswa);
+
+        $this->assertSame($sebelum + 1, $layanan->rekap($pemilihan)['total_pemilih']);
+    }
 }

@@ -28,6 +28,13 @@ class AppServiceProvider extends ServiceProvider
         // Aksi Livewire di halaman pemilihan ikut diperiksa ulang terhadap sakelar mode.
         \Illuminate\Support\Facades\View::composer('components.layouts.siswa', \App\View\Composers\NavigasiPublik::class);
 
+        // Impor pemilih mengubah jumlah pemilih: rekap ter-cache (total pemilih, partisipasi) segera diperbarui.
+        \Illuminate\Support\Facades\Event::listen(\App\Events\PemilihDiimpor::class, function () {
+            if ($pemilihan = app(LayananPemilihan::class)->pemilihanAktif()) {
+                \App\Services\LayananHasil::lupakanCache($pemilihan->id);
+            }
+        });
+
         \Livewire\Livewire::addPersistentMiddleware([\App\Http\Middleware\WajibModePemilihan::class]);
 
         Gate::policy(User::class, \App\Policies\UserPolicy::class);

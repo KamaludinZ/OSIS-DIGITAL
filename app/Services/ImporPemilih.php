@@ -193,6 +193,10 @@ class ImporPemilih
             'galat' => $hasil['gagal'] ?: null,
         ]);
 
+        if ($hasil['tambah'] || $hasil['perbarui']) {
+            \App\Events\PemilihDiimpor::dispatch($log);
+        }
+
         return [...$hasil, 'log_id' => $log->id];
     }
 

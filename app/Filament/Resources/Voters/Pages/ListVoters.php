@@ -104,8 +104,9 @@ class ListVoters extends ListRecords
             ->action(function (array $data) use ($jenis) {
                 $berkas = self::berkasDari($data['berkas']);
                 $hasil = app(ImporPemilih::class)->impor($berkas->getRealPath(), $jenis, $berkas->getClientOriginalName());
-                // Panel "Impor terakhir" muncul lagi untuk log baru ini.
+                // Panel "Impor terakhir" muncul lagi untuk log baru ini; tabel langsung memuat data baru.
                 session()->forget('impor_pemilih_ditutup');
+                $this->resetTable();
 
                 $judul = "Impor selesai: {$hasil['tambah']} ditambahkan, {$hasil['perbarui']} diperbarui".($hasil['sama'] ? ", {$hasil['sama']} tidak berubah" : '');
                 $tanpaKode = Voter::terverifikasi()->whereNull('kode_pilih')->count();
