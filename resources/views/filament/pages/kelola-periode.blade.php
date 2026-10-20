@@ -25,6 +25,9 @@
 
     {{ $this->table }}
 
+    {{-- Mode pemilihan menentukan menu publik; pengurus melihat statusnya di sini. --}}
+    @include('filament.mode-pemilihan')
+
     {{-- Penanda pengurus yang masih menjabat di periode aktif --}}
     @php($menjabat = collect($pengurus)->where('is_aktif', true)->count())
     <x-filament::section heading="Status pengurus" :description="$menjabat.' dari '.count($pengurus).' akun pengurus masih menjabat. Hanya pengurus menjabat yang bisa menanggapi saran periode berjalan.'">

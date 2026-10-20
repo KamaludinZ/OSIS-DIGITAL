@@ -71,4 +71,22 @@ class ModePemilihanTest extends TestCase
             ->mountAction('ubahMode')
             ->assertMountedActionModalSee(['Saat mode nonaktif', 'Struktur Organisasi', 'Kotak Saran']);
     }
+
+    public function test_kendali_mode_tersembunyi_bagi_yang_tidak_berhak(): void
+    {
+        // Pengurus hanya melihat status mode di halaman Periode OSIM, tanpa tombol.
+        $this->actingAs(User::factory()->pengurusMenjabat()->create());
+        $this->get('/admin/periode-osim')->assertOk()
+            ->assertSeeInOrder(['Mode pemilihan', 'Aktif'])
+            ->assertSee('Hanya panitia atau admin yang bisa mengubah mode.')
+            ->assertDontSee('Matikan mode pemilihan');
+        $this->get('/admin/periode-pemilihan')->assertForbidden();
+        $this->assertFalse(auth()->user()->can('ubah-mode-pemilihan'));
+
+        foreach ([Peran::Panitia, Peran::Admin] as $peran) {
+            $this->actingAs(User::factory()->create(['role' => $peran]));
+            $this->get('/admin/periode-pemilihan')->assertOk()->assertDontSee('Hanya panitia atau admin yang bisa mengubah mode.');
+            \Livewire\Livewire::test(\App\Filament\Resources\Elections\Pages\ListElections::class)->assertActionVisible('ubahMode');
+        }
+    }
 }

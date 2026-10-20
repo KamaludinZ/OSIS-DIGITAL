@@ -25,6 +25,7 @@ class ListElections extends ListRecords
     protected function aksiUbahMode(): Action
     {
         return Action::make('ubahMode')
+            ->visible(fn () => auth()->user()?->can('ubah-mode-pemilihan') ?? false)
             ->label(fn () => DataTiruanModePemilihan::aktif() ? 'Matikan mode pemilihan' : 'Nyalakan mode pemilihan')
             ->icon(fn () => DataTiruanModePemilihan::aktif() ? Heroicon::OutlinedPauseCircle : Heroicon::OutlinedPlayCircle)
             ->color(fn () => DataTiruanModePemilihan::aktif() ? 'danger' : 'success')

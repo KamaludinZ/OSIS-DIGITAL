@@ -28,10 +28,18 @@
             </p>
         </div>
     </div>
-    <p @class(['text-xs sm:text-right', 'text-hijau-200' => $aktif, 'text-tinta-2' => ! $aktif])>
-        Terakhir diubah {{ \Illuminate\Support\Carbon::parse($status['diubah_pada'])->translatedFormat('j M Y, H:i') }}<br>
-        oleh {{ $status['diubah_oleh'] }}
-    </p>
+    <div @class(['text-xs sm:text-right', 'text-hijau-200' => $aktif, 'text-tinta-2' => ! $aktif])>
+        <p>
+            Terakhir diubah {{ \Illuminate\Support\Carbon::parse($status['diubah_pada'])->translatedFormat('j M Y, H:i') }}<br>
+            oleh {{ $status['diubah_oleh'] }}
+        </p>
+        @cannot('ubah-mode-pemilihan')
+            <p class="mt-2 inline-flex items-center gap-1 font-semibold">
+                <x-filament::icon icon="heroicon-m-lock-closed" class="size-3.5" />
+                Hanya panitia atau admin yang bisa mengubah mode.
+            </p>
+        @endcannot
+    </div>
 </section>
 
 {{-- Pratinjau menu publik kedua mode --}}
