@@ -23,5 +23,6 @@
             </li>
         @endforeach
     </ul>
+    @include('filament.pratinjau-menu-publik', ['aktif' => $menyalakan, 'sorot' => false])
     <p class="text-xs text-tinta-2">Data pemilihan, suara, dan saran tidak berubah. Mode bisa diubah lagi kapan saja.</p>
 </div>

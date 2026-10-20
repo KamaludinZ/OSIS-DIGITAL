@@ -58,4 +58,17 @@ class ModePemilihanTest extends TestCase
             ->mountAction('ubahMode')
             ->assertMountedActionModalSee(['Nyalakan mode pemilihan?', 'Bilik Suara, Kandidat, dan Hasil', 'Ya, nyalakan']);
     }
+
+    public function test_pratinjau_menu_publik_kedua_mode(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+
+        $this->get('/admin/periode-pemilihan')->assertOk()
+            ->assertSeeInOrder(['Saat mode aktif', 'Sedang tampil', 'Beranda', 'Bilik Suara', 'Kandidat', 'Hasil',
+                'Saat mode nonaktif', 'Beranda', 'Struktur Organisasi', 'Kotak Saran']);
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Elections\Pages\ListElections::class)
+            ->mountAction('ubahMode')
+            ->assertMountedActionModalSee(['Saat mode nonaktif', 'Struktur Organisasi', 'Kotak Saran']);
+    }
 }

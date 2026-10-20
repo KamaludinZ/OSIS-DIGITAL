@@ -33,3 +33,9 @@
         oleh {{ $status['diubah_oleh'] }}
     </p>
 </section>
+
+{{-- Pratinjau menu publik kedua mode --}}
+<section class="grid gap-3 md:grid-cols-2" aria-label="Pratinjau menu publik">
+    @include('filament.pratinjau-menu-publik', ['aktif' => true, 'sorot' => $aktif])
+    @include('filament.pratinjau-menu-publik', ['aktif' => false, 'sorot' => ! $aktif])
+</section>

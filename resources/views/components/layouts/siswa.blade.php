@@ -1,10 +1,6 @@
 @php
-    $menu = [
-        ['home', 'Beranda', 'home', 'home'],
-        ['bilik-suara', 'Bilik Suara', 'check-badge', 'bilik-suara*'],
-        ['kandidat.index', 'Kandidat', 'user-group', 'kandidat.*'],
-        ['hasil', 'Hasil', 'chart-bar', 'hasil'],
-    ];
+    // Menu publik (sama dengan pratinjau di Ruang OSIM); mode nonaktif mulai dipakai di fase Menu Publik Dinamis.
+    $menu = array_map(fn ($m) => [$m['rute'], $m['label'], $m['ikon'], $m['pola']], \App\Support\MenuPublik::untuk(true));
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
