@@ -63,7 +63,13 @@ class StrukturOrganisasi extends Page
                         ->helperText('JPG, PNG, atau WebP. Maks. 5 MB. Pastikan tulisan masih terbaca saat diperkecil.')
                         ->image()->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                         ->disk('public')->directory('struktur')->visibility('public')
-                        ->maxSize(5120)->required(),
+                        ->maxSize(5120)->required()
+                        ->validationMessages([
+                            'max' => 'Ukuran gambar maksimal 5 MB. Perkecil atau kompres dulu.',
+                            'image' => 'Berkas harus berupa gambar JPG, PNG, atau WebP.',
+                            'mimetypes' => 'Berkas harus berupa gambar JPG, PNG, atau WebP.',
+                            'required' => 'Pilih gambar bagan yang akan diunggah.',
+                        ]),
                     self::pemilihRasio(),
                 ])
                 ->fillForm(fn () => ['rasio' => DataTiruanStruktur::aktif()['rasio'] ?? '4:3'])

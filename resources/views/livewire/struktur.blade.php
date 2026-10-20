@@ -8,12 +8,16 @@ new #[Layout('components.layouts.siswa')] #[Title('Struktur Organisasi')] class 
     #[\Livewire\Attributes\Locked]
     public string $periode = '';
 
+    #[\Livewire\Attributes\Locked]
+    public bool $adaPeriodeAktif = false;
+
     /** Data tiruan: satu bagan untuk periode aktif (diganti tabel organization_structures di backend). */
     #[\Livewire\Attributes\Locked]
     public ?array $struktur = null;
 
     public function mount(): void
     {
+        $this->adaPeriodeAktif = \App\Models\OsisPeriod::aktif() !== null;
         $this->periode = \App\Models\OsisPeriod::aktif()?->nama ?? \App\Models\Member::periodeAktif();
         $this->struktur = \App\Support\DataTiruanStruktur::aktif();
     }
@@ -41,8 +45,13 @@ new #[Layout('components.layouts.siswa')] #[Title('Struktur Organisasi')] class 
             @else
                 <div class="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-hijau-50 p-8 text-center">
                     <flux:icon.rectangle-group class="size-12 text-hijau-600" />
-                    <p class="font-bold text-tinta">Bagan struktur belum diunggah</p>
-                    <p class="max-w-sm text-sm text-tinta-2">Pengurus OSIM sedang menyiapkan bagan kepengurusan periode ini. Cek lagi nanti, ya.</p>
+                    @if ($adaPeriodeAktif)
+                        <p class="font-bold text-tinta">Bagan struktur belum diunggah</p>
+                        <p class="max-w-sm text-sm text-tinta-2">Pengurus OSIM sedang menyiapkan bagan kepengurusan periode ini. Cek lagi nanti, ya.</p>
+                    @else
+                        <p class="font-bold text-tinta">Kepengurusan baru sedang disiapkan</p>
+                        <p class="max-w-sm text-sm text-tinta-2">Belum ada periode kepengurusan OSIM yang aktif. Struktur akan tampil setelah pengurus baru dilantik.</p>
+                    @endif
                 </div>
             @endif
         </figure>

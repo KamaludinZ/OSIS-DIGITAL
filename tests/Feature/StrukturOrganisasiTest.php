@@ -25,6 +25,7 @@ class StrukturOrganisasiTest extends TestCase
         $this->get('/struktur')->assertOk()->assertSee('aspect-[3/4] sm:w-auto sm:h-[min(80vh,56rem)]', false)->assertSee('data-rasio="3:4"', false);
 
         DataTiruanStruktur::simpan(null);
+        \App\Models\OsisPeriod::factory()->tahun(2026)->aktif()->create();
         $this->get('/struktur')->assertOk()->assertSee('Bagan struktur belum diunggah');
     }
 
@@ -109,5 +110,28 @@ class StrukturOrganisasiTest extends TestCase
 
         $this->assertNull(DataTiruanStruktur::aktif());
         $this->get('/admin/struktur-organisasi')->assertSee('Belum ada bagan untuk periode ini');
+    }
+
+    public function test_keterangan_belum_tersedia_dan_pesan_galat(): void
+    {
+        // Tanpa periode aktif dan tanpa gambar.
+        DataTiruanStruktur::simpan(null);
+        $this->get('/struktur')->assertOk()->assertSee('Kepengurusan baru sedang disiapkan');
+
+        \App\Models\OsisPeriod::factory()->tahun(2026)->aktif()->create();
+        $this->get('/struktur')->assertOk()->assertSee('Bagan struktur belum diunggah');
+
+        // Gambar ada: pesan cadangan bila gagal dimuat sudah disiapkan.
+        DataTiruanStruktur::simpan(['gambar' => '/images/struktur/contoh-lebar.svg', 'rasio' => '4:3']);
+        $this->get('/struktur')->assertOk()->assertSee('Gambar bagan gagal dimuat')->assertSee('x-on:error="gagal = true"', false);
+
+        // Pesan galat unggah dalam bahasa Indonesia.
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]));
+        \Livewire\Livewire::test(\App\Filament\Pages\StrukturOrganisasi::class)
+            ->callAction('unggah', data: ['gambar' => \Illuminate\Http\UploadedFile::fake()->image('besar.png')->size(6000), 'rasio' => '4:3'])
+            ->assertHasFormErrors(['gambar'])
+            ->tap(fn ($uji) => $this->assertStringContainsString('Ukuran gambar maksimal 5 MB',
+                collect($uji->errors()->getMessages())->flatten()->implode(' ')));
     }
 }
