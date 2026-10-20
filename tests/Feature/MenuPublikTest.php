@@ -134,8 +134,10 @@ class MenuPublikTest extends TestCase
     {
         app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
 
-        $this->get('/struktur')->assertOk()
-            ->assertSee('href="'.route('struktur').'" wire:navigate aria-current="page"', false)
-            ->assertDontSee('href="'.route('saran').'" wire:navigate aria-current="page"', false);
+        $html = $this->get('/struktur')->assertOk()->getContent();
+        $aktif = fn (string $rute) => preg_match('#href="'.preg_quote(route($rute), '#').'" wire:navigate\s+aria-current="page"#', $html);
+
+        $this->assertSame(1, $aktif('struktur'));
+        $this->assertSame(0, $aktif('saran'));
     }
 }
