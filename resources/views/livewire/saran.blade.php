@@ -34,7 +34,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Kotak Saran')] class extends 
     public function kirim(\App\Services\LayananSaran $layanan): void
     {
         $this->terkirim = false;
-        $this->validate(\App\Services\LayananSaran::aturan(), [], ['isi' => 'isi saran', 'nama' => 'nama', 'kelas' => 'kelas']);
+        $this->validate(\App\Services\LayananSaran::aturan(), \App\Services\LayananSaran::pesan());
 
         // Cegah banjir kiriman dari satu perangkat/jaringan (tanpa menyimpan IP bersama saran).
         $kunci = 'kirim-saran:'.request()->ip();

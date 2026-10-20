@@ -90,4 +90,24 @@ class KirimSaranTest extends TestCase
         $this->expectException(\App\Exceptions\PeriodeDitolak::class);
         Suggestion::diPeriode($this->periode)->first()->delete();
     }
+
+    public function test_pesan_validasi_dan_format_tanggal_indonesia(): void
+    {
+        app()->setLocale('id');
+
+        Volt::test('saran')
+            ->call('kirim')->assertSee('Tulis dulu saranmu.')
+            ->set('isi', 'pendek')->call('kirim')->assertSee('Saran terlalu pendek. Tulis minimal 10 karakter')
+            ->set('isi', 'Saran yang cukup panjang untuk OSIM.')->set('bernama', true)->call('kirim')
+            ->assertSee('Tulis namamu, atau pilih kirim sebagai anonim.');
+
+        $waktu = \Illuminate\Support\Carbon::parse('2026-10-19 11:40', 'Asia/Jakarta');
+        $this->assertSame('Senin, 19 Oktober 2026 pukul 11.40 WIB', \App\Support\Tanggal::lengkap($waktu));
+        $this->assertSame('19 Okt 2026, 11.40', \App\Support\Tanggal::singkat($waktu));
+        $this->travelTo($waktu->copy()->addHours(3));
+        $this->assertSame('3 jam yang lalu', \App\Support\Tanggal::relatif($waktu));
+        $this->assertSame('—', \App\Support\Tanggal::lengkap(null));
+
+        $this->assertSame('Tanggal mulai harus berupa tanggal yang benar.', validator(['mulai' => 'x'], ['mulai' => 'date'])->errors()->first('mulai'));
+    }
 }

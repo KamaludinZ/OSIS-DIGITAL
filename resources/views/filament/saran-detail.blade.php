@@ -1,5 +1,5 @@
 {{-- Riwayat satu saran: pesan pengirim lalu tanggapan pengurus. --}}
-@php($tgl = fn ($t) => $t->translatedFormat('j F Y, H:i'))
+@php($tgl = fn ($t) => \App\Support\Tanggal::lengkap($t))
 <ol class="flex flex-col gap-3">
     <li class="rounded-xl bg-hijau-50 p-4 ring-1 ring-garis">
         <p class="text-xs font-bold uppercase tracking-[0.12em] text-tinta-2">

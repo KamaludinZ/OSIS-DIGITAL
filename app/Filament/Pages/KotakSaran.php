@@ -100,8 +100,9 @@ class KotakSaran extends Page implements HasTable
                     ->state(fn (Suggestion $record) => $record->pengirim())
                     ->color(fn (Suggestion $record) => $record->anonim() ? 'gray' : null)
                     ->icon(fn (Suggestion $record) => $record->anonim() ? 'heroicon-m-eye-slash' : 'heroicon-m-user'),
-                TextColumn::make('created_at')->label('Dikirim')->since()
-                    ->tooltip(fn (Suggestion $record) => $record->created_at->translatedFormat('j F Y, H:i')),
+                TextColumn::make('created_at')->label('Dikirim')
+                    ->formatStateUsing(fn ($state) => \App\Support\Tanggal::relatif($state))
+                    ->tooltip(fn (Suggestion $record) => \App\Support\Tanggal::lengkap($record->created_at)),
                 TextColumn::make('status')->label('Status')->badge()
                     ->state(fn (Suggestion $record) => $record->sudahDitanggapi() ? 'Ditanggapi' : 'Belum ditanggapi')
                     ->color(fn (string $state) => $state === 'Ditanggapi' ? 'success' : 'warning'),

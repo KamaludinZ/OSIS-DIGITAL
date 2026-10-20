@@ -24,6 +24,20 @@ class LayananSaran
         ];
     }
 
+    /** Pesan validasi yang lebih ramah dari bawaan lang/id. */
+    public static function pesan(): array
+    {
+        return [
+            'isi.required' => 'Tulis dulu saranmu.',
+            'isi.min' => 'Saran terlalu pendek. Tulis minimal :min karakter agar pengurus paham maksudnya.',
+            'isi.max' => 'Saran terlalu panjang (maksimal :max karakter).',
+            'nama.required' => 'Tulis namamu, atau pilih kirim sebagai anonim.',
+            'nama.min' => 'Nama minimal :min huruf.',
+            'tanggapan.required' => 'Tulis dulu tanggapannya.',
+            'tanggapan.min' => 'Tanggapan minimal :min karakter.',
+        ];
+    }
+
     /**
      * Simpan saran ke periode aktif. Anonim: nama & kelas tidak disimpan sama sekali
      * (juga tidak IP / perangkat), agar pengirim tidak bisa ditelusuri.
@@ -34,7 +48,7 @@ class LayananSaran
      */
     public function kirim(array $data): Suggestion
     {
-        $data = Validator::make($data, self::aturan(), [], ['isi' => 'isi saran'])->validate();
+        $data = Validator::make($data, self::aturan(), self::pesan())->validate();
 
         if (! OsisPeriod::aktif()) {
             throw new PeriodeDitolak('Kotak saran sedang ditutup karena belum ada kepengurusan aktif.');
@@ -61,7 +75,7 @@ class LayananSaran
             throw new AuthorizationException('Hanya pengurus yang sedang menjabat yang bisa menanggapi saran periode berjalan.');
         }
 
-        $data = Validator::make(['tanggapan' => $tanggapan], ['tanggapan' => ['required', 'string', 'min:5', 'max:1000']])->validate();
+        $data = Validator::make(['tanggapan' => $tanggapan], ['tanggapan' => ['required', 'string', 'min:5', 'max:1000']], self::pesan())->validate();
 
         $saran->forceFill([
             'tanggapan' => trim($data['tanggapan']),
