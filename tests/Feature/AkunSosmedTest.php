@@ -206,7 +206,7 @@ class AkunSosmedTest extends TestCase
         $this->get('/sosmed/akun/'.$this->arsip->id.'/buka')->assertNotFound();
         $this->get('/sosmed/akun/abc/buka')->assertNotFound();
 
-        \Illuminate\Support\Facades\DB::table('social_links')->where('id', $this->tiktok->id)->update(['tautan' => 'javascript:alert(1)']);
+        \Illuminate\Support\Facades\DB::table('social_links')->where('id', $this->tiktok->id)->update(['tautan' => 'https://tiktok.com.jahat.test/@osim']);
         $this->get('/sosmed/akun/'.$this->tiktok->id.'/buka')->assertNotFound();
         $this->assertSame(0, $this->tiktok->fresh()->jumlah_klik);
     }

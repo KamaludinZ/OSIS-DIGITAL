@@ -38,5 +38,16 @@ class SosmedSeeder extends Seeder
             ]);
             $post->forceFill(['jumlah_klik' => $klik, 'created_at' => now()->subDays(count($konten) - $i)])->save();
         }
+
+        // Akun resmi contoh untuk periode aktif (tautan fiktif).
+        if (\App\Models\OsisPeriod::aktif()) {
+            foreach ([
+                [PlatformSosmed::Instagram, '@osim.contoh', 'https://www.instagram.com/osim.contoh'],
+                [PlatformSosmed::YouTube, 'OSIM MTsN 2 Kota Malang (contoh)', 'https://www.youtube.com/@osim.contoh'],
+                [PlatformSosmed::TikTok, '@osim.contoh', 'https://www.tiktok.com/@osim.contoh'],
+            ] as $urutan => [$platform, $nama, $tautan]) {
+                \App\Models\SocialLink::updateOrCreate(['platform' => $platform], ['nama_akun' => $nama, 'tautan' => $tautan, 'urutan' => $urutan]);
+            }
+        }
     }
 }

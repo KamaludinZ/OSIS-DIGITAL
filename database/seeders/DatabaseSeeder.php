@@ -43,7 +43,7 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        $this->call([PemilihSeeder::class, PemilihanSeeder::class, KampanyeSeeder::class, PublikasiSeeder::class, OrganisasiSeeder::class, SosmedSeeder::class]);
+        $this->call([PeriodeSeeder::class, PemilihSeeder::class, PemilihanSeeder::class, KampanyeSeeder::class, PublikasiSeeder::class, OrganisasiSeeder::class, SosmedSeeder::class]);
 
         $calon = \App\Models\Election::aktif()?->candidates()->where('nomor_urut', 1)->first();
 

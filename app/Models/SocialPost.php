@@ -16,6 +16,12 @@ class SocialPost extends Model
 
     protected $fillable = ['platform', 'judul', 'tautan', 'thumbnail', 'orientasi', 'dipublikasikan', 'pengunggah_id'];
 
+    protected static function booted(): void
+    {
+        // Konten baru tercatat di periode aktif (arsip konten per kepengurusan).
+        static::creating(fn (SocialPost $post) => $post->periode_id ??= OsisPeriod::aktif()?->id);
+    }
+
     protected function casts(): array
     {
         return [
