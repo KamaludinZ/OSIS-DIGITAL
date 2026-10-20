@@ -50,4 +50,18 @@ class MenuPublikTest extends TestCase
         app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
         $this->get('/')->assertDontSee('(sedang dibuka)');
     }
+
+    public function test_tampilan_mode_nonaktif_mengarah_ke_struktur_dan_saran(): void
+    {
+        app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
+
+        $this->get('/')->assertOk()
+            ->assertSee('href="'.route('struktur').'"', false)
+            ->assertSee('href="'.route('saran').'"', false)
+            ->assertSee('Kenali pengurus & sampaikan aspirasimu', false)
+            ->assertDontSee('Kartu Pemilihan');
+
+        $this->get('/struktur')->assertOk()->assertSee('Struktur Organisasi')->assertSee('2026/2027');
+        $this->get('/saran')->assertOk()->assertSee('Kotak Saran');
+    }
 }

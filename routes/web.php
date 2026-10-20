@@ -6,6 +6,8 @@ use Livewire\Volt\Volt;
 Volt::route('/', 'beranda')->name('home');
 
 Volt::route('cari', 'cari')->name('cari');
+Volt::route('struktur', 'struktur')->name('struktur');
+Volt::route('saran', 'saran')->name('saran');
 Volt::route('kelola/sosmed', 'kelola.sosmed')->middleware(['auth', 'can:kelola-publikasi'])->name('kelola.sosmed');
 Route::get('sosmed/{post}/buka', App\Http\Controllers\BukaSosmedController::class)->whereNumber('post')->middleware(['throttle:60,1', 'periode:'.App\Models\SocialPost::class.',post,arsip'])->name('sosmed.buka');
 Volt::route('hasil', 'hasil')->middleware('mode-pemilihan')->name('hasil');

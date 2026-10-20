@@ -27,9 +27,13 @@ new #[Layout('components.layouts.siswa')] #[Title('Beranda')] class extends Comp
 
     public array $sosmed = [];
 
+    #[\Livewire\Attributes\Locked]
+    public bool $modePemilihan = true;
+
     public function mount(LayananPemilihan $layanan, LayananPublikasi $publikasi, LayananSosmed $sosmed): void
     {
         $this->sosmed = $sosmed->perPlatform();
+        $this->modePemilihan = app(\App\Services\LayananModePemilihan::class)->aktif();
         $this->pemilihan = $layanan->ringkasanPemilihan();
         $this->pengumuman = $publikasi->pengumumanTerbaru(batas: 4);
         $this->agenda = $publikasi->agendaMendatang(batas: 4);
@@ -72,8 +76,28 @@ new #[Layout('components.layouts.siswa')] #[Title('Beranda')] class extends Comp
     </x-osim.pita>
 
     <x-osim.wadah class="-mt-16 flex flex-col gap-10 sm:-mt-20">
-        {{-- Kartu pemilihan menjorok dari pita --}}
-        @if ($pemilihan)
+        {{-- Kartu pemilihan menjorok dari pita; di luar masa pemilihan diganti kartu struktur & saran --}}
+        @if (! $modePemilihan)
+            <section aria-labelledby="judul-osim" class="overflow-hidden rounded-[14px] bg-white shadow-[0_18px_40px_-18px_rgb(4_41_26/0.5)] ring-1 ring-garis">
+                <div class="flex items-center justify-between gap-3 bg-hijau-100 px-5 py-2">
+                    <x-osim.label class="text-hijau-800">Kepengurusan OSIM</x-osim.label>
+                </div>
+                <div class="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
+                    <div>
+                        <h2 id="judul-osim" class="font-display text-2xl font-extrabold leading-tight text-tinta sm:text-3xl">Kenali pengurus & sampaikan aspirasimu</h2>
+                        <p class="mt-2 text-tinta-2">Lihat susunan pengurus OSIM periode ini, atau kirim saran untuk OSIM. Boleh tanpa nama.</p>
+                    </div>
+                    <div class="flex flex-col gap-2 sm:w-64">
+                        <a href="{{ route('struktur') }}" wire:navigate class="inline-flex items-center justify-center gap-2 rounded-xl bg-hijau-600 px-5 py-3 font-bold text-white hover:bg-hijau-700">
+                            <flux:icon.rectangle-group variant="micro" /> Struktur Organisasi
+                        </a>
+                        <a href="{{ route('saran') }}" wire:navigate class="inline-flex items-center justify-center gap-2 rounded-xl bg-emas-400 px-5 py-3 font-black text-hijau-950 hover:bg-emas-300">
+                            <flux:icon.inbox-arrow-down variant="micro" /> Kirim saran
+                        </a>
+                    </div>
+                </div>
+            </section>
+        @elseif ($pemilihan)
             <section aria-labelledby="judul-pemilihan" class="overflow-hidden rounded-[14px] bg-white shadow-[0_18px_40px_-18px_rgb(4_41_26/0.5)] ring-1 ring-garis">
                 <div class="flex items-center justify-between gap-3 bg-hijau-100 px-5 py-2">
                     <x-osim.label class="text-hijau-800">Kartu Pemilihan</x-osim.label>
