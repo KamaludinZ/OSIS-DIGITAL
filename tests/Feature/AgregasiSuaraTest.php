@@ -86,4 +86,27 @@ class AgregasiSuaraTest extends TestCase
 
         $this->assertSame(2, \App\Models\VoteTally::where('candidate_id', $calon->id)->value('jumlah'));
     }
+
+    public function test_rekap_agregat_bertambah_bersama_suara_dan_bisa_dihitung_ulang(): void
+    {
+        $e = Election::factory()->create();
+        $a = Candidate::factory()->for($e)->create(['nomor_urut' => 1]);
+        $b = Candidate::factory()->for($e)->create(['nomor_urut' => 2]);
+        $this->suara($e, $a, 2);
+        app(\App\Services\LayananPemilihan::class)->kirimSuara(\App\Models\Voter::factory()->create(), $e, $b->id);
+
+        $this->assertSame(2, \App\Models\VoteTally::where('candidate_id', $a->id)->value('jumlah'));
+        $this->assertSame(1, \App\Models\VoteTally::where('candidate_id', $b->id)->value('jumlah'));
+
+        // Rekap dibaca dari tabel agregat tanpa GROUP BY atas baris suara.
+        DB::enableQueryLog();
+        app(LayananHasil::class)->perolehanSuara($e);
+        $this->assertEmpty(collect(DB::getQueryLog())->filter(fn ($q) => str_contains($q['query'], 'from "ballots"')));
+
+        // Rekap rusak (mis. diubah manual) dipulihkan dari surat suara.
+        \App\Models\VoteTally::where('candidate_id', $a->id)->update(['jumlah' => 99]);
+        $this->artisan('osim:hitung-ulang-rekap', ['pemilihan' => $e->id])->expectsOutputToContain('1 kandidat diperbaiki')->assertSuccessful();
+        $this->assertSame([2, 1], array_column(app(LayananHasil::class)->perolehanSuara($e), 'suara'));
+        $this->artisan('osim:hitung-ulang-rekap', ['pemilihan' => $e->id])->expectsOutputToContain('sudah sesuai')->assertSuccessful();
+    }
 }

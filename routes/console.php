@@ -45,3 +45,23 @@ Artisan::command('osim:buat-admin {email} {--nama=Admin Madrasah}', function (st
     $this->line("Kata sandi: {$sandi}");
     $this->warn('Simpan kata sandi ini sekarang; tidak akan ditampilkan lagi. Ganti setelah masuk (Pengaturan akun).');
 })->purpose('Buat atau setel ulang akun admin (untuk server produksi)');
+
+// Verifikasi rekap agregat terhadap surat suara anonim; perbaiki bila berbeda.
+Artisan::command('osim:hitung-ulang-rekap {pemilihan? : id pemilihan (bawaan: pemilihan aktif)}', function () {
+    $pemilihan = $this->argument('pemilihan')
+        ? App\Models\Election::findOrFail($this->argument('pemilihan'))
+        : app(App\Services\LayananPemilihan::class)->pemilihanAktif();
+
+    if (! $pemilihan) {
+        $this->warn('Tidak ada pemilihan.');
+
+        return 1;
+    }
+
+    $beda = app(App\Services\LayananHasil::class)->hitungUlang($pemilihan);
+    $beda
+        ? $this->warn(count($beda).' kandidat diperbaiki: '.collect($beda)->map(fn ($b, $id) => "#{$id} {$b['rekap']}→{$b['ballots']}")->implode(', '))
+        : $this->info('Rekap '.$pemilihan->judul.' sudah sesuai dengan surat suara.');
+
+    return 0;
+})->purpose('Hitung ulang rekap suara dari surat suara anonim');

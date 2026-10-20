@@ -25,11 +25,9 @@ class LayananHasil
      */
     public function perolehanSuara(Election $pemilihan): array
     {
-        // Dihitung dari surat suara anonim (ballots), bukan dari catatan kehadiran pemilih.
-        $hitungan = \App\Models\Ballot::query()
+        // Dibaca dari rekap agregat (satu baris per kandidat), bukan menghitung baris suara satu per satu.
+        $hitungan = \App\Models\VoteTally::query()
             ->where('election_id', $pemilihan->id)
-            ->selectRaw('candidate_id, count(*) as jumlah')
-            ->groupBy('candidate_id')
             ->pluck('jumlah', 'candidate_id');
 
         return $pemilihan->candidates()
@@ -60,6 +58,49 @@ class LayananHasil
     public static function kunciCache(int $pemilihanId): string
     {
         return "rekap-suara:{$pemilihanId}";
+    }
+
+    /** Tambah satu suara pada rekap agregat (upsert atomik); dipanggil saat surat suara dibuat. */
+    public static function tambahHitungan(int $pemilihanId, int $kandidatId): void
+    {
+        $diubah = \App\Models\VoteTally::query()
+            ->where(['election_id' => $pemilihanId, 'candidate_id' => $kandidatId])
+            ->increment('jumlah');
+
+        if ($diubah === 0) {
+            \Illuminate\Support\Facades\DB::table('vote_tallies')->insertOrIgnore(['election_id' => $pemilihanId, 'candidate_id' => $kandidatId, 'jumlah' => 0]);
+            \App\Models\VoteTally::query()->where(['election_id' => $pemilihanId, 'candidate_id' => $kandidatId])->increment('jumlah');
+        }
+    }
+
+    /**
+     * Hitung ulang rekap agregat dari surat suara anonim (GROUP BY di basis data).
+     * Untuk verifikasi/pemulihan; mengembalikan kandidat yang hitungannya sempat berbeda.
+     *
+     * @return array<int, array{rekap: int, ballots: int}> candidate_id => selisih
+     */
+    public function hitungUlang(Election $pemilihan): array
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($pemilihan) {
+            $sebenarnya = \App\Models\Ballot::query()->where('election_id', $pemilihan->id)
+                ->selectRaw('candidate_id, count(*) as jumlah')->groupBy('candidate_id')->pluck('jumlah', 'candidate_id');
+            $tercatat = \App\Models\VoteTally::query()->where('election_id', $pemilihan->id)->lockForUpdate()->pluck('jumlah', 'candidate_id');
+
+            $beda = [];
+            foreach ($pemilihan->candidates()->pluck('id') as $id) {
+                $a = (int) ($sebenarnya[$id] ?? 0);
+                $b = (int) ($tercatat[$id] ?? 0);
+                if ($a !== $b) {
+                    $beda[$id] = ['rekap' => $b, 'ballots' => $a];
+                }
+            }
+
+            \App\Models\VoteTally::query()->where('election_id', $pemilihan->id)->delete();
+            \Illuminate\Support\Facades\DB::table('vote_tallies')->insert($sebenarnya->map(fn ($n, $id) => ['election_id' => $pemilihan->id, 'candidate_id' => $id, 'jumlah' => $n])->values()->all());
+            self::lupakanCache($pemilihan->id);
+
+            return $beda;
+        });
     }
 
     /** Buang cache rekap — dipanggil setiap ada suara baru. */
