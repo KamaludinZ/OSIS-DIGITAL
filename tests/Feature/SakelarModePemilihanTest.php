@@ -42,9 +42,9 @@ class SakelarModePemilihanTest extends TestCase
             ->callAction('ubahMode')->assertNotified('Mode pemilihan dimatikan');
         auth()->logout();
 
-        $this->get('/bilik-suara')->assertStatus(423);
-        $this->get('/kandidat')->assertStatus(423);
-        $this->get('/hasil')->assertStatus(423);
+        $this->get('/bilik-suara')->assertRedirect('/terkunci?halaman=bilik-suara');
+        $this->get('/kandidat')->assertRedirect('/terkunci?halaman=kandidat');
+        $this->get('/hasil')->assertRedirect('/terkunci?halaman=hasil');
 
         $this->actingAs(User::factory()->create(['role' => Peran::Admin]));
         Livewire::test(\App\Filament\Resources\Elections\Pages\ListElections::class)
@@ -77,7 +77,7 @@ class SakelarModePemilihanTest extends TestCase
         $baru = OsisPeriod::factory()->tahun(2027)->create();
         app(\App\Services\LayananPeriode::class)->aktifkan($baru);
 
-        $this->get('/bilik-suara')->assertStatus(423);
+        $this->get('/bilik-suara')->assertRedirect('/terkunci?halaman=bilik-suara');
         $this->assertFalse(app(LayananModePemilihan::class)->status()['aktif']);
         $this->assertSame('2027/2028', app(LayananModePemilihan::class)->status()['periode']);
     }

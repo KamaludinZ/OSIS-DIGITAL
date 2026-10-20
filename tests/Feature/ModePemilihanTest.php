@@ -195,8 +195,13 @@ class ModePemilihanTest extends TestCase
         app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
 
         foreach ($alamat as $url) {
-            $this->get($url)->assertStatus(423)->assertSee('Halaman sedang ditutup');
+            $halaman = explode('/', trim($url, '/'))[0];
+            $url === '/hasil/laporan.csv'
+                ? $this->get($url)->assertStatus(423)
+                : $this->get($url)->assertRedirect(route('terkunci', ['halaman' => $halaman]));
+            $this->getJson($url)->assertStatus(423);
         }
+        $this->followingRedirects()->get('/bilik-suara')->assertOk()->assertSee('Bilik Suara sedang ditutup');
         // Halaman lain tetap terbuka.
         $this->get('/')->assertOk();
 
