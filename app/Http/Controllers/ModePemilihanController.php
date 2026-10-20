@@ -10,8 +10,21 @@ use Illuminate\Http\Request;
 
 class ModePemilihanController extends Controller
 {
+    /** Status sakelar + pratinjau menu publik kedua mode (untuk staf yang sudah masuk). */
+    public function tampil(LayananModePemilihan $layanan): JsonResponse
+    {
+        $status = $layanan->status();
+
+        return response()->json([
+            ...$status,
+            'diubah_pada' => $status['diubah_pada']?->toIso8601String(),
+            'menu' => array_column($status['menu'], 'label'),
+            'pratinjau' => array_map(fn ($p) => ['menu' => array_column($p['menu'], 'label'), 'sedang_tampil' => $p['sedang_tampil']], $layanan->pratinjau()),
+        ]);
+    }
+
     /** Ubah sakelar mode pemilihan periode aktif (rute dijaga gate ubah-mode-pemilihan). */
-    public function __invoke(Request $request, LayananModePemilihan $layanan): JsonResponse|RedirectResponse
+    public function ubah(Request $request, LayananModePemilihan $layanan): JsonResponse|RedirectResponse
     {
         $request->validate(['aktif' => ['required', 'boolean']]);
 

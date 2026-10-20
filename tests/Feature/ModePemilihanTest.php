@@ -161,4 +161,30 @@ class ModePemilihanTest extends TestCase
         $this->periode->update(['status' => 'arsip']);
         $this->actingAs($pengurus)->patchJson('/mode-pemilihan', ['aktif' => false])->assertStatus(409);
     }
+
+    public function test_data_status_mode_dan_pratinjau_menu(): void
+    {
+        $layanan = app(LayananModePemilihan::class);
+
+        $this->assertSame(['Beranda', 'Bilik Suara', 'Kandidat', 'Hasil'], array_column($layanan->status()['menu'], 'label'));
+        $this->assertTrue($layanan->pratinjau()['aktif']['sedang_tampil']);
+        $this->assertSame(['Beranda', 'Struktur Organisasi', 'Kotak Saran'], array_column($layanan->pratinjau()['nonaktif']['menu'], 'label'));
+
+        $this->getJson('/mode-pemilihan')->assertUnauthorized();
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $layanan->ubah(false, User::factory()->create(['name' => 'Bu Panitia']));
+
+        $this->getJson('/mode-pemilihan')->assertOk()->assertJson([
+            'aktif' => false,
+            'periode' => '2026/2027',
+            'diubah_oleh' => 'Bu Panitia',
+            'bisa_diubah' => true,
+            'menu' => ['Beranda', 'Struktur Organisasi', 'Kotak Saran'],
+            'pratinjau' => [
+                'aktif' => ['sedang_tampil' => false, 'menu' => ['Beranda', 'Bilik Suara', 'Kandidat', 'Hasil']],
+                'nonaktif' => ['sedang_tampil' => true],
+            ],
+        ]);
+    }
 }

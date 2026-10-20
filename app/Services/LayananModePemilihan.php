@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\PeriodeDitolak;
 use App\Models\OsisPeriod;
 use App\Models\User;
+use App\Support\MenuPublik;
 
 /** Sakelar mode pemilihan milik periode aktif; menentukan menu & alamat publik yang terbuka. */
 class LayananModePemilihan
@@ -15,7 +16,11 @@ class LayananModePemilihan
         return OsisPeriod::aktif()?->mode_pemilihan ?? true;
     }
 
-    /** @return array{aktif: bool, periode: ?string, diubah_pada: ?\Illuminate\Support\Carbon, diubah_oleh: ?string} */
+    /**
+     * Status sakelar untuk Ruang OSIM: mode, periode, jejak perubahan, dan menu yang sedang tampil.
+     *
+     * @return array{aktif: bool, periode: ?string, diubah_pada: ?\Illuminate\Support\Carbon, diubah_oleh: ?string, bisa_diubah: bool, menu: list<array>}
+     */
     public function status(): array
     {
         $periode = OsisPeriod::aktif()?->loadMissing('pengubahMode');
@@ -25,6 +30,29 @@ class LayananModePemilihan
             'periode' => $periode?->nama,
             'diubah_pada' => $periode?->mode_diubah_pada,
             'diubah_oleh' => $periode?->pengubahMode?->name,
+            'bisa_diubah' => $periode !== null,
+            'menu' => $this->menu(),
+        ];
+    }
+
+    /** Menu publik untuk mode tertentu (bawaan: mode saat ini). */
+    public function menu(?bool $modePemilihan = null): array
+    {
+        return MenuPublik::untuk($modePemilihan ?? $this->aktif());
+    }
+
+    /**
+     * Pratinjau menu publik kedua mode, ditandai mana yang sedang tampil.
+     *
+     * @return array{aktif: array{menu: list<array>, sedang_tampil: bool}, nonaktif: array{menu: list<array>, sedang_tampil: bool}}
+     */
+    public function pratinjau(): array
+    {
+        $aktif = $this->aktif();
+
+        return [
+            'aktif' => ['menu' => $this->menu(true), 'sedang_tampil' => $aktif],
+            'nonaktif' => ['menu' => $this->menu(false), 'sedang_tampil' => ! $aktif],
         ];
     }
 

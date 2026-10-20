@@ -51,6 +51,7 @@
 
 {{-- Pratinjau menu publik kedua mode --}}
 <section class="grid gap-3 md:grid-cols-2" aria-label="Pratinjau menu publik">
-    @include('filament.pratinjau-menu-publik', ['aktif' => true, 'sorot' => $aktif])
-    @include('filament.pratinjau-menu-publik', ['aktif' => false, 'sorot' => ! $aktif])
+    @foreach (app(\App\Services\LayananModePemilihan::class)->pratinjau() as $mode => $p)
+        @include('filament.pratinjau-menu-publik', ['aktif' => $mode === 'aktif', 'menu' => $p['menu'], 'sorot' => $p['sedang_tampil']])
+    @endforeach
 </section>
