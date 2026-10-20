@@ -6,6 +6,7 @@ use App\Enums\StatusPeriode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** Periode kepengurusan OSIM. Data operasional ber-periode_id mengikuti periode aktif. */
 class OsisPeriod extends Model
@@ -49,9 +50,38 @@ class OsisPeriod extends Model
         app()->forgetInstance(self::KUNCI_AKTIF);
     }
 
+    // Relasi isi periode melepas batas periode aktif agar arsip tetap terbaca.
+    public function members(): HasMany
+    {
+        return $this->hasMany(Member::class, 'periode_id')->withoutGlobalScope(Scopes\PeriodeAktifScope::class);
+    }
+
+    public function candidates(): HasMany
+    {
+        return $this->hasMany(Candidate::class, 'periode_id')->withoutGlobalScope(Scopes\PeriodeAktifScope::class);
+    }
+
+    public function elections(): HasMany
+    {
+        return $this->hasMany(Election::class, 'periode_id')->withoutGlobalScope(Scopes\PeriodeAktifScope::class);
+    }
+
+    /** Sudah ada data operasional yang menempel ke periode ini. */
+    public function punyaData(): bool
+    {
+        return collect(['members', 'work_programs', 'events', 'social_posts', 'elections', 'candidates'])
+            ->contains(fn (string $tabel) => \Illuminate\Support\Facades\DB::table($tabel)->where('periode_id', $this->id)->exists());
+    }
+
     public function scopeStatus(Builder $query, StatusPeriode $status): void
     {
         $query->where('status', $status);
+    }
+
+    /** Aktif dulu, lalu disiapkan, lalu arsip; dalam kelompok, yang terbaru di atas. */
+    public function scopeUrutTampil(Builder $query): void
+    {
+        $query->orderByRaw("case status when 'aktif' then 0 when 'disiapkan' then 1 else 2 end")->orderByDesc('nama');
     }
 
     public function adalahAktif(): bool

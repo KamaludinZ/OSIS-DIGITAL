@@ -31,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
             Gate::policy($model, \App\Policies\KelolaPemilihanPolicy::class);
         }
 
-        foreach ([\App\Models\Division::class, \App\Models\Member::class, \App\Models\WorkProgram::class, \App\Models\Event::class] as $model) {
+        foreach ([\App\Models\Division::class, \App\Models\Member::class, \App\Models\WorkProgram::class, \App\Models\Event::class, \App\Models\OsisPeriod::class] as $model) {
             Gate::policy($model, \App\Policies\KelolaOrganisasiPolicy::class);
         }
 

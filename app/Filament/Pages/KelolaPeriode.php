@@ -2,7 +2,12 @@
 
 namespace App\Filament\Pages;
 
-use App\Support\DataTiruanPeriode;
+use App\Enums\Peran;
+use App\Enums\StatusPeriode;
+use App\Exceptions\PeriodeDitolak;
+use App\Models\OsisPeriod;
+use App\Models\User;
+use App\Services\LayananPeriode;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -14,7 +19,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
-use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rules\Unique;
 use UnitEnum;
 
 /** Periode kepengurusan OSIM: satu periode aktif, periode lama diarsipkan. */
@@ -38,7 +43,7 @@ class KelolaPeriode extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->can('kelola-organisasi') ?? false;
+        return auth()->user()?->can('viewAny', OsisPeriod::class) ?? false;
     }
 
     public function getSubheading(): ?string
@@ -52,33 +57,26 @@ class KelolaPeriode extends Page implements HasTable
             Action::make('tambah')
                 ->label('Tambah periode')
                 ->icon(Heroicon::OutlinedPlus)
+                ->authorize(fn () => auth()->user()->can('create', OsisPeriod::class))
                 ->modalHeading('Tambah periode')
                 ->modalDescription('Periode baru disiapkan dengan data kosong. Aktifkan setelah kepengurusan baru siap.')
                 ->modalSubmitActionLabel('Simpan')
                 ->schema(self::formPeriode())
                 ->action(function (array $data) {
-                    $semua = DataTiruanPeriode::semua();
-                    $id = (max(array_keys($semua) ?: [0])) + 1;
-                    $semua = [$id => ['id' => $id, ...self::isian($data), 'status' => 'disiapkan', 'pengurus' => 0, 'kandidat' => 0, 'saran' => 0]] + $semua;
-                    DataTiruanPeriode::simpan($semua);
+                    app(LayananPeriode::class)->buat($data);
                     Notification::make()->title('Periode '.$data['nama'].' disiapkan')->success()->send();
                 }),
         ];
     }
 
     /** Isian nama + rentang tanggal, dipakai form tambah & ubah. */
-    public static function formPeriode(?int $kecuali = null): array
+    public static function formPeriode(?OsisPeriod $kecuali = null): array
     {
         return [
             TextInput::make('nama')->label('Nama periode')->placeholder('Contoh: 2027/2028')->required()
-                ->regex('/^\\d{4}\\/\\d{4}$/')
-                ->rule(fn () => function (string $attribute, $value, \Closure $fail) use ($kecuali) {
-                    $kembar = collect(DataTiruanPeriode::semua())->except($kecuali)->contains('nama', $value);
-                    if ($kembar) {
-                        $fail('Periode '.$value.' sudah ada.');
-                    }
-                })
-                ->validationMessages(['regex' => 'Format periode: 2027/2028.'])
+                ->regex('/^\d{4}\/\d{4}$/')
+                ->unique(OsisPeriod::class, 'nama', modifyRuleUsing: fn (Unique $rule) => $kecuali ? $rule->ignore($kecuali->id) : $rule)
+                ->validationMessages(['regex' => 'Format periode: 2027/2028.', 'unique' => 'Periode ini sudah ada.'])
                 ->columnSpanFull(),
             DatePicker::make('mulai')->label('Mulai menjabat')->required(),
             DatePicker::make('selesai')->label('Selesai menjabat')->required()->after('mulai')
@@ -86,104 +84,110 @@ class KelolaPeriode extends Page implements HasTable
         ];
     }
 
-    /** @return array{nama: string, mulai: string, selesai: string} */
-    private static function isian(array $data): array
-    {
-        return [
-            'nama' => $data['nama'],
-            'mulai' => Carbon::parse($data['mulai'])->toDateString(),
-            'selesai' => Carbon::parse($data['selesai'])->toDateString(),
-        ];
-    }
-
     protected function getViewData(): array
     {
         return [
-            'aktif' => DataTiruanPeriode::aktif(),
-            'pengurus' => collect(DataTiruanPeriode::pengurus())->sortByDesc('is_aktif')->values()->all(),
+            'aktif' => OsisPeriod::aktif()?->loadCount(['members', 'candidates']),
+            'pengurus' => User::query()->where('role', Peran::Pengurus)
+                ->orderByDesc('is_aktif')->orderBy('name')->get()
+                ->map(fn (User $u) => ['nama' => $u->name, 'email' => $u->email, 'is_aktif' => $u->menjabat()])
+                ->all(),
         ];
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn (): array => collect(DataTiruanPeriode::semua())
-                ->sortBy([fn ($a, $b) => DataTiruanPeriode::URUTAN[$a['status']] <=> DataTiruanPeriode::URUTAN[$b['status']], ['nama', 'desc']])
-                ->all())
+            ->query(OsisPeriod::query()->withCount(['members', 'candidates'])->urutTampil())
             ->columns([
                 TextColumn::make('nama')->label('Periode')->weight('bold')
-                    ->description(fn (array $record) => self::rentang($record)),
+                    ->description(fn (OsisPeriod $record) => $record->rentang()),
                 TextColumn::make('status')->label('Status')->badge()
-                    ->formatStateUsing(fn (string $state) => DataTiruanPeriode::STATUS[$state][0])
-                    ->color(fn (string $state) => DataTiruanPeriode::STATUS[$state][1])
-                    ->icon(fn (string $state) => DataTiruanPeriode::STATUS[$state][2])
-                    ->tooltip(fn (string $state) => DataTiruanPeriode::STATUS[$state][3]),
-                TextColumn::make('pengurus')->label('Pengurus')->numeric(),
-                TextColumn::make('kandidat')->label('Kandidat')->numeric(),
-                TextColumn::make('saran')->label('Saran')->numeric(),
+                    ->formatStateUsing(fn (StatusPeriode $state) => $state->label())
+                    ->color(fn (StatusPeriode $state) => $state->warna())
+                    ->icon(fn (StatusPeriode $state) => $state->ikon())
+                    ->tooltip(fn (StatusPeriode $state) => $state->keterangan()),
+                TextColumn::make('members_count')->label('Pengurus')->numeric(),
+                TextColumn::make('candidates_count')->label('Kandidat')->numeric(),
             ])
-            ->recordClasses(fn (array $record) => $record['status'] === 'aktif' ? 'bg-hijau-50' : null)
+            ->recordClasses(fn (OsisPeriod $record) => $record->adalahAktif() ? 'bg-hijau-50' : null)
             ->recordActions([
                 // Arsip hanya-lihat: tidak ada ubah/arsipkan, cukup ringkasan isinya.
                 Action::make('lihat')
                     ->label('Lihat')
                     ->icon(Heroicon::OutlinedEye)
                     ->color('gray')
-                    ->visible(fn (array $record) => $record['status'] === 'arsip')
-                    ->modalHeading(fn (array $record) => 'Arsip periode '.$record['nama'])
-                    ->modalContent(fn (array $record) => view('filament.pages.periode-arsip', ['periode' => $record]))
+                    ->visible(fn (OsisPeriod $record) => $record->adalahArsip())
+                    ->modalHeading(fn (OsisPeriod $record) => 'Arsip periode '.$record->nama)
+                    ->modalContent(fn (OsisPeriod $record) => view('filament.pages.periode-arsip', ['periode' => $record]))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
                     ->modalWidth('md'),
                 Action::make('ubah')
                     ->label('Ubah')
                     ->icon(Heroicon::OutlinedPencilSquare)
-                    ->visible(fn (array $record) => $record['status'] !== 'arsip')
-                    ->modalHeading(fn (array $record) => 'Ubah periode '.$record['nama'])
+                    ->visible(fn (OsisPeriod $record) => ! $record->adalahArsip())
+                    ->authorize(fn (OsisPeriod $record) => auth()->user()->can('update', $record))
+                    ->modalHeading(fn (OsisPeriod $record) => 'Ubah periode '.$record->nama)
                     ->modalSubmitActionLabel('Simpan perubahan')
-                    ->fillForm(fn (array $record) => $record)
-                    ->schema(fn (array $record) => self::formPeriode($record['id']))
-                    ->action(function (array $record, array $data) {
-                        $semua = DataTiruanPeriode::semua();
-                        abort_if($semua[$record['id']]['status'] === 'arsip', 403);
-                        $semua[$record['id']] = [...$semua[$record['id']], ...self::isian($data)];
-                        DataTiruanPeriode::simpan($semua);
-                        Notification::make()->title('Periode '.$data['nama'].' diperbarui')->success()->send();
-                    }),
+                    ->fillForm(fn (OsisPeriod $record) => ['nama' => $record->nama, 'mulai' => $record->mulai, 'selesai' => $record->selesai])
+                    ->schema(fn (OsisPeriod $record) => self::formPeriode($record))
+                    ->action(fn (OsisPeriod $record, array $data) => self::jalankan(
+                        fn () => app(LayananPeriode::class)->ubah($record, $data),
+                        'Periode '.$data['nama'].' diperbarui',
+                    )),
                 Action::make('arsipkan')
                     ->label('Arsipkan')
                     ->icon(Heroicon::OutlinedArchiveBoxArrowDown)
                     ->color('warning')
-                    ->visible(fn (array $record) => $record['status'] !== 'arsip')
+                    ->visible(fn (OsisPeriod $record) => ! $record->adalahArsip())
+                    ->authorize(fn (OsisPeriod $record) => auth()->user()->can('update', $record))
                     ->requiresConfirmation()
                     ->modalIcon(Heroicon::OutlinedArchiveBoxArrowDown)
-                    ->modalHeading(fn (array $record) => 'Arsipkan periode '.$record['nama'].'?')
-                    ->modalDescription(fn (array $record) => self::dampakArsip($record))
+                    ->modalHeading(fn (OsisPeriod $record) => 'Arsipkan periode '.$record->nama.'?')
+                    ->modalDescription(fn (OsisPeriod $record) => self::dampakArsip($record))
                     ->modalSubmitActionLabel('Ya, arsipkan')
-                    ->action(function (array $record) {
-                        $semua = DataTiruanPeriode::semua();
-                        $semua[$record['id']]['status'] = 'arsip';
-                        DataTiruanPeriode::simpan($semua);
-                        Notification::make()->title('Periode '.$record['nama'].' diarsipkan')->success()->send();
-                    }),
+                    ->action(fn (OsisPeriod $record) => self::jalankan(
+                        fn () => app(LayananPeriode::class)->arsipkan($record),
+                        'Periode '.$record->nama.' diarsipkan',
+                    )),
+                Action::make('hapus')
+                    ->label('Hapus')
+                    ->icon(Heroicon::OutlinedTrash)
+                    ->color('danger')
+                    ->visible(fn (OsisPeriod $record) => $record->status === StatusPeriode::Disiapkan && ! $record->punyaData())
+                    ->authorize(fn (OsisPeriod $record) => auth()->user()->can('delete', $record))
+                    ->requiresConfirmation()
+                    ->modalHeading(fn (OsisPeriod $record) => 'Hapus periode '.$record->nama.'?')
+                    ->modalDescription('Periode ini belum pernah aktif dan belum berisi data.')
+                    ->action(fn (OsisPeriod $record) => self::jalankan(
+                        fn () => app(LayananPeriode::class)->hapus($record),
+                        'Periode '.$record->nama.' dihapus',
+                    )),
             ])
             ->emptyStateHeading('Belum ada periode')
             ->emptyStateDescription('Buat periode kepengurusan pertama, misalnya 2026/2027.');
     }
 
-    /** Penjelasan dampak sebelum periode dipindah ke arsip. */
-    public static function dampakArsip(array $periode): string
+    /** Jalankan aksi layanan; penolakan aturan periode tampil sebagai pemberitahuan. */
+    private static function jalankan(\Closure $aksi, string $berhasil): void
     {
-        $isi = $periode['pengurus'].' pengurus, '.$periode['kandidat'].' kandidat, dan '.$periode['saran'].' saran tetap tersimpan dan hanya bisa dibaca. Arsip tidak bisa diaktifkan kembali.';
-
-        return $periode['status'] === 'aktif'
-            ? 'Ini periode yang sedang aktif. Setelah diarsipkan, Ruang OSIM tidak punya periode aktif sampai periode lain diaktifkan, dan data baru belum bisa ditambahkan. '.$isi
-            : $isi;
+        try {
+            $aksi();
+            Notification::make()->title($berhasil)->success()->send();
+        } catch (PeriodeDitolak $e) {
+            Notification::make()->title($e->getMessage())->danger()->send();
+        }
     }
 
-    /** @param  array<string, mixed>  $periode */
-    public static function rentang(array $periode): string
+    /** Penjelasan dampak sebelum periode dipindah ke arsip. */
+    public static function dampakArsip(OsisPeriod $periode): string
     {
-        return Carbon::parse($periode['mulai'])->translatedFormat('j M Y').' – '.Carbon::parse($periode['selesai'])->translatedFormat('j M Y');
+        $isi = ($periode->members_count ?? $periode->members()->count()).' pengurus dan '
+            .($periode->candidates_count ?? $periode->candidates()->count()).' kandidat tetap tersimpan dan hanya bisa dibaca. Arsip tidak bisa diaktifkan kembali.';
+
+        return $periode->adalahAktif()
+            ? 'Ini periode yang sedang aktif. Setelah diarsipkan, Ruang OSIM tidak punya periode aktif sampai periode lain diaktifkan, dan data baru belum bisa ditambahkan. '.$isi
+            : $isi;
     }
 }
