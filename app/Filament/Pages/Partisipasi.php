@@ -36,6 +36,15 @@ class Partisipasi extends Page
         return $p ? $p['judul'].' · diperbarui otomatis tiap 15 detik' : 'Belum ada pemilihan';
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            // Segarkan sekarang tanpa menunggu putaran 15 detik berikutnya.
+            \Filament\Actions\Action::make('segarkan')->label('Segarkan')->icon(Heroicon::OutlinedArrowPath)->color('gray')
+                ->action(fn () => null),
+        ];
+    }
+
     protected function getViewData(): array
     {
         $pemilihan = app(LayananPemilihan::class)->pemilihanAktif();

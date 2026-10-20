@@ -556,4 +556,19 @@ class RuangOsimTest extends TestCase
         $this->assertFileExists(public_path('templat/pemilih-siswa.csv'));
         $this->assertStringStartsWith('nisn,nama,kelas,tanggal_lahir', file_get_contents(public_path('templat/pemilih-siswa.csv')));
     }
+
+    public function test_partisipasi_segarkan_dan_dijaga_dari_pengurus(): void
+    {
+        $this->seed(\Database\Seeders\PemilihanSeeder::class);
+
+        $this->actingAs(User::factory()->pengurusMenjabat()->create());
+        $this->get('/admin/partisipasi')->assertForbidden();
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $this->get('/admin/partisipasi')->assertOk()->assertSee('wire:poll.15s.visible', false);
+        \Livewire\Livewire::test(\App\Filament\Pages\Partisipasi::class)
+            ->assertActionVisible('segarkan')
+            ->callAction('segarkan')
+            ->assertOk();
+    }
 }
