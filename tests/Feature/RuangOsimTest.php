@@ -625,4 +625,21 @@ class RuangOsimTest extends TestCase
             ->assertSee('periode 2026/2027')
             ->assertSeeInOrder(['Mode pemilihan', 'Nonaktif', 'Bagan struktur', 'Belum ada', 'Kotak saran', '2 belum ditanggapi', 'Akun media sosial', '1 akun']);
     }
+
+    public function test_partisipasi_mengikuti_pemilihan_periode_aktif(): void
+    {
+        $lama = \App\Models\OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        $pemilihanLama = \App\Models\Election::factory()->create(['judul' => 'Pemilihan 2025', 'status' => 'selesai', 'mulai' => now()->subYear(), 'selesai' => now()->subYear()->addDay()]);
+        $this->assertSame($lama->id, $pemilihanLama->periode_id);
+
+        app(\App\Services\LayananPeriode::class)->aktifkan(\App\Models\OsisPeriod::factory()->tahun(2026)->create());
+        // Belum ada pemilihan di periode baru: data lama tidak ikut tampil.
+        $this->assertNull(app(\App\Services\LayananPemilihan::class)->pemilihanAktif());
+
+        $baru = \App\Models\Election::factory()->create(['judul' => 'Pemilihan 2026', 'status' => 'berjalan', 'mulai' => now()->subHour(), 'selesai' => now()->addHour()]);
+        $this->assertTrue(app(\App\Services\LayananPemilihan::class)->pemilihanAktif()->is($baru));
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $this->get('/admin/partisipasi')->assertOk()->assertSee('Pemilihan 2026')->assertDontSee('Pemilihan 2025');
+    }
 }

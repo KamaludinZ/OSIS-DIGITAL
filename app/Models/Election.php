@@ -26,6 +26,12 @@ class Election extends Model
 
     protected static function booted(): void
     {
+        // Pemilihan baru tercatat di periode aktif.
+        static::creating(function (Election $e) {
+            if (! $e->periode_id && ($aktif = OsisPeriod::aktif())) {
+                $e->periode_id = $aktif->id;
+            }
+        });
         // Status / publikasi berubah -> rekap di halaman Hasil harus ikut berubah.
         static::saved(fn (Election $pemilihan) => \App\Services\LayananHasil::lupakanCache($pemilihan->id));
         static::saved(fn () => \App\Services\LayananNotifikasi::lupakan());
@@ -70,10 +76,16 @@ class Election extends Model
         return $this->hasMany(Vote::class);
     }
 
-    /** Pemilihan yang ditampilkan ke siswa: yang berjalan, atau yang terbaru. */
+    /**
+     * Pemilihan yang ditampilkan ke siswa: yang berjalan, atau yang terbaru — di periode
+     * kepengurusan aktif (pemilihan lama tanpa periode tetap ikut terhitung).
+     */
     public static function aktif(): ?self
     {
+        $periode = OsisPeriod::aktif();
+
         return static::query()
+            ->when($periode, fn (Builder $q) => $q->where(fn ($w) => $w->where('periode_id', $periode->id)->orWhereNull('periode_id')))
             ->orderByRaw('case when status = ? then 0 else 1 end', [StatusPemilihan::Berjalan->value])
             ->latest('mulai')
             ->first();

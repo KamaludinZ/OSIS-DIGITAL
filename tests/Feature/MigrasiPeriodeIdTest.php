@@ -35,6 +35,7 @@ class MigrasiPeriodeIdTest extends TestCase
         $pemilihan = Election::factory()->create();
 
         $migrasi->up();
+        OsisPeriod::lupakanAktif(); // migrasi menulis langsung ke basis data, memo periode aktif dibuang
 
         $this->assertSame(['2025/2026' => 'arsip', '2026/2027' => 'aktif'], OsisPeriod::orderBy('nama')->get()->mapWithKeys(fn ($p) => [$p->nama => $p->status->value])->all());
         $aktif = OsisPeriod::aktif();
