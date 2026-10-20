@@ -10,7 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Announcement extends Model
 {
     /** @use HasFactory<\Database\Factories\AnnouncementFactory> */
-    use HasFactory;
+    use \App\Models\Concerns\IkutPeriode, HasFactory;
+
+    /** Pengumuman lama tanpa periode tetap terbaca; tanpa periode aktif tidak difilter. */
+    public function periodeLonggar(): bool
+    {
+        return true;
+    }
 
     protected $fillable = [
         'judul',

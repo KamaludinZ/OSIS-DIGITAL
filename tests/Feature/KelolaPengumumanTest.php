@@ -56,4 +56,21 @@ class KelolaPengumumanTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
         $this->get('/admin/pengumuman')->assertForbidden();
     }
+
+    public function test_pengumuman_per_periode_dengan_jadwal_tayang(): void
+    {
+        $lama = \App\Models\OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        $pengumumanLama = \App\Models\Announcement::factory()->create(['judul' => 'Pengumuman Periode Lama', 'dipublikasikan' => true, 'dipublikasikan_pada' => now()->subDay()]);
+        $this->assertSame($lama->id, $pengumumanLama->periode_id);
+
+        app(\App\Services\LayananPeriode::class)->aktifkan(\App\Models\OsisPeriod::factory()->tahun(2026)->create());
+        \App\Models\Announcement::factory()->create(['judul' => 'Pengumuman Periode Baru', 'dipublikasikan' => true, 'dipublikasikan_pada' => now()->subHour()]);
+        \App\Models\Announcement::factory()->create(['judul' => 'Terjadwal Besok', 'dipublikasikan' => true, 'dipublikasikan_pada' => now()->addDay()]);
+
+        $judul = collect(app(\App\Services\LayananPublikasi::class)->pengumumanTerbaru(batas: 10))->pluck('judul');
+        $this->assertContains('Pengumuman Periode Baru', $judul);
+        $this->assertNotContains('Pengumuman Periode Lama', $judul);
+        $this->assertNotContains('Terjadwal Besok', $judul);
+        $this->assertSame(1, \App\Models\Announcement::diPeriode($lama)->count());
+    }
 }
