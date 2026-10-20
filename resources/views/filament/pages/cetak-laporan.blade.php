@@ -21,6 +21,11 @@
                 <x-filament::button tag="a" :href="$this->urlKartu()" target="_blank" icon="heroicon-m-printer" :disabled="$totalKartu === 0">
                     Buka lembar kartu
                 </x-filament::button>
+                <figure>
+                    <figcaption class="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-tinta-2">Pratinjau siap gunting (data contoh)</figcaption>
+                    <iframe src="{{ route('kartu-pemilih', ['contoh' => 1]) }}" title="Pratinjau kartu pemilih" loading="lazy"
+                            class="h-80 w-full rounded-lg bg-white ring-1 ring-garis"></iframe>
+                </figure>
             </div>
         </x-filament::section>
 

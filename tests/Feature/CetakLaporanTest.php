@@ -37,4 +37,23 @@ class CetakLaporanTest extends TestCase
             ->set('kelompok', 'VII-A')
             ->assertSee(route('kartu-pemilih', ['kelompok' => 'VII-A']));
     }
+
+    public function test_pratinjau_kartu_siap_gunting_dengan_data_contoh(): void
+    {
+        $asli = Voter::factory()->berkode('987654')->create(['nama' => 'Siswa Asli']);
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+
+        $this->get('/admin/cetak-laporan')->assertSee(route('kartu-pemilih', ['contoh' => 1]));
+
+        $this->get(route('kartu-pemilih', ['contoh' => 1]))->assertOk()
+            ->assertSee('Pratinjau tata letak dengan data contoh')
+            ->assertSee('Ahmad Contoh')
+            ->assertSee('123456')
+            ->assertDontSee('Siswa Asli')
+            ->assertDontSee('987654');
+
+        // Tetap hanya untuk pengelola pemilih.
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $this->get(route('kartu-pemilih', ['contoh' => 1]))->assertForbidden();
+    }
 }

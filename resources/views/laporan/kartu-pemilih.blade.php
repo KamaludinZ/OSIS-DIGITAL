@@ -13,6 +13,9 @@
     </head>
     <body class="osim py-8 print:py-0" style="background:#fff">
         <div class="mx-auto max-w-5xl px-6 print:max-w-none print:px-0">
+            @if ($contoh ?? false)
+                <p class="mb-4 rounded-lg bg-emas-200 px-3 py-2 text-sm font-bold text-hijau-950">Pratinjau tata letak dengan data contoh — bukan kode asli. 3 kolom per baris pada kertas A4, gunting di garis putus-putus.</p>
+            @else
             <div class="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
                 <div>
                     <h1 class="font-display text-2xl font-black text-tinta">Kartu Pemilih</h1>
@@ -23,6 +26,7 @@
                     <button type="button" onclick="window.print()" class="rounded-xl bg-emas-400 px-4 py-2 font-black text-hijau-950 hover:bg-emas-300">Cetak</button>
                 </div>
             </div>
+            @endif
 
             @if ($pemilih->isEmpty())
                 <p class="rounded-xl bg-emas-200 p-4 font-bold text-hijau-950">Belum ada pemilih terverifikasi yang punya kode pilih. Buat kode dulu di Data Pemilih.</p>
