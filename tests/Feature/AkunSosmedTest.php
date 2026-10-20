@@ -83,10 +83,27 @@ class AkunSosmedTest extends TestCase
     {
         $this->get('/')->assertOk()
             ->assertSee('Akun media sosial resmi OSIM')
-            ->assertSee('href="https://www.instagram.com/osim.mtsn2malang"', false)
-            ->assertSee('rel="noopener noreferrer"', false)
+            ->assertSee('href="'.route('sosmed.akun', 1).'"', false)
+            ->assertDontSee('href="https://www.instagram.com/osim.mtsn2malang"', false)
             ->assertDontSee('@osim2526.mtsn2');
 
         $this->get('/saran')->assertOk()->assertSee('@osim.mtsn2malang');
+    }
+
+    public function test_halaman_pengalihan_aman(): void
+    {
+        $this->get('/sosmed/akun/1')->assertOk()
+            ->assertSee('Membuka Instagram')
+            ->assertSee('www.instagram.com')
+            ->assertSee('href="https://www.instagram.com/osim.mtsn2malang" rel="noopener noreferrer"', false)
+            ->assertSee('Tetap di situs OSIM');
+
+        // Akun arsip / tidak dikenal tidak bisa dipakai untuk dialihkan.
+        $this->get('/sosmed/akun/4')->assertNotFound();
+        $this->get('/sosmed/akun/99')->assertNotFound();
+
+        // Tautan yang tidak cocok domainnya ditolak.
+        \App\Support\DataTiruanAkunSosmed::simpan([['id' => 7, 'periode' => '2026/2027', 'platform' => 'instagram', 'nama_akun' => '@palsu', 'tautan' => 'https://instagram.com.jahat.test/x']]);
+        $this->get('/sosmed/akun/7')->assertNotFound();
     }
 }

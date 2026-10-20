@@ -6,6 +6,7 @@ use Livewire\Volt\Volt;
 Volt::route('/', 'beranda')->name('home');
 
 Volt::route('cari', 'cari')->name('cari');
+Volt::route('sosmed/akun/{id}', 'sosmed.akun')->whereNumber('id')->middleware('throttle:60,1')->name('sosmed.akun');
 Volt::route('struktur', 'struktur')->name('struktur');
 Volt::route('saran', 'saran')->name('saran');
 Volt::route('terkunci', 'terkunci')->name('terkunci');

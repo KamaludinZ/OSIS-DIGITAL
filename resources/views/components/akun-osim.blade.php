@@ -4,7 +4,7 @@
     <ul {{ $attributes->class('flex flex-wrap gap-2') }} aria-label="Akun media sosial resmi OSIM">
         @foreach ($akun as $a)
             <li>
-                <a href="{{ $a['url'] }}" target="_blank" rel="noopener noreferrer"
+                <a href="{{ $a['url'] }}" target="_blank" rel="noopener"
                    @class(['inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition',
                        'bg-white text-hijau-800 ring-1 ring-garis hover:bg-hijau-50' => ! $gelap,
                        'bg-white/10 text-white ring-1 ring-white/20 hover:bg-white/20' => $gelap])>
