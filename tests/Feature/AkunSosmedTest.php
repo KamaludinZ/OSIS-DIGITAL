@@ -78,4 +78,15 @@ class AkunSosmedTest extends TestCase
             ->assertDontSee('Tambah akun')
             ->call('hapus', 4)->assertForbidden();
     }
+
+    public function test_tautan_periode_aktif_tampil_di_halaman_publik(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('Akun media sosial resmi OSIM')
+            ->assertSee('href="https://www.instagram.com/osim.mtsn2malang"', false)
+            ->assertSee('rel="noopener noreferrer"', false)
+            ->assertDontSee('@osim2526.mtsn2');
+
+        $this->get('/saran')->assertOk()->assertSee('@osim.mtsn2malang');
+    }
 }

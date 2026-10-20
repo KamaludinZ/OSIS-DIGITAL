@@ -30,4 +30,12 @@ class DataTiruanAkunSosmed
     {
         return \App\Models\OsisPeriod::aktif()?->nama ?? '2026/2027';
     }
+
+    /** Akun periode aktif untuk halaman publik (data tiruan: tautan langsung ke profil). */
+    public static function publik(): array
+    {
+        return collect(self::semua())->where('periode', self::periodeAktif())
+            ->map(fn ($a) => [...$a, 'label' => \App\Enums\PlatformSosmed::from($a['platform'])->label(), 'url' => $a['tautan']])
+            ->values()->all();
+    }
 }

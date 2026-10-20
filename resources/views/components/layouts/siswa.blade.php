@@ -124,6 +124,7 @@
         <footer class="hidden border-t border-garis bg-white py-6 text-sm text-tinta-2 lg:block print:hidden">
             <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6">
                 <span>OSIM MTsN 2 Kota Malang · <em>Milenial Religius, Berbudaya Lingkungan</em></span>
+                <x-akun-osim :akun="$akunSosmed" class="ml-auto" />
                 <span class="font-arab text-base text-hijau-700" lang="ar" dir="rtl">اِقْرَأْ</span>
             </div>
         </footer>

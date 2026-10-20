@@ -30,9 +30,13 @@ new #[Layout('components.layouts.siswa')] #[Title('Beranda')] class extends Comp
     #[\Livewire\Attributes\Locked]
     public bool $modePemilihan = true;
 
+    #[\Livewire\Attributes\Locked]
+    public array $akunSosmed = [];
+
     public function mount(LayananPemilihan $layanan, LayananPublikasi $publikasi, LayananSosmed $sosmed): void
     {
         $this->sosmed = $sosmed->perPlatform();
+        $this->akunSosmed = \App\Support\DataTiruanAkunSosmed::publik();
         $this->modePemilihan = app(\App\Services\LayananModePemilihan::class)->aktif();
         $this->pemilihan = $layanan->ringkasanPemilihan();
         $this->pengumuman = $publikasi->pengumumanTerbaru(batas: 4);
@@ -184,10 +188,15 @@ new #[Layout('components.layouts.siswa')] #[Title('Beranda')] class extends Comp
         </section>
 
         {{-- Konten media sosial OSIM --}}
-        @if (collect($sosmed)->sum(fn ($g) => count($g['konten'])) > 0)
+        @if (collect($sosmed)->sum(fn ($g) => count($g['konten'])) > 0 || count($akunSosmed))
             <section aria-labelledby="judul-sosmed">
-                <h2 id="judul-sosmed" class="font-display mb-4 text-2xl font-black text-tinta sm:text-3xl">Dari Media Sosial OSIM</h2>
-                <x-sosmed-osim :grup="$sosmed" />
+                <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+                    <h2 id="judul-sosmed" class="font-display text-2xl font-black text-tinta sm:text-3xl">Dari Media Sosial OSIM</h2>
+                    <x-akun-osim :akun="$akunSosmed" />
+                </div>
+                @if (collect($sosmed)->sum(fn ($g) => count($g['konten'])) > 0)
+                    <x-sosmed-osim :grup="$sosmed" />
+                @endif
             </section>
         @endif
     </x-osim.wadah>
