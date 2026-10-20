@@ -73,7 +73,16 @@ class StrukturOrganisasi extends Page implements \Filament\Tables\Contracts\HasT
                             'mimetypes' => 'Berkas harus berupa gambar JPG, PNG, atau WebP.',
                             'required' => 'Pilih gambar bagan yang akan diunggah.',
                         ]),
-                    self::pemilihRasio(),
+                    self::pemilihRasio()
+                        // Orientasi gambar yang diunggah harus cocok dengan rasio pilihan.
+                        ->rule(fn (\Filament\Schemas\Components\Utilities\Get $get) => function (string $attribute, $value, \Closure $fail) use ($get) {
+                            $state = $get('gambar');
+                            $berkas = is_array($state) ? collect($state)->first() : $state;
+                            $jalur = $berkas instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile ? $berkas->getRealPath() : null;
+                            if ($jalur && ($pesan = LayananStruktur::cocokkanRasio($jalur, (string) $value))) {
+                                $fail($pesan);
+                            }
+                        }),
                 ])
                 ->fillForm(fn () => ['rasio' => self::struktur()?->rasio ?? '4:3'])
                 ->disabled(fn () => \App\Models\OsisPeriod::aktif() === null)

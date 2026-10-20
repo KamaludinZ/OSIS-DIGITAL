@@ -66,6 +66,9 @@ class LayananStruktur
     {
         try {
             $this->periksaRasio($rasio);
+            if ($pesan = self::cocokkanRasio(Storage::disk('public')->path($path), $rasio)) {
+                throw ValidationException::withMessages(['rasio' => $pesan]);
+            }
             $periode = OsisPeriod::aktif() ?? throw new PeriodeDitolak('Belum ada periode aktif. Aktifkan periode OSIM dulu.');
         } catch (PeriodeDitolak|ValidationException $e) {
             // Berkas yang terlanjur diunggah tidak dipakai: jangan tinggalkan sampah di disk.
@@ -119,6 +122,26 @@ class LayananStruktur
         $struktur = $this->aktif() ?? throw new PeriodeDitolak('Belum ada bagan untuk periode aktif.');
         $struktur->delete();
         Storage::disk('public')->delete($struktur->gambar);
+    }
+
+    /**
+     * Orientasi gambar harus sesuai rasio pilihan: melebar -> 4:3, memanjang -> 3:4
+     * (gambar persegi/hampir persegi cocok untuk keduanya). null = cocok / ukuran tak terbaca.
+     */
+    public static function cocokkanRasio(string $berkas, string $rasio): ?string
+    {
+        $ukuran = @getimagesize($berkas);
+        if (! $ukuran || ! $ukuran[0] || ! $ukuran[1]) {
+            return null;
+        }
+
+        $perbandingan = $ukuran[0] / $ukuran[1];
+
+        return match (true) {
+            $rasio === '4:3' && $perbandingan < 0.9 => 'Gambar ini memanjang ke bawah ('.$ukuran[0].'×'.$ukuran[1].' piksel). Pilih rasio Tinggi (3:4) agar bagan tidak terpotong kecil.',
+            $rasio === '3:4' && $perbandingan > 1.1 => 'Gambar ini melebar ke samping ('.$ukuran[0].'×'.$ukuran[1].' piksel). Pilih rasio Lebar (4:3) agar bagan tidak terpotong kecil.',
+            default => null,
+        };
     }
 
     /** @throws ValidationException */

@@ -127,4 +127,30 @@ class LayananStrukturTest extends TestCase
         $this->assertNull($data['struktur']);
         $this->get('/struktur')->assertDontSee('struktur/lama.png');
     }
+
+    public function test_validasi_rasio_sesuai_orientasi_gambar(): void
+    {
+        // Simpan objek berkas agar berkas sementaranya tidak terhapus sebelum dibaca.
+        [$fTinggi, $fLebar, $fPersegi] = [
+            \Illuminate\Http\UploadedFile::fake()->image('tinggi.png', 900, 1200),
+            \Illuminate\Http\UploadedFile::fake()->image('lebar.png', 1200, 900),
+            \Illuminate\Http\UploadedFile::fake()->image('persegi.png', 1000, 1000),
+        ];
+        [$tinggi, $lebar, $persegi] = [$fTinggi->getRealPath(), $fLebar->getRealPath(), $fPersegi->getRealPath()];
+
+        $this->assertStringContainsString('Pilih rasio Tinggi (3:4)', LayananStruktur::cocokkanRasio($tinggi, '4:3'));
+        $this->assertNull(LayananStruktur::cocokkanRasio($tinggi, '3:4'));
+        $this->assertStringContainsString('Pilih rasio Lebar (4:3)', LayananStruktur::cocokkanRasio($lebar, '3:4'));
+        $this->assertNull(LayananStruktur::cocokkanRasio($persegi, '4:3'));
+        $this->assertNull(LayananStruktur::cocokkanRasio($persegi, '3:4'));
+
+        // Lewat form Ruang OSIM: ditolak dengan pesan ramah, berkas tidak disimpan sebagai bagan.
+        Storage::fake('public');
+        OsisPeriod::factory()->tahun(2026)->aktif()->create();
+        $this->actingAs(User::factory()->create(['role' => \App\Enums\Peran::Pengurus]));
+        \Livewire\Livewire::test(\App\Filament\Pages\StrukturOrganisasi::class)
+            ->callAction('unggah', data: ['gambar' => \Illuminate\Http\UploadedFile::fake()->image('tinggi.png', 900, 1200), 'rasio' => '4:3'])
+            ->assertHasFormErrors(['rasio']);
+        $this->assertNull(app(LayananStruktur::class)->aktif());
+    }
 }

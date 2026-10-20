@@ -78,7 +78,7 @@ class StrukturOrganisasiTest extends TestCase
 
         Livewire::test(StrukturOrganisasi::class)
             ->assertActionHasLabel('unggah', 'Unggah gambar')
-            ->callAction('unggah', data: ['gambar' => UploadedFile::fake()->image('bagan.png', 1200, 900), 'rasio' => '3:4'])
+            ->callAction('unggah', data: ['gambar' => UploadedFile::fake()->image('bagan.png', 900, 1200), 'rasio' => '3:4'])
             ->assertHasNoFormErrors()
             ->assertNotified('Bagan struktur disimpan');
 
