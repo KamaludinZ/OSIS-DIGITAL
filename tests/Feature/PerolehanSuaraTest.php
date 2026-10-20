@@ -54,6 +54,13 @@ class PerolehanSuaraTest extends TestCase
             ->assertActionHasLabel('publikasi', 'Tarik publikasi')
             ->assertActionHasUrl('cetak', route('hasil.laporan'));
         $this->assertTrue($pemilihan->fresh()->hasil_publik);
+        $this->assertNotNull($pemilihan->fresh()->hasil_dipublikasikan_pada);
+        $this->assertTrue($pemilihan->fresh()->pempublikasi->is(auth()->user()));
+
+        // Ditarik: jejak publikasi dikosongkan.
+        Livewire::test(PerolehanSuara::class)->callAction('publikasi')->assertNotified('Publikasi ditarik');
+        $this->assertNull($pemilihan->fresh()->hasil_dipublikasikan_pada);
+        $this->assertNull($pemilihan->fresh()->hasil_dipublikasikan_oleh);
     }
 
     public function test_endpoint_agregasi_hasil(): void

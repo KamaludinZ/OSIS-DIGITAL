@@ -124,7 +124,7 @@ class LayananHasil
      *
      * @throws ValidationException
      */
-    public function aturPublikasi(Election $pemilihan, bool $publik): Election
+    public function aturPublikasi(Election $pemilihan, bool $publik, ?\App\Models\User $oleh = null): Election
     {
         if ($publik && $this->pemilihan->statusEfektif($pemilihan) !== StatusPemilihan::Selesai) {
             throw ValidationException::withMessages([
@@ -132,7 +132,12 @@ class LayananHasil
             ]);
         }
 
-        $pemilihan->update(['hasil_publik' => $publik]);
+        $pemilihan->update([
+            'hasil_publik' => $publik,
+            // Jejak siapa & kapan mempublikasikan; dikosongkan saat ditarik.
+            'hasil_dipublikasikan_pada' => $publik ? now() : null,
+            'hasil_dipublikasikan_oleh' => $publik ? ($oleh ?? auth()->user())?->id : null,
+        ]);
         self::lupakanCache($pemilihan->id);
 
         return $pemilihan;

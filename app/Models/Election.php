@@ -20,6 +20,8 @@ class Election extends Model
         'selesai',
         'status',
         'hasil_publik',
+        'hasil_dipublikasikan_pada',
+        'hasil_dipublikasikan_oleh',
     ];
 
     protected static function booted(): void
@@ -43,6 +45,7 @@ class Election extends Model
             'status' => StatusPemilihan::class,
             'format_kandidat' => \App\Enums\FormatKandidat::class,
             'hasil_publik' => 'boolean',
+            'hasil_dipublikasikan_pada' => 'datetime',
             'pengingat_terkirim' => 'array',
         ];
     }
@@ -50,6 +53,16 @@ class Election extends Model
     public function candidates(): HasMany
     {
         return $this->hasMany(Candidate::class)->orderBy('nomor_urut');
+    }
+
+    public function pempublikasi(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'hasil_dipublikasikan_oleh');
+    }
+
+    public function periode(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(OsisPeriod::class, 'periode_id');
     }
 
     public function votes(): HasMany
