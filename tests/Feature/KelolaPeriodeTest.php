@@ -78,4 +78,17 @@ class KelolaPeriodeTest extends TestCase
         $this->assertSame('2025-07-21', DataTiruanPeriode::semua()[2]['mulai']);
         $this->assertSame('arsip', DataTiruanPeriode::semua()[2]['status']);
     }
+
+    public function test_daftar_menampilkan_label_status_dengan_periode_aktif_di_atas(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+
+        Livewire::test(KelolaPeriode::class)
+            ->callAction('tambah', data: ['nama' => '2027/2028', 'mulai' => '2027-07-12', 'selesai' => '2028-06-23'])
+            ->assertCanSeeTableRecords([3, 4, 2, 1], inOrder: true)
+            ->assertTableColumnFormattedStateSet('status', 'Aktif', 3)
+            ->assertTableColumnFormattedStateSet('status', 'Disiapkan', 4)
+            ->assertTableColumnFormattedStateSet('status', 'Arsip', 1)
+            ->assertSee('Periode berjalan; data baru masuk ke sini.');
+    }
 }

@@ -10,11 +10,15 @@ class DataTiruanPeriode
 {
     private const KUNCI = 'tiruan.periode-osim';
 
+    /** status => [label, warna, ikon, keterangan] */
     public const STATUS = [
-        'aktif' => ['Aktif', 'success'],
-        'disiapkan' => ['Disiapkan', 'gray'],
-        'arsip' => ['Arsip', 'warning'],
+        'aktif' => ['Aktif', 'success', 'heroicon-m-check-circle', 'Periode berjalan; data baru masuk ke sini.'],
+        'disiapkan' => ['Disiapkan', 'gray', 'heroicon-m-clock', 'Belum aktif; data masih kosong.'],
+        'arsip' => ['Arsip', 'warning', 'heroicon-m-archive-box', 'Hanya dibaca; tidak tercampur periode berjalan.'],
     ];
+
+    /** Urutan tampil: aktif, disiapkan, lalu arsip terbaru. */
+    public const URUTAN = ['aktif' => 0, 'disiapkan' => 1, 'arsip' => 2];
 
     /** @return array<int, array<string, mixed>> */
     public static function semua(): array

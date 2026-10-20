@@ -104,17 +104,22 @@ class KelolaPeriode extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn (): array => DataTiruanPeriode::semua())
+            ->records(fn (): array => collect(DataTiruanPeriode::semua())
+                ->sortBy([fn ($a, $b) => DataTiruanPeriode::URUTAN[$a['status']] <=> DataTiruanPeriode::URUTAN[$b['status']], ['nama', 'desc']])
+                ->all())
             ->columns([
                 TextColumn::make('nama')->label('Periode')->weight('bold')
                     ->description(fn (array $record) => self::rentang($record)),
                 TextColumn::make('status')->label('Status')->badge()
                     ->formatStateUsing(fn (string $state) => DataTiruanPeriode::STATUS[$state][0])
-                    ->color(fn (string $state) => DataTiruanPeriode::STATUS[$state][1]),
+                    ->color(fn (string $state) => DataTiruanPeriode::STATUS[$state][1])
+                    ->icon(fn (string $state) => DataTiruanPeriode::STATUS[$state][2])
+                    ->tooltip(fn (string $state) => DataTiruanPeriode::STATUS[$state][3]),
                 TextColumn::make('pengurus')->label('Pengurus')->numeric(),
                 TextColumn::make('kandidat')->label('Kandidat')->numeric(),
                 TextColumn::make('saran')->label('Saran')->numeric(),
             ])
+            ->recordClasses(fn (array $record) => $record['status'] === 'aktif' ? 'bg-hijau-50' : null)
             ->recordActions([
                 Action::make('ubah')
                     ->label('Ubah')
