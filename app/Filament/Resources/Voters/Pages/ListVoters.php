@@ -107,6 +107,11 @@ class ListVoters extends ListRecords
             ->action(function (array $data) use ($jenis) {
                 $berkas = self::berkasDari($data['berkas']);
                 $hasil = app(ImporPemilih::class)->impor($berkas->getRealPath(), $jenis, $berkas->getClientOriginalName());
+                // Ringkasan menetap di halaman (panel "Impor terakhir") untuk akun ini selama sehari.
+                \Illuminate\Support\Facades\Cache::put(self::kunciRingkasan(), [
+                    ...\Illuminate\Support\Arr::only($hasil, ['tambah', 'perbarui', 'sama', 'gagal']),
+                    'jenis' => $jenis->value, 'berkas' => $berkas->getClientOriginalName(), 'waktu' => now()->toDateTimeString(),
+                ], now()->addDay());
 
                 $judul = "Impor selesai: {$hasil['tambah']} ditambahkan, {$hasil['perbarui']} diperbarui".($hasil['sama'] ? ", {$hasil['sama']} tidak berubah" : '');
                 $tanpaKode = Voter::terverifikasi()->whereNull('kode_pilih')->count();
@@ -134,6 +139,28 @@ class ListVoters extends ListRecords
 
                 $notif->send();
             });
+    }
+
+    public static function kunciRingkasan(): string
+    {
+        return 'impor-pemilih-terakhir:'.auth()->id();
+    }
+
+    public function tutupRingkasanImpor(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget(self::kunciRingkasan());
+    }
+
+    /** Panel ringkasan impor terakhir di atas tabel pemilih. */
+    public function content(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
+    {
+        $isi = parent::content($schema);
+
+        return $isi->components([
+            \Filament\Schemas\Components\View::make('filament.ringkasan-impor')
+                ->viewData(fn () => ['ringkasan' => \Illuminate\Support\Facades\Cache::get(self::kunciRingkasan())]),
+            ...$isi->getComponents(withHidden: true),
+        ]);
     }
 
     /** Ambil berkas unggahan sementara dari state FileUpload (bisa berupa array). */

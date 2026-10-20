@@ -337,6 +337,14 @@ class RuangOsimTest extends TestCase
             ->assertNotified('Impor selesai: 1 ditambahkan, 1 diperbarui');
         $this->assertSame(2, \App\Models\Voter::count());
 
+        // Panel ringkasan impor terakhir menetap di halaman Data Pemilih sampai ditutup.
+        \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
+            ->assertSee('Impor terakhir · Siswa')
+            ->assertSeeInOrder(['Ditambahkan', '1', 'Diperbarui', '1', 'Tidak berubah', '0', 'Dilewati', '1'])
+            ->assertSee('Baris yang dilewati (1)')
+            ->call('tutupRingkasanImpor')
+            ->assertDontSee('Impor terakhir');
+
         // Tombol "Buat kode pilih" pada notifikasi membuat kode untuk pemilih baru.
         \Livewire\Livewire::test(\App\Filament\Resources\Voters\Pages\ListVoters::class)
             ->dispatch('buat-kode-pemilih-baru')
