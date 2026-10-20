@@ -51,10 +51,14 @@ class StrukturOrganisasi extends Page
             Action::make('unggah')
                 ->label(fn () => DataTiruanStruktur::aktif() ? 'Ganti gambar' : 'Unggah gambar')
                 ->icon(Heroicon::OutlinedArrowUpTray)
-                ->modalHeading('Unggah bagan struktur')
-                ->modalDescription('Satu gambar untuk periode aktif. Gambar lama akan diganti.')
+                ->modalHeading(fn () => DataTiruanStruktur::aktif() ? 'Ganti bagan struktur' : 'Unggah bagan struktur')
+                ->modalDescription(fn () => DataTiruanStruktur::aktif()
+                    ? 'Gambar yang sekarang tampil di halaman publik akan diganti. Periode lain tidak terpengaruh.'
+                    : 'Satu gambar untuk periode aktif.')
                 ->modalSubmitActionLabel('Simpan')
                 ->schema([
+                    \Filament\Schemas\Components\View::make('filament.struktur-saat-ini')
+                        ->visible(fn () => DataTiruanStruktur::aktif() !== null),
                     FileUpload::make('gambar')->label('Gambar bagan')
                         ->helperText('JPG, PNG, atau WebP. Maks. 5 MB. Pastikan tulisan masih terbaca saat diperkecil.')
                         ->image()->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
@@ -69,6 +73,19 @@ class StrukturOrganisasi extends Page
                         'rasio' => $data['rasio'],
                     ]);
                     Notification::make()->title('Bagan struktur disimpan')->success()->send();
+                }),
+            Action::make('hapus')
+                ->label('Hapus gambar')
+                ->icon(Heroicon::OutlinedTrash)
+                ->color('danger')
+                ->visible(fn () => DataTiruanStruktur::aktif() !== null)
+                ->requiresConfirmation()
+                ->modalHeading('Hapus bagan struktur?')
+                ->modalDescription('Halaman publik Struktur Organisasi akan menampilkan "Bagan struktur belum diunggah" sampai gambar baru diunggah. Bagan periode lain tidak terpengaruh.')
+                ->modalSubmitActionLabel('Ya, hapus')
+                ->action(function () {
+                    DataTiruanStruktur::simpan(null);
+                    Notification::make()->title('Bagan struktur dihapus')->success()->send();
                 }),
             Action::make('ubahRasio')
                 ->label('Ubah rasio')

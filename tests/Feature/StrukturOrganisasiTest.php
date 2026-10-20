@@ -86,4 +86,28 @@ class StrukturOrganisasiTest extends TestCase
         \Livewire\Livewire::test(\App\Filament\Pages\StrukturOrganisasi::class)
             ->callAction('ubahRasio', data: ['rasio' => '16:9'])->assertHasFormErrors(['rasio']);
     }
+
+    public function test_ganti_dan_hapus_gambar_dengan_konfirmasi(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $this->actingAs(\App\Models\User::factory()->create(['role' => \App\Enums\Peran::Pengurus]));
+
+        $halaman = \Livewire\Livewire::test(\App\Filament\Pages\StrukturOrganisasi::class)
+            ->mountAction('unggah')
+            ->assertMountedActionModalSee(['Ganti bagan struktur', 'Gambar saat ini', 'akan diganti'])
+            ->callMountedAction()
+            ->assertHasFormErrors(['gambar' => 'required']);
+
+        \Livewire\Livewire::test(\App\Filament\Pages\StrukturOrganisasi::class)
+            ->mountAction('hapus')
+            ->assertMountedActionModalSee(['Hapus bagan struktur?', 'Bagan struktur belum diunggah', 'Ya, hapus'])
+            ->callMountedAction()
+            ->assertNotified('Bagan struktur dihapus')
+            ->assertActionHidden('hapus')
+            ->assertActionHidden('ubahRasio')
+            ->assertActionHasLabel('unggah', 'Unggah gambar');
+
+        $this->assertNull(DataTiruanStruktur::aktif());
+        $this->get('/admin/struktur-organisasi')->assertSee('Belum ada bagan untuk periode ini');
+    }
 }
