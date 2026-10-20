@@ -91,4 +91,18 @@ class KelolaPeriodeTest extends TestCase
             ->assertTableColumnFormattedStateSet('status', 'Arsip', 1)
             ->assertSee('Periode berjalan; data baru masuk ke sini.');
     }
+
+    public function test_nama_periode_aktif_tampil_di_sidebar_panel(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+        $this->get('/admin/ringkasan')->assertOk()
+            ->assertSeeInOrder(['osim-periode-aktif', 'Periode aktif', '2026/2027'])
+            ->assertSee('/admin/periode-osim');
+
+        // Panitia melihat nama periode tanpa tautan ke halaman kelola.
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $this->get('/admin/ringkasan')->assertOk()
+            ->assertSeeInOrder(['Periode aktif', '2026/2027'])
+            ->assertDontSee('aria-label="Kelola periode OSIM"', false);
+    }
 }

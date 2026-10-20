@@ -66,6 +66,8 @@ class AdminPanelProvider extends PanelProvider
             // Pemberitahuan akun staf (tabel notifications), diperbarui berkala.
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
+            // Nama periode kepengurusan aktif selalu terlihat di atas menu.
+            ->renderHook(\Filament\View\PanelsRenderHook::SIDEBAR_NAV_START, fn () => view('filament.periode-aktif'))
             ->navigationItems([
                 \Filament\Navigation\NavigationItem::make('Media Sosial')
                     ->url(fn () => route('kelola.sosmed'))->icon(\Filament\Support\Icons\Heroicon::OutlinedPlayCircle)
