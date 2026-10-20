@@ -29,4 +29,25 @@ class SeederTest extends TestCase
         $this->assertFalse(User::where('role', Peran::Siswa)->exists());
         $this->assertSame(Peran::Panitia, User::where('email', 'panitia@osis.test')->first()->role);
     }
+
+    public function test_seeder_menyiapkan_arsip_periode_lama_yang_tetap_tersimpan(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $this->seed();
+        $this->seed();
+
+        $aktif = \App\Models\OsisPeriod::aktif();
+        $arsip = \App\Models\OsisPeriod::status(\App\Enums\StatusPeriode::Arsip)->sole();
+
+        $this->assertTrue($aktif->mode_pemilihan);
+        // Arsip tersimpan & terbaca lewat relasi tanpa batas periode aktif.
+        $this->assertSame('3:4', $arsip->struktur->rasio);
+        $this->assertSame(1, $arsip->suggestions()->count());
+        $this->assertSame(1, $arsip->socialLinks()->count());
+        // Tidak bocor ke periode aktif.
+        $this->assertSame(0, \App\Models\Suggestion::count());
+        $this->assertNotContains('@osim.arsip.contoh', \App\Models\SocialLink::pluck('nama_akun'));
+        // Halaman publik menawarkan arsipnya.
+        $this->get('/struktur')->assertSee($arsip->nama);
+    }
 }
