@@ -8,7 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CampaignSchedule extends Model
 {
-    use \App\Models\Concerns\PeriodeDariKandidat;
+    // Periode dari kandidat lebih dulu; IkutPeriode menambah global scope (mode longgar) & penjaga arsip.
+    use \App\Models\Concerns\PeriodeDariKandidat, \App\Models\Concerns\IkutPeriode;
+
+    /** Data lama tanpa periode tetap terbaca; tanpa periode aktif tidak difilter. */
+    public function periodeLonggar(): bool
+    {
+        return true;
+    }
 
     /** @use HasFactory<\Database\Factories\CampaignScheduleFactory> */
     use HasFactory;

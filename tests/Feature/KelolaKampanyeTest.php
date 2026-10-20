@@ -73,4 +73,22 @@ class KelolaKampanyeTest extends TestCase
         }
         $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumns('candidate_questions', ['ditampilkan', 'jawaban']));
     }
+
+    public function test_global_scope_periode_pada_data_kampanye(): void
+    {
+        $lama = \App\Models\OsisPeriod::factory()->tahun(2025)->aktif()->create();
+        $calonLama = \App\Models\Candidate::factory()->create(['periode_id' => $lama->id]);
+        $tanyaLama = \App\Models\CandidateQuestion::factory()->create(['candidate_id' => $calonLama->id]);
+
+        app(\App\Services\LayananPeriode::class)->aktifkan($baru = \App\Models\OsisPeriod::factory()->tahun(2026)->create());
+        $calonBaru = \App\Models\Candidate::factory()->create(['periode_id' => $baru->id]);
+        $tanyaBaru = \App\Models\CandidateQuestion::factory()->create(['candidate_id' => $calonBaru->id]);
+
+        $this->assertSame([$tanyaBaru->id], \App\Models\CandidateQuestion::pluck('id')->all());
+        $this->assertSame(1, \App\Models\CandidateQuestion::diPeriode($lama)->count());
+
+        // Arsip hanya-baca: tanya jawab periode lama tidak bisa dimoderasi/diubah.
+        $this->expectException(\App\Exceptions\PeriodeDitolak::class);
+        \App\Models\CandidateQuestion::semuaPeriode()->find($tanyaLama->id)->update(['ditampilkan' => false]);
+    }
 }

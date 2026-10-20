@@ -3,11 +3,10 @@
 namespace App\Models\Concerns;
 
 use App\Models\Candidate;
-use App\Models\OsisPeriod;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Data kampanye (materi, jadwal, tanya jawab) tercatat di periode kandidatnya.
+ * Dipakai bersama IkutPeriode (yang menyediakan relasi periode() & global scope).
  *
  * @mixin \Illuminate\Database\Eloquent\Model
  */
@@ -18,10 +17,5 @@ trait PeriodeDariKandidat
         static::creating(function ($model) {
             $model->periode_id ??= Candidate::query()->whereKey($model->candidate_id)->value('periode_id');
         });
-    }
-
-    public function periode(): BelongsTo
-    {
-        return $this->belongsTo(OsisPeriod::class, 'periode_id');
     }
 }
