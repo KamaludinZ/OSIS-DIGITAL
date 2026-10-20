@@ -19,7 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Illuminate\Http\Request::HEADER_X_FORWARDED_PORT | Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO,
         );
 
-        $middleware->alias(['periode' => App\Http\Middleware\BatasiDataPeriode::class]);
+        $middleware->alias([
+            'periode' => App\Http\Middleware\BatasiDataPeriode::class,
+            'mode-pemilihan' => App\Http\Middleware\WajibModePemilihan::class,
+        ]);
 
         // Pengguna yang sudah masuk lalu membuka /login diarahkan ke halaman awal perannya.
         $middleware->redirectUsersTo(fn (Illuminate\Http\Request $request) => $request->user()?->halamanAwal() ?? '/');

@@ -25,7 +25,7 @@ class BatasiDataPeriodeTest extends TestCase
         parent::setUp();
 
         $this->arsip = OsisPeriod::factory()->tahun(2025)->arsip()->create();
-        $this->aktif = OsisPeriod::factory()->tahun(2026)->aktif()->create();
+        $this->aktif = OsisPeriod::factory()->tahun(2026)->aktif()->create(['mode_pemilihan' => true]);
         $this->disiapkan = OsisPeriod::factory()->tahun(2027)->create();
     }
 

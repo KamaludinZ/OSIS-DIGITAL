@@ -187,4 +187,29 @@ class ModePemilihanTest extends TestCase
             ],
         ]);
     }
+
+    public function test_alamat_pemilihan_diblokir_saat_mode_nonaktif(): void
+    {
+        $alamat = ['/bilik-suara', '/bilik-suara/bukti', '/kandidat', '/kandidat/1', '/hasil', '/hasil/laporan', '/hasil/laporan.csv'];
+
+        app(LayananModePemilihan::class)->ubah(false, User::factory()->create());
+
+        foreach ($alamat as $url) {
+            $this->get($url)->assertStatus(423)->assertSee('Halaman sedang ditutup');
+        }
+        // Halaman lain tetap terbuka.
+        $this->get('/')->assertOk();
+
+        app(LayananModePemilihan::class)->ubah(true, User::factory()->create());
+        $this->get('/bilik-suara')->assertOk();
+        $this->get('/kandidat')->assertOk();
+        $this->get('/hasil')->assertOk();
+    }
+
+    public function test_aksi_livewire_di_halaman_pemilihan_ikut_diperiksa(): void
+    {
+        $persisten = app(\Livewire\Mechanisms\PersistentMiddleware\PersistentMiddleware::class)->getPersistentMiddleware();
+
+        $this->assertContains(\App\Http\Middleware\WajibModePemilihan::class, $persisten);
+    }
 }
