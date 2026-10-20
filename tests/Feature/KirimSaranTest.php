@@ -70,4 +70,24 @@ class KirimSaranTest extends TestCase
         $this->expectException(\App\Exceptions\PeriodeDitolak::class);
         app(LayananSaran::class)->kirim(['isi' => 'Saran saat tidak ada periode aktif.']);
     }
+
+    public function test_saran_dibatasi_global_scope_periode(): void
+    {
+        $this->assertContains(\App\Models\Concerns\IkutPeriode::class, class_uses_recursive(Suggestion::class));
+
+        $lama = Suggestion::factory()->create(['isi' => 'Saran periode lama.']);
+        app(\App\Services\LayananPeriode::class)->aktifkan($baru = OsisPeriod::factory()->tahun(2027)->create());
+        $sekarang = Suggestion::factory()->bernama()->create();
+
+        $this->assertSame([$sekarang->id], Suggestion::pluck('id')->all());
+        $this->assertSame($baru->id, $sekarang->periode_id);
+        $this->assertNull(Suggestion::find($lama->id));
+        $this->assertSame([$lama->id], Suggestion::diPeriode($this->periode)->pluck('id')->all());
+        $this->assertSame(2, Suggestion::semuaPeriode()->count());
+        $this->assertSame(1, $this->periode->suggestions()->count());
+
+        // Saran periode arsip tidak bisa diubah/dihapus.
+        $this->expectException(\App\Exceptions\PeriodeDitolak::class);
+        Suggestion::diPeriode($this->periode)->first()->delete();
+    }
 }
