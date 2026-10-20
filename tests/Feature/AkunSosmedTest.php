@@ -156,4 +156,26 @@ class AkunSosmedTest extends TestCase
         $this->get('/sosmed/akun/'.$this->tiktok->id)->assertNotFound();
         $this->assertNotContains('tiktok', array_column(app(LayananAkunSosmed::class)->publik(), 'platform'));
     }
+
+    public function test_hapus_dijaga_hanya_periode_aktif(): void
+    {
+        $layanan = app(LayananAkunSosmed::class);
+
+        // Akun periode yang baru disiapkan (belum aktif) tidak bisa dihapus/diubah dari sini.
+        $depan = OsisPeriod::factory()->tahun(2027)->create();
+        $akunDepan = SocialLink::factory()->create(['periode_id' => $depan->id]);
+        foreach ([fn () => $layanan->hapus($akunDepan), fn () => $layanan->ubah($akunDepan, ['platform' => 'instagram', 'nama_akun' => '@x', 'tautan' => 'https://instagram.com/x'])] as $aksi) {
+            try {
+                $aksi();
+                $this->fail('Seharusnya ditolak.');
+            } catch (\App\Exceptions\PeriodeDitolak $e) {
+                $this->assertStringContainsString('milik periode 2027/2028', $e->getMessage());
+            }
+        }
+        $this->assertModelExists($akunDepan);
+
+        // Akun periode aktif boleh dihapus.
+        $layanan->hapus($this->youtube);
+        $this->assertModelMissing($this->youtube);
+    }
 }

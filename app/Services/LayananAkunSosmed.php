@@ -45,19 +45,35 @@ class LayananAkunSosmed
         return SocialLink::create([...$this->isian($data), 'urutan' => (SocialLink::max('urutan') ?? 0) + 1]);
     }
 
-    /** Hanya akun periode aktif (arsip ditolak IkutPeriode). @throws PeriodeDitolak|\Illuminate\Validation\ValidationException */
+    /** Hanya akun periode aktif. @throws PeriodeDitolak|\Illuminate\Validation\ValidationException */
     public function ubah(SocialLink $akun, array $data): SocialLink
     {
-        $this->pastikanPeriodeAktif();
+        $this->pastikanMilikPeriodeAktif($akun);
         $akun->update($this->isian($data, $akun));
 
         return $akun;
     }
 
-    /** @throws PeriodeDitolak */
+    /**
+     * Hapus akun milik periode aktif. Akun periode arsip maupun periode yang baru disiapkan
+     * tidak bisa dihapus dari sini, agar riwayat akun tiap periode tetap utuh.
+     *
+     * @throws PeriodeDitolak
+     */
     public function hapus(SocialLink $akun): void
     {
+        $this->pastikanMilikPeriodeAktif($akun);
         $akun->delete();
+    }
+
+    /** @throws PeriodeDitolak */
+    private function pastikanMilikPeriodeAktif(SocialLink $akun): void
+    {
+        $this->pastikanPeriodeAktif();
+
+        if ((int) $akun->periode_id !== OsisPeriod::aktif()->id) {
+            throw new PeriodeDitolak('Akun ini milik periode '.($akun->periode?->nama ?? 'lain').'; hanya akun periode aktif yang bisa diubah atau dihapus.');
+        }
     }
 
     /**
