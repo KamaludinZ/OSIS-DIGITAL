@@ -99,7 +99,7 @@ class LayananPemilihan
         $tolak = fn (string $alasan, string $pesan) => ['boleh' => false, 'alasan' => $alasan, 'pesan' => $pesan];
 
         if (! $pemilihan || $this->statusEfektif($pemilihan) !== StatusPemilihan::Berjalan) {
-            return $tolak('pemilihan_tertutup', 'Bilik suara sedang tidak dibuka.');
+            return $tolak('pemilihan_tertutup', 'Bilik suara sedang tidak dibuka. Cek jadwal pemilihan di Beranda.');
         }
 
         if (! $pemilih) {
@@ -108,12 +108,12 @@ class LayananPemilihan
 
         if ($pemilih->verifikasi !== 'terverifikasi') {
             return $tolak('bukan_pemilih', $pemilih->verifikasi === 'menunggu'
-                ? 'Data pemilihmu masih menunggu verifikasi panitia.'
-                : 'Data pemilihmu tidak lolos verifikasi. Hubungi panitia pemilihan.');
+                ? 'Data pemilihmu masih menunggu verifikasi panitia. Tunjukkan kartu pemilihmu ke meja panitia agar segera dicek, lalu coba lagi.'
+                : 'Data pemilihmu tidak lolos verifikasi, jadi belum bisa memilih. Datangi meja panitia dengan membawa kartu pemilih untuk dibantu.');
         }
 
         if ($pemilih->sudahMemilih($pemilihan)) {
-            return $tolak('sudah_memilih', 'Anda sudah menggunakan hak pilih pada pemilihan ini.');
+            return $tolak('sudah_memilih', 'Anda sudah menggunakan hak pilih pada pemilihan ini. Terima kasih! Suaramu sudah tercatat dan tidak bisa diubah.');
         }
 
         return ['boleh' => true, 'alasan' => null, 'pesan' => null];

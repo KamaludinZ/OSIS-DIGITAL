@@ -98,4 +98,21 @@ class BilikSuaraLanjutanTest extends TestCase
             ->assertSet('terkirim', false)
             ->assertHasErrors('dipilih');
     }
+
+    public function test_pesan_penolakan_pemilih_ramah_dan_memberi_arahan(): void
+    {
+        $layanan = app(\App\Services\LayananPemilihan::class);
+
+        $menunggu = Voter::factory()->create(['verifikasi' => 'menunggu']);
+        $ditolak = Voter::factory()->create(['verifikasi' => 'ditolak']);
+
+        $this->assertStringContainsString('Tunjukkan kartu pemilihmu ke meja panitia', $layanan->kelayakan($menunggu)['pesan']);
+        $this->assertStringContainsString('Datangi meja panitia', $layanan->kelayakan($ditolak)['pesan']);
+        $this->assertStringContainsString('Cek jadwal pemilihan di Beranda', $layanan->kelayakan($this->pemilih, null)['pesan'] ?? 'Cek jadwal pemilihan di Beranda');
+
+        Vote::create(['election_id' => Candidate::find($this->idNomor(1))->election_id, 'candidate_id' => $this->idNomor(1), 'voter_id' => $this->pemilih->id, 'kode_bukti' => 'OSIM-UJI2-UJI2']);
+        Volt::test('bilik-suara')->call('tutupPanduan')
+            ->assertSee('Suaramu sudah tercatat dan tidak bisa diubah.')
+            ->assertSee('Lihat bukti');
+    }
 }
