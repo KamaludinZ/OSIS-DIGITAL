@@ -14,14 +14,33 @@ new class extends Component {
         $this->periode = DataTiruanAkunSosmed::periodeAktif();
     }
 
+    /** Nilai periode dari peramban hanya diterima bila memang ada; selain itu kembali ke periode aktif. */
+    public function updatedPeriode(string $nilai): void
+    {
+        if (! array_key_exists($nilai, $this->jumlahPerPeriode())) {
+            $this->periode = DataTiruanAkunSosmed::periodeAktif();
+        }
+    }
+
+    /** @return array<string, int> periode => jumlah akun, periode aktif selalu ada dan di depan. */
+    private function jumlahPerPeriode(): array
+    {
+        $aktif = DataTiruanAkunSosmed::periodeAktif();
+
+        return collect(DataTiruanAkunSosmed::semua())->countBy('periode')
+            ->union([$aktif => 0])
+            ->sortKeysDesc()
+            ->sortBy(fn ($n, $p) => $p === $aktif ? 0 : 1)
+            ->all();
+    }
+
     public function with(): array
     {
-        $semua = collect(DataTiruanAkunSosmed::semua());
-
         return [
-            'daftarPeriode' => $semua->pluck('periode')->push(DataTiruanAkunSosmed::periodeAktif())->unique()->sortDesc()->values()->all(),
-            'akun' => $semua->where('periode', $this->periode)->values()->all(),
-            'aktif' => $this->periode === DataTiruanAkunSosmed::periodeAktif(),
+            'daftarPeriode' => $this->jumlahPerPeriode(),
+            'akun' => collect(DataTiruanAkunSosmed::semua())->where('periode', $this->periode)->values()->all(),
+            // Arsip baca-saja: tombol ubah/tambah disembunyikan bila false.
+            'bolehUbah' => $this->periode === DataTiruanAkunSosmed::periodeAktif(),
         ];
     }
 }; ?>
@@ -32,21 +51,26 @@ new class extends Component {
             <h2 id="judul-akun-sosmed" class="font-display text-xl font-black text-tinta">Akun resmi OSIM</h2>
             <p class="text-sm text-tinta-2">Tautan akun yang tampil di halaman publik. Tiap periode punya daftarnya sendiri.</p>
         </div>
-        <label class="flex items-center gap-2 text-sm font-bold text-tinta">
-            Periode
-            <select wire:model.live="periode" class="h-10 rounded-xl border-2 border-garis bg-hijau-50/50 px-3 font-bold text-tinta focus:border-hijau-600 focus:outline-none">
-                @foreach ($daftarPeriode as $p)
-                    <option value="{{ $p }}">{{ $p }}{{ $p === \App\Support\DataTiruanAkunSosmed::periodeAktif() ? ' (aktif)' : ' (arsip)' }}</option>
-                @endforeach
-            </select>
-        </label>
+        <div role="tablist" aria-label="Pilih periode" class="flex flex-wrap gap-1.5">
+            @foreach ($daftarPeriode as $p => $jumlah)
+                @php($dipilih = $p === $periode)
+                <button type="button" role="tab" wire:click="$set('periode', '{{ $p }}')" aria-selected="{{ $dipilih ? 'true' : 'false' }}"
+                        @class(['inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold ring-1 transition',
+                            'bg-hijau-600 text-white ring-hijau-600' => $dipilih,
+                            'bg-white text-hijau-800 ring-garis hover:bg-hijau-50' => ! $dipilih])>
+                    @if ($loop->first) <flux:icon.check-circle variant="micro" /> @else <flux:icon.archive-box variant="micro" /> @endif
+                    {{ $p }}
+                    <span class="angka rounded-full bg-black/10 px-1.5 text-xs">{{ $jumlah }}</span>
+                </button>
+            @endforeach
+        </div>
     </div>
 
-    @unless ($aktif)
+    @unless ($bolehUbah)
         <p class="flex items-center gap-1.5 bg-emas-300/40 px-5 py-2 text-sm font-semibold text-tinta"><flux:icon.lock-closed variant="micro" /> Arsip periode {{ $periode }}: hanya bisa dilihat.</p>
     @endunless
 
-    <ul class="divide-y divide-dashed divide-garis">
+    <ul @class(['divide-y divide-dashed divide-garis', 'opacity-75 grayscale' => ! $bolehUbah])>
         @forelse ($akun as $a)
             @php($platform = PlatformSosmed::from($a['platform']))
             <li wire:key="akun-{{ $a['id'] }}" class="flex items-center gap-3 px-5 py-3">

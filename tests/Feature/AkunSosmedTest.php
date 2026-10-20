@@ -17,7 +17,7 @@ class AkunSosmedTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
 
         $this->get('/kelola/sosmed')->assertOk()
-            ->assertSeeInOrder(['Akun resmi OSIM', '2026/2027 (aktif)', '@osim.mtsn2malang', 'Konten baru']);
+            ->assertSeeInOrder(['Akun resmi OSIM', '2026/2027', '3', '2025/2026', '1', '@osim.mtsn2malang', 'Konten baru']);
 
         Volt::test('kelola.akun-sosmed')
             ->assertSee('OSIM MTsN 2 Kota Malang')
@@ -31,5 +31,17 @@ class AkunSosmedTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
         Volt::test('kelola.akun-sosmed')->assertForbidden();
+    }
+
+    public function test_periode_tidak_dikenal_kembali_ke_periode_aktif(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Peran::Pengurus]));
+
+        Volt::test('kelola.akun-sosmed')
+            ->set('periode', '1999/2000')
+            ->assertSet('periode', '2026/2027')
+            ->assertDontSee('hanya bisa dilihat')
+            ->set('periode', '2025/2026')
+            ->assertSee('grayscale', false);
     }
 }
