@@ -6,23 +6,31 @@ namespace App\Support;
 class MenuPublik
 {
     /**
-     * @return list<array{rute: string, label: string, ikon: string, pola: string}>
+     * label_pendek dipakai tab bar HP yang sempit.
+     *
+     * @return list<array{rute: string, label: string, label_pendek: string, ikon: string, pola: string}>
      */
     public static function untuk(bool $modePemilihan): array
     {
-        $beranda = ['rute' => 'home', 'label' => 'Beranda', 'ikon' => 'home', 'pola' => 'home'];
+        $beranda = ['rute' => 'home', 'label' => 'Beranda', 'label_pendek' => 'Beranda', 'ikon' => 'home', 'pola' => 'home'];
 
         return $modePemilihan
             ? [
                 $beranda,
-                ['rute' => 'bilik-suara', 'label' => 'Bilik Suara', 'ikon' => 'check-badge', 'pola' => 'bilik-suara*'],
-                ['rute' => 'kandidat.index', 'label' => 'Kandidat', 'ikon' => 'user-group', 'pola' => 'kandidat.*'],
-                ['rute' => 'hasil', 'label' => 'Hasil', 'ikon' => 'chart-bar', 'pola' => 'hasil'],
+                ['rute' => 'bilik-suara', 'label' => 'Bilik Suara', 'label_pendek' => 'Bilik Suara', 'ikon' => 'check-badge', 'pola' => 'bilik-suara*'],
+                ['rute' => 'kandidat.index', 'label' => 'Kandidat', 'label_pendek' => 'Kandidat', 'ikon' => 'user-group', 'pola' => 'kandidat.*'],
+                ['rute' => 'hasil', 'label' => 'Hasil', 'label_pendek' => 'Hasil', 'ikon' => 'chart-bar', 'pola' => 'hasil'],
             ]
             : [
                 $beranda,
-                ['rute' => 'struktur', 'label' => 'Struktur Organisasi', 'ikon' => 'rectangle-group', 'pola' => 'struktur'],
-                ['rute' => 'saran', 'label' => 'Kotak Saran', 'ikon' => 'inbox-arrow-down', 'pola' => 'saran*'],
+                ['rute' => 'struktur', 'label' => 'Struktur Organisasi', 'label_pendek' => 'Struktur', 'ikon' => 'rectangle-group', 'pola' => 'struktur'],
+                ['rute' => 'saran', 'label' => 'Kotak Saran', 'label_pendek' => 'Saran', 'ikon' => 'inbox-arrow-down', 'pola' => 'saran*'],
             ];
+    }
+
+    /** Alamat item menu; halaman yang belum dibangun mengarah ke "#". */
+    public static function url(array $item): string
+    {
+        return \Illuminate\Support\Facades\Route::has($item['rute']) ? route($item['rute']) : '#';
     }
 }

@@ -1,6 +1,6 @@
 @php
-    // Menu publik (sama dengan pratinjau di Ruang OSIM); mode nonaktif mulai dipakai di fase Menu Publik Dinamis.
-    $menu = array_map(fn ($m) => [$m['rute'], $m['label'], $m['ikon'], $m['pola']], \App\Support\MenuPublik::untuk(true));
+    // Menu publik mengikuti sakelar mode pemilihan (sama dengan pratinjau di Ruang OSIM).
+    $menu = app(\App\Services\LayananModePemilihan::class)->menu();
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -29,16 +29,16 @@
                 </a>
 
                 <nav aria-label="Menu utama" class="ml-6 hidden items-center gap-1 lg:flex">
-                    @foreach ($menu as [$rute, $label, $ikon, $pola])
-                        @php($aktif = request()->routeIs($pola))
-                        <a href="{{ route($rute) }}" wire:navigate @if ($aktif) aria-current="page" @endif
+                    @foreach ($menu as $item)
+                        @php($aktif = request()->routeIs($item['pola']))
+                        <a href="{{ \App\Support\MenuPublik::url($item) }}" wire:navigate @if ($aktif) aria-current="page" @endif
                            @class([
-                               'flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition',
+                               'flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition',
                                'bg-emas-400 text-hijau-950 shadow-[0_3px_10px_-3px_rgb(0_0_0/0.15)]' => $aktif,
                                'text-hijau-50 hover:bg-white/10' => ! $aktif,
                            ])>
-                            <flux:icon :name="$ikon" variant="micro" />
-                            {{ $label }}
+                            <flux:icon :name="$item['ikon']" variant="micro" />
+                            {{ $item['label'] }}
                         </a>
                     @endforeach
                 </nav>
@@ -119,16 +119,16 @@
 
         {{-- Tab bar bawah untuk HP --}}
         <nav aria-label="Menu utama" class="fixed inset-x-0 bottom-0 z-40 border-t border-garis bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden">
-            <ul class="mx-auto grid max-w-md grid-cols-4">
-                @foreach ($menu as [$rute, $label, $ikon, $pola])
-                    @php($aktif = request()->routeIs($pola))
+            <ul @class(['mx-auto grid max-w-md', 'grid-cols-3' => count($menu) === 3, 'grid-cols-4' => count($menu) === 4])>
+                @foreach ($menu as $item)
+                    @php($aktif = request()->routeIs($item['pola']))
                     <li>
-                        <a href="{{ route($rute) }}" wire:navigate @if ($aktif) aria-current="page" @endif
+                        <a href="{{ \App\Support\MenuPublik::url($item) }}" wire:navigate @if ($aktif) aria-current="page" @endif
                            class="flex flex-col items-center gap-1 px-1 pb-2 pt-2.5 text-[11px] font-semibold {{ $aktif ? 'text-hijau-800' : 'text-tinta-2' }}">
                             <span @class(['flex h-7 w-12 items-center justify-center rounded-full transition', 'bg-emas-400 text-hijau-950' => $aktif])>
-                                <flux:icon :name="$ikon" variant="{{ $aktif ? 'solid' : 'outline' }}" class="size-5" />
+                                <flux:icon :name="$item['ikon']" variant="{{ $aktif ? 'solid' : 'outline' }}" class="size-5" />
                             </span>
-                            {{ $label }}
+                            {{ $item['label_pendek'] }}
                         </a>
                     </li>
                 @endforeach
