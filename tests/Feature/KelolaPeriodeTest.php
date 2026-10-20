@@ -220,4 +220,46 @@ class KelolaPeriodeTest extends TestCase
 
         app(\App\Services\LayananPeriode::class)->buat(['nama' => '2026/2027', 'mulai' => '2026-08-01', 'selesai' => '2027-06-01']);
     }
+
+    public function test_mengaktifkan_periode_mengarsipkan_periode_aktif_lama(): void
+    {
+        $this->masukSebagai();
+        $baru = OsisPeriod::factory()->tahun(2027)->create();
+
+        Livewire::test(KelolaPeriode::class)
+            ->assertTableActionHidden('aktifkan', $this->aktif)
+            ->assertTableActionHidden('aktifkan', $this->lama)
+            ->mountTableAction('aktifkan', $baru)
+            ->assertMountedActionModalSee(['Aktifkan periode 2027/2028?', 'Periode 2026/2027 yang sedang aktif otomatis diarsipkan'])
+            ->callMountedTableAction()
+            ->assertNotified('Periode 2027/2028 sekarang aktif');
+
+        $this->assertTrue(OsisPeriod::aktif()->is($baru));
+        $this->assertTrue($this->aktif->fresh()->adalahArsip());
+        $this->assertSame(1, OsisPeriod::status(StatusPeriode::Aktif)->count());
+    }
+
+    public function test_arsip_dan_periode_aktif_tidak_bisa_diaktifkan_ulang(): void
+    {
+        $layanan = app(\App\Services\LayananPeriode::class);
+
+        foreach ([$this->lama, $this->aktif] as $periode) {
+            try {
+                $layanan->aktifkan($periode);
+                $this->fail('Seharusnya ditolak: '.$periode->nama);
+            } catch (\App\Exceptions\PeriodeDitolak) {
+            }
+        }
+
+        $this->assertTrue(OsisPeriod::aktif()->is($this->aktif));
+    }
+
+    public function test_aktifkan_saat_belum_ada_periode_aktif(): void
+    {
+        $this->aktif->update(['status' => StatusPeriode::Arsip]);
+        $baru = OsisPeriod::factory()->tahun(2027)->create();
+
+        $this->assertNull(app(\App\Services\LayananPeriode::class)->aktifkan($baru));
+        $this->assertTrue(OsisPeriod::aktif()->is($baru));
+    }
 }

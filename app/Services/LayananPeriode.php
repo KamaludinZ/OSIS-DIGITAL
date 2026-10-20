@@ -6,6 +6,7 @@ use App\Enums\StatusPeriode;
 use App\Exceptions\PeriodeDitolak;
 use App\Models\OsisPeriod;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /** Siklus periode kepengurusan OSIM: buat, ubah, hapus, arsipkan. */
@@ -40,6 +41,35 @@ class LayananPeriode
         }
 
         $periode->delete();
+    }
+
+    /**
+     * Jadikan satu-satunya periode aktif: periode aktif sebelumnya otomatis diarsipkan
+     * dalam transaksi yang sama. Arsip tidak bisa diaktifkan kembali.
+     *
+     * @return OsisPeriod|null periode lama yang diarsipkan
+     *
+     * @throws PeriodeDitolak
+     */
+    public function aktifkan(OsisPeriod $periode): ?OsisPeriod
+    {
+        return DB::transaction(function () use ($periode) {
+            $periode = OsisPeriod::query()->lockForUpdate()->findOrFail($periode->id);
+
+            if ($periode->adalahAktif()) {
+                throw new PeriodeDitolak('Periode '.$periode->nama.' sudah aktif.');
+            }
+            if ($periode->adalahArsip()) {
+                throw new PeriodeDitolak('Periode arsip tidak bisa diaktifkan kembali.');
+            }
+
+            $lama = OsisPeriod::query()->where('status', StatusPeriode::Aktif)->lockForUpdate()->first();
+            // Arsipkan dulu yang lama agar indeks "satu aktif" tidak pernah dilanggar.
+            $lama?->update(['status' => StatusPeriode::Arsip]);
+            $periode->update(['status' => StatusPeriode::Aktif]);
+
+            return $lama;
+        });
     }
 
     /** @throws PeriodeDitolak */

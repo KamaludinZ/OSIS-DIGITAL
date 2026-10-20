@@ -155,6 +155,23 @@ class KelolaPeriode extends Page implements HasTable
                         fn () => app(LayananPeriode::class)->ubah($record, $data),
                         'Periode '.$data['nama'].' diperbarui',
                     )),
+                Action::make('aktifkan')
+                    ->label('Aktifkan')
+                    ->icon(Heroicon::OutlinedCheckCircle)
+                    ->color('success')
+                    ->visible(fn (OsisPeriod $record) => $record->status === StatusPeriode::Disiapkan)
+                    ->authorize(fn (OsisPeriod $record) => auth()->user()->can('update', $record))
+                    ->requiresConfirmation()
+                    ->modalIcon(Heroicon::OutlinedCheckCircle)
+                    ->modalHeading(fn (OsisPeriod $record) => 'Aktifkan periode '.$record->nama.'?')
+                    ->modalDescription(fn (OsisPeriod $record) => ($lama = OsisPeriod::aktif())
+                        ? 'Periode '.$lama->nama.' yang sedang aktif otomatis diarsipkan dan hanya bisa dilihat. Data baru (kandidat, saran, struktur, media sosial) masuk ke periode '.$record->nama.'.'
+                        : 'Data baru (kandidat, saran, struktur, media sosial) masuk ke periode '.$record->nama.'.')
+                    ->modalSubmitActionLabel('Ya, aktifkan')
+                    ->action(fn (OsisPeriod $record) => self::jalankan(
+                        fn () => app(LayananPeriode::class)->aktifkan($record),
+                        'Periode '.$record->nama.' sekarang aktif',
+                    )),
                 Action::make('arsipkan')
                     ->label('Arsipkan')
                     ->icon(Heroicon::OutlinedArchiveBoxArrowDown)
