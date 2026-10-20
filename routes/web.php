@@ -26,6 +26,7 @@ Route::patch('mode-pemilihan', [App\Http\Controllers\ModePemilihanController::cl
     ->middleware(['auth', 'can:ubah-mode-pemilihan', 'throttle:10,1'])->name('mode-pemilihan.ubah');
 Route::get('admin-cetak/kartu-pemilih', App\Http\Controllers\KartuPemilihController::class)->middleware(['auth', 'can:kelola-pemilih'])->name('kartu-pemilih');
 Route::get('hasil/laporan', [App\Http\Controllers\LaporanHasilController::class, 'cetak'])->middleware('mode-pemilihan')->name('hasil.laporan');
+Route::get('hasil/rekap.json', [App\Http\Controllers\LaporanHasilController::class, 'json'])->middleware(['mode-pemilihan', 'throttle:60,1'])->name('hasil.rekap');
 Route::get('hasil/laporan.csv', [App\Http\Controllers\LaporanHasilController::class, 'csv'])->middleware('mode-pemilihan')->name('hasil.laporan.csv');
 Volt::route('pengumuman/{id}', 'pengumuman.detail')->whereNumber('id')->name('pengumuman.detail');
 Volt::route('kegiatan/{id}', 'kegiatan.detail')->whereNumber('id')->middleware('periode:'.App\Models\Event::class.',id,arsip')->name('kegiatan.detail');

@@ -55,4 +55,30 @@ class PerolehanSuaraTest extends TestCase
             ->assertActionHasUrl('cetak', route('hasil.laporan'));
         $this->assertTrue($pemilihan->fresh()->hasil_publik);
     }
+
+    public function test_endpoint_agregasi_hasil(): void
+    {
+        $this->seed(PemilihanSeeder::class);
+        $pemilihan = Election::first();
+        [$satu, $dua] = Candidate::orderBy('nomor_urut')->take(2)->get();
+        foreach ([$satu, $satu, $dua] as $calon) {
+            app(\App\Services\LayananPemilihan::class)->kirimSuara(Voter::factory()->create(), $pemilihan, $calon->id);
+        }
+
+        // Publik: belum dipublikasikan -> ditolak.
+        $this->getJson('/hasil/rekap.json')->assertForbidden();
+
+        $this->actingAs(User::factory()->create(['role' => Peran::Panitia]));
+        $this->getJson('/hasil/rekap.json')->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('suara_masuk', 3)
+            ->assertJsonPath('kandidat.0.nomor_urut', 1)
+            ->assertJsonPath('kandidat.0.suara', 2)
+            ->assertJsonPath('kandidat.1.suara', 1)
+            ->assertJsonMissingPath('kandidat.0.id');
+
+        auth()->logout();
+        $pemilihan->update(['status' => 'selesai', 'selesai' => now()->subMinute(), 'hasil_publik' => true]);
+        $this->getJson('/hasil/rekap.json')->assertOk()->assertJsonPath('pemenang', 1);
+    }
 }

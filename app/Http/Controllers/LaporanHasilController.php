@@ -35,6 +35,24 @@ class LaporanHasilController extends Controller
         ];
     }
 
+    /** Rekap agregat (GROUP BY dari surat suara anonim, di-cache singkat) sebagai JSON. */
+    public function json(): \Illuminate\Http\JsonResponse
+    {
+        $d = $this->data();
+
+        return response()->json([
+            'pemilihan' => $d['rekap']['judul'],
+            'status' => $d['rekap']['status'],
+            'hasil_publik' => $d['rekap']['hasil_publik'],
+            'suara_masuk' => $d['rekap']['suara_masuk'],
+            'total_pemilih' => $d['rekap']['total_pemilih'],
+            'partisipasi_persen' => $d['partisipasi'],
+            'pemenang' => $d['pemenang']['status'] === 'menang' ? $d['pemenang']['kandidat']['nomor_urut'] : null,
+            'kandidat' => array_map(fn ($c) => \Illuminate\Support\Arr::only($c, ['nomor_urut', 'nama_tampil', 'suara', 'persen']), $d['baris']),
+            'diperbarui' => $d['rekap']['diperbarui'],
+        ])->header('Cache-Control', 'no-store');
+    }
+
     public function cetak(): View
     {
         return view('laporan.hasil', $this->data());
