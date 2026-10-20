@@ -78,4 +78,16 @@ class SkemaPeriodeTest extends TestCase
 
         $this->assertTrue((bool) DB::table('osis_periods')->value('mode_pemilihan'));
     }
+
+    public function test_tabel_organization_structures_satu_bagan_per_periode(): void
+    {
+        $this->assertTrue(Schema::hasColumns('organization_structures', ['id', 'periode_id', 'gambar', 'rasio', 'diunggah_oleh', 'created_at', 'updated_at']));
+
+        $periode = \App\Models\OsisPeriod::factory()->create();
+        DB::table('organization_structures')->insert(['periode_id' => $periode->id, 'gambar' => 'struktur/a.png']);
+        $this->assertSame('4:3', DB::table('organization_structures')->value('rasio'));
+
+        $this->expectException(QueryException::class);
+        DB::table('organization_structures')->insert(['periode_id' => $periode->id, 'gambar' => 'struktur/b.png']);
+    }
 }
