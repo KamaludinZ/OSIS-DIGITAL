@@ -110,7 +110,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Hasil Pemilihan')] class exte
                     @endif
                 @endcan
                 @error('publikasi') <p class="text-sm font-bold text-emas-300" role="alert">{{ $message }}</p> @enderror
-                @if ($rekap['perolehan_terlihat'])
+                @if ($rekap['perolehan_terlihat'] && auth()->check())
                     <flux:dropdown position="bottom" align="end" class="print:hidden">
                         <button type="button" class="inline-flex items-center gap-2 whitespace-nowrap rounded-xl bg-white px-4 py-2.5 font-bold text-hijau-800 hover:bg-hijau-50">
                             <flux:icon.arrow-down-tray variant="mini" /> Unduh laporan <flux:icon.chevron-down variant="micro" />

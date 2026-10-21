@@ -62,7 +62,7 @@ new #[Layout('components.layouts.siswa')] #[Title('Bukti Suara')] class extends 
             </div>
 
             <div class="relative p-5 sm:p-6">
-                <x-osim.stempel class="osim-cap-masuk pointer-events-none absolute -right-3 top-2 size-36 -rotate-12 opacity-90 mix-blend-multiply sm:right-2 sm:size-40" bawah="{{ \Illuminate\Support\Carbon::parse($bukti['waktu'])->translatedFormat('j M Y') }}" />
+                <x-osim.stempel class="osim-cap-masuk pointer-events-none absolute -right-3 top-2 size-36 -rotate-12 opacity-90 mix-blend-multiply sm:right-2 sm:size-40" tanggal="{{ \Illuminate\Support\Carbon::parse($bukti['waktu'])->translatedFormat('j M Y') }}" />
 
                 <dl class="relative grid gap-4 pr-28 sm:pr-36">
                     <div>

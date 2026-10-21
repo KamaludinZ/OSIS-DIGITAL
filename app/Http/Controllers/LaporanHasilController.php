@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\LayananHasil;
 use App\Services\LayananPemilihan;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -53,13 +54,27 @@ class LaporanHasilController extends Controller
         ])->header('Cache-Control', 'no-store');
     }
 
+    /**
+     * Unduhan laporan hanya untuk pengguna yang sudah masuk (tamu diarahkan ke login).
+     * Tidak memakai middleware `auth` agar kunci mode pemilihan tetap diperiksa lebih dulu.
+     */
+    private function wajibMasuk(): void
+    {
+        if (! auth()->check()) {
+            throw new AuthenticationException;
+        }
+    }
+
     public function cetak(): View
     {
+        $this->wajibMasuk();
+
         return view('laporan.hasil', $this->data());
     }
 
     public function csv(): StreamedResponse
     {
+        $this->wajibMasuk();
         $d = $this->data();
         $koma = fn (float $x) => str_replace('.', ',', (string) $x);
         $nama = 'laporan-hasil-'.Str::slug($d['rekap']['judul']).'.csv';

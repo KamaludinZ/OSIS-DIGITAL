@@ -128,6 +128,7 @@ class HasilTest extends TestCase
     {
         $this->siapkanSuara()->update(['status' => 'selesai', 'hasil_publik' => true]);
         Candidate::where('nomor_urut', 1)->update(['nama_ketua' => '=HYPERLINK("http://contoh.test")']);
+        $this->actingAs(User::factory()->create());
 
         $isi = $this->get('/hasil/laporan.csv')->streamedContent();
 
@@ -139,6 +140,12 @@ class HasilTest extends TestCase
     {
         $this->siapkanSuara()->update(['status' => 'selesai', 'hasil_publik' => true]);
 
+        // Tamu tetap melihat hasil, tetapi unduhan laporan hanya untuk pengguna yang sudah masuk.
+        $this->get('/hasil')->assertOk()->assertDontSee('Unduh laporan')->assertDontSee(route('hasil.laporan.csv'));
+        $this->get('/hasil/laporan.csv')->assertRedirect(route('login'));
+        $this->get('/hasil/laporan')->assertRedirect(route('login'));
+
+        $this->actingAs(User::factory()->create());
         $this->get('/hasil')->assertSee('Unduh laporan')->assertSee(route('hasil.laporan.csv'))->assertSee(route('hasil.laporan'));
 
         $csv = $this->get('/hasil/laporan.csv');
